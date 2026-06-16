@@ -1,0 +1,645 @@
+openapi: 3.0.3
+info:
+  title: DCF Light Bot Control Plane API
+  version: 1.11.0
+paths:
+  # ── Health & Monitoring ──
+  /health:
+    get:
+      summary: Health probe
+  /status:
+    get:
+      summary: Runtime status summary with health level
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+
+  # ── Auth (Control Plane) ──
+  /api/control/auth/login:
+    post:
+      summary: Login and issue control-plane JWT
+  /api/control/auth/me:
+    get:
+      summary: Get current principal
+
+  # ── Auth (BFF) ──
+  /api/auth/login:
+    post:
+      summary: Admin console login
+  /api/auth/logout:
+    post:
+      summary: Logout
+  /api/auth/me:
+    get:
+      summary: Current session info
+  /api/auth/renew:
+    post:
+      summary: Renew JWT token
+  /api/auth/acl:
+    get:
+      summary: Get permission list for current user
+  /api/auth/sso/capabilities:
+    get:
+      summary: SSO capability query
+  /api/auth/sso/authorize:
+    get:
+      summary: SSO authorization redirect
+  /api/auth/sso/bridge-login:
+    post:
+      summary: SSO bridge login
+  /api/auth/matrix-admin-entry:
+    get:
+      summary: Matrix admin console entry
+
+  # ── Auth Management (BFF) ──
+  /api/admin/auth/health:
+    get:
+      summary: Auth service health
+  /api/admin/auth/users:
+    get:
+      summary: List users
+    post:
+      summary: Create user
+  /api/admin/auth/users/{userId}:
+    post:
+      summary: Update user
+  /api/admin/auth/users/{userId}/delete:
+    post:
+      summary: Delete user
+  /api/admin/auth/roles:
+    get:
+      summary: List roles
+    post:
+      summary: Create role
+  /api/admin/auth/roles/{role}:
+    post:
+      summary: Update role
+  /api/admin/auth/roles/{role}/delete:
+    post:
+      summary: Delete role
+
+  # ── Tenant Instances (Control Plane) ──
+  /api/control/instances:
+    get:
+      summary: List instances
+      parameters:
+        - in: query
+          name: state
+          schema: { type: string }
+        - in: query
+          name: tenantId
+          schema: { type: string }
+        - in: query
+          name: name
+          schema: { type: string }
+        - in: query
+          name: channel
+          schema: { type: string }
+    post:
+      summary: Create instance
+  /api/control/instances/batch-actions:
+    post:
+      summary: Batch instance operations (start/stop/rebuild/delete)
+  /api/control/instances/jobs/{requestId}:
+    get:
+      summary: Query async job status
+  /api/control/instances/{instanceId}:
+    get:
+      summary: Get instance
+  /api/control/instances/{instanceId}/start:
+    post:
+      summary: Start instance
+  /api/control/instances/{instanceId}/stop:
+    post:
+      summary: Stop instance
+  /api/control/instances/{instanceId}/rebuild:
+    post:
+      summary: Rebuild instance
+  /api/control/instances/{instanceId}/delete:
+    post:
+      summary: Delete instance
+
+  # ── Tenant Instances (BFF) ──
+  /api/admin/employees:
+    get:
+      summary: Employee list (BFF aggregated view)
+  /api/admin/employees/{id}:
+    get:
+      summary: Employee detail
+  /api/admin/employees/{id}/profile:
+    post:
+      summary: Update basic profile
+  /api/admin/employees/{id}/policy:
+    post:
+      summary: Update governance policy
+  /api/admin/employees/{id}/approval-policy:
+    post:
+      summary: Update approval policy
+  /api/admin/employees/{id}/policy-optimize:
+    post:
+      summary: LLM-optimize policy into System Prompt
+  /api/admin/employees/{id}/sync-identity:
+    post:
+      summary: Sync identity info
+  /api/admin/instances:
+    get:
+      summary: Instance list (BFF)
+  /api/admin/instances/{id}:
+    get:
+      summary: Instance detail (BFF)
+  /api/admin/instances/{id}/start:
+    post:
+      summary: Start instance (BFF)
+  /api/admin/instances/{id}/stop:
+    post:
+      summary: Stop instance (BFF)
+  /api/admin/instances/{id}/rebuild:
+    post:
+      summary: Rebuild instance (BFF)
+  /api/admin/instances/{id}/delete:
+    post:
+      summary: Delete instance (BFF)
+
+  # ── Shared Assets (Control Plane) ──
+  /api/control/assets/reports:
+    post:
+      summary: Report tenant asset (skill/tool/knowledge)
+    get:
+      summary: List tenant asset reports
+  /api/control/assets/reviews/pending:
+    get:
+      summary: List pending reviews for reviewer
+  /api/control/assets/reviews/dashboard:
+    get:
+      summary: Review workload dashboard with overdue/escalation metrics
+  /api/control/assets/reviews/escalate:
+    post:
+      summary: Run SLA-based review escalation
+  /api/control/assets/reviews/batch:
+    post:
+      summary: Batch review operations
+  /api/control/assets/reports/{reportId}/reviews:
+    get:
+      summary: List review history of report
+    post:
+      summary: Submit review decision with opinion
+  /api/control/assets/reports/{reportId}/approve:
+    post:
+      summary: Approve asset report and publish shared asset
+  /api/control/assets/reports/{reportId}/reject:
+    post:
+      summary: Reject asset report
+  /api/control/assets/shared:
+    get:
+      summary: List shared assets by type
+  /api/control/assets/bindings:
+    post:
+      summary: Bind shared asset to tenant
+    get:
+      summary: List asset bindings by type
+  /api/control/assets/bindings/batch:
+    post:
+      summary: Batch bind shared assets
+
+  # ── Skills (Control Plane) ──
+  /api/control/skills/reports:
+    post:
+      summary: Report skill from tenant runtime
+    get:
+      summary: List skill reports
+  /api/control/skills/reports/{reportId}/approve:
+    post:
+      summary: Approve skill report and publish shared skill
+  /api/control/skills/reports/{reportId}/reject:
+    post:
+      summary: Reject skill report
+  /api/control/skills/shared:
+    get:
+      summary: List shared skills
+  /api/control/skills/bindings:
+    post:
+      summary: Bind shared skill to tenant
+    get:
+      summary: List bindings
+
+  # ── Skills (BFF) ──
+  /api/admin/skills:
+    get:
+      summary: Skill list
+  /api/admin/skills/{id}:
+    get:
+      summary: Skill detail
+    delete:
+      summary: Delete skill
+  /api/admin/skills/employees:
+    get:
+      summary: Skills-to-employees mapping
+  /api/admin/skills/{id}/link:
+    post:
+      summary: Link skill to employee
+  /api/admin/skills/{id}/unlink:
+    post:
+      summary: Unlink skill from employee
+  /api/admin/skills/export:
+    get:
+      summary: Export skills
+  /api/admin/skills/import:
+    post:
+      summary: Import skills
+
+  # ── Tools (BFF) ──
+  /api/admin/tools/mcp-services:
+    get:
+      summary: List MCP services
+    post:
+      summary: Create MCP service
+  /api/admin/tools/mcp-services/{id}:
+    post:
+      summary: Update MCP service
+  /api/admin/tools/mcp-services/{id}/check-health:
+    post:
+      summary: Health check
+  /api/admin/tools/mcp-services/{id}/delete:
+    post:
+      summary: Delete MCP service
+  /api/admin/tools/pending:
+    get:
+      summary: Pending approvals
+  /api/admin/tools/mcp-services/{id}/{action}:
+    post:
+      summary: Approval action (approve/reject/rollback/resubmit)
+
+  # ── Assets (BFF) ──
+  /api/admin/assets/{type}:
+    get:
+      summary: List assets by type
+  /api/admin/assets/{type}/{id}:
+    get:
+      summary: Asset detail
+  /api/admin/assets/{type}/reports:
+    post:
+      summary: Report asset
+  /api/admin/assets/{type}/{id}/{action}:
+    post:
+      summary: Asset action (approve/reject/publish etc.)
+
+  # ── OSS/Knowledge (BFF) ──
+  /api/admin/oss-findings:
+    get:
+      summary: OSS findings list
+  /api/admin/oss-cases:
+    get:
+      summary: OSS cases list
+  /api/admin/oss-cases/{id}:
+    get:
+      summary: OSS case detail
+  /api/admin/oss-cases/{id}/{action}:
+    post:
+      summary: OSS case action
+
+  # ── Runtime ──
+  /api/control/runtime/instances/{instanceId}/invoke:
+    post:
+      summary: Invoke tenant runtime through control-plane proxy
+
+  # ── Audits ──
+  /api/control/audits:
+    get:
+      summary: List audit logs with cursor pagination and incremental filters
+  /api/control/audits/export:
+    get:
+      summary: Export audit logs (json or ndjson) with incremental filters
+  /api/control/audits/trace/instances/{instanceId}:
+    get:
+      summary: Instance audit trace
+
+  # ── Matrix ──
+  /api/integrations/matrix/commands:
+    post:
+      summary: Receive matrix command webhook
+      parameters:
+        - in: header
+          name: x-matrix-webhook-secret
+          schema: { type: string }
+
+  # ── Documents ──
+  /api/documents:
+    get:
+      summary: List documents
+    post:
+      summary: Create document
+  /api/documents/{id}:
+    get:
+      summary: Get document
+    put:
+      summary: Update document
+    delete:
+      summary: Delete document
+  /api/documents/{id}/star:
+    patch:
+      summary: Toggle star/bookmark
+  /api/documents/{id}/submit-review:
+    post:
+      summary: Submit for review
+  /api/documents/{id}/approve:
+    post:
+      summary: Approve document
+  /api/documents/{id}/reject:
+    post:
+      summary: Reject document
+  /api/documents/{id}/publish:
+    post:
+      summary: Publish document
+  /api/documents/{id}/archive:
+    post:
+      summary: Archive document
+  /api/documents/{id}/versions:
+    get:
+      summary: List versions
+  /api/documents/versions/{versionId}/restore:
+    post:
+      summary: Restore version
+  /api/documents/{id}/permissions:
+    get:
+      summary: Get permissions
+    put:
+      summary: Update permissions
+
+  # ── Categories ──
+  /api/categories:
+    get:
+      summary: List categories
+    post:
+      summary: Create category
+  /api/categories/{id}:
+    get:
+      summary: Get category
+    put:
+      summary: Update category
+    delete:
+      summary: Delete category
+
+  # ── Knowledge Audits ──
+  /api/knowledge-audits:
+    get:
+      summary: Knowledge audit logs
+
+  # ── Uploads & Storage ──
+  /api/uploads:
+    post:
+      summary: Upload file
+  /api/uploads/{fileId}:
+    get:
+      summary: Download file
+  /api/storage/stats:
+    get:
+      summary: Storage statistics
+  /api/storage/departments:
+    get:
+      summary: Department storage distribution
+  /api/storage/large-files:
+    get:
+      summary: Large files list
+
+  # ── WeKnora ──
+  /api/weknora/knowledge-bases:
+    get:
+      summary: List knowledge bases
+  /api/weknora/search:
+    get:
+      summary: Knowledge search
+  /api/weknora/chat:
+    post:
+      summary: Knowledge Q&A
+  /api/weknora/sync-document:
+    post:
+      summary: Sync document to WeKnora
+
+  # ── Release Management ──
+  /api/control/release/preflight:
+    get:
+      summary: Release preflight check
+  /api/control/release/preflight/assert:
+    post:
+      summary: Preflight assertion
+
+  # ── Shared Agents (BFF) ──
+  /api/admin/agents/shared:
+    get:
+      summary: List shared agents
+  /api/admin/agents/shared/register:
+    post:
+      summary: Register shared agent
+  /api/admin/agents/shared/runtime-events:
+    post:
+      summary: Runtime event reporting
+  /api/admin/agents/shared/{id}:
+    post:
+      summary: Update agent
+  /api/admin/agents/shared/{id}/delete:
+    post:
+      summary: Delete agent
+  /api/admin/agents/shared/recommend:
+    get:
+      summary: Recommend agents
+  /api/admin/agents/shared/auto-bind/{employeeId}:
+    post:
+      summary: Auto-bind agent to employee
+
+  # ── Notifications (BFF) ──
+  /api/admin/notifications:
+    get:
+      summary: Notification list
+  /api/admin/push-channels:
+    get:
+      summary: Push channel list
+    post:
+      summary: Create push channel
+  /api/admin/push-channels/{id}/delete:
+    post:
+      summary: Delete push channel
+  /api/admin/push-channels/{id}/test:
+    post:
+      summary: Test push
+  /api/admin/matrix/channels:
+    get:
+      summary: Matrix channel list
+  /api/admin/matrix/status:
+    get:
+      summary: Matrix connection status
+  /api/admin/matrix/channels/{roomId}/bind-instance:
+    post:
+      summary: Bind channel to instance
+  /api/admin/matrix/channels/{roomId}/unbind:
+    post:
+      summary: Unbind channel
+
+  # ── Logs & Tasks (BFF) ──
+  /api/admin/logs:
+    get:
+      summary: Behavior logs
+  /api/admin/tasks:
+    get:
+      summary: Task list
+  /api/admin/tasks/{id}:
+    get:
+      summary: Task detail
+  /api/admin/tasks/{id}/rollback-report:
+    get:
+      summary: Rollback report
+  /api/admin/tasks/{id}/rollback-package:
+    get:
+      summary: Rollback package
+
+  # ── AI Gateway (BFF) ──
+  /api/admin/ai-gateway/providers:
+    get:
+      summary: Model provider list
+  /api/admin/ai-gateway/models:
+    get:
+      summary: Model list
+    post:
+      summary: Create model
+  /api/admin/ai-gateway/models/{id}:
+    get:
+      summary: Model detail
+  /api/admin/ai-gateway/models/{id}/toggle:
+    post:
+      summary: Toggle model enabled/disabled
+  /api/admin/ai-gateway/models/{id}/delete:
+    post:
+      summary: Delete model
+  /api/admin/ai-gateway/models/{id}/health-check:
+    post:
+      summary: Model health check
+  /api/admin/ai-gateway/models/{id}/health:
+    get:
+      summary: Model health status
+  /api/admin/ai-gateway/models/discover:
+    post:
+      summary: Auto-discover models from provider
+  /api/admin/ai-gateway/failover-chains:
+    get:
+      summary: Failover chain list
+    post:
+      summary: Create failover chain
+  /api/admin/ai-gateway/failover-chains/{id}:
+    delete:
+      summary: Delete failover chain
+  /api/admin/ai-gateway/stats:
+    get:
+      summary: Call statistics
+  /api/admin/ai-gateway/traces:
+    get:
+      summary: Trace list
+  /api/admin/ai-gateway/traces/{traceId}:
+    get:
+      summary: Trace detail
+  /api/admin/ai-gateway/costs:
+    get:
+      summary: Cost report
+  /api/admin/ai-gateway/budgets:
+    get:
+      summary: Budget list
+    post:
+      summary: Create budget
+  /api/admin/ai-gateway/budgets/{id}:
+    delete:
+      summary: Delete budget
+  /api/admin/ai-gateway/budget-status:
+    get:
+      summary: Budget execution status
+  /api/admin/ai-gateway/risk-rules:
+    get:
+      summary: Risk rule list
+    post:
+      summary: Create risk rule
+  /api/admin/ai-gateway/risk-rules/{ruleId}/toggle:
+    post:
+      summary: Toggle rule
+  /api/admin/ai-gateway/risk-rules/{ruleId}/delete:
+    post:
+      summary: Delete rule
+  /api/admin/ai-gateway/risk-rules/test:
+    post:
+      summary: Test rule
+  /api/admin/ai-gateway/risk-rules/snapshots:
+    get:
+      summary: Rule snapshot list
+  /api/admin/ai-gateway/risk-rules/snapshots/{id}/restore:
+    post:
+      summary: Restore snapshot
+  /api/admin/ai-gateway/risk-rules/batch:
+    post:
+      summary: Batch rule operations
+  /api/admin/ai-gateway/risk-rules/export:
+    get:
+      summary: Export rules
+  /api/admin/ai-gateway/risk-rules/import:
+    post:
+      summary: Import rules
+  /api/admin/ai-gateway/decisions:
+    get:
+      summary: Decision list
+    post:
+      summary: Create decision
+  /api/admin/ai-gateway/decisions/{decisionId}:
+    get:
+      summary: Decision detail
+  /api/admin/ai-gateway/decisions/{decisionId}/respond:
+    post:
+      summary: Respond to decision
+  /api/admin/ai-gateway/decisions/trigger:
+    post:
+      summary: Trigger decision
+
+  # ── Platform Operations (BFF) ──
+  /api/admin/overview:
+    get:
+      summary: Operations overview (instance/asset/audit/permission stats)
+  /api/admin/runtime-status:
+    get:
+      summary: Runtime status
+  /api/admin/bootstrap-status:
+    get:
+      summary: Bootstrap status
+  /api/framework:
+    get:
+      summary: Framework info
+  /api/admin/runtime/openclaw-config:
+    get:
+      summary: Current OpenClaw config
+    post:
+      summary: Update OpenClaw config
+  /api/admin/runtime/openclaw-config/snapshots:
+    get:
+      summary: Config snapshot list
+  /api/admin/runtime/openclaw-config/snapshots/{id}/restore:
+    post:
+      summary: Restore config snapshot
+  /api/admin/runtime/openclaw-config/snapshots/{id1}/diff/{id2}:
+    get:
+      summary: Config snapshot diff
+  /api/admin/runtime/skill-sedimentation-policy:
+    get:
+      summary: Skill sedimentation policy
+    post:
+      summary: Update sedimentation policy
+  /api/admin/analytics/log-stats:
+    get:
+      summary: Log statistics
+  /api/admin/analytics/agent-performance:
+    get:
+      summary: Agent performance metrics
+  /api/admin/analytics/alerts:
+    get:
+      summary: Alert list
+  /api/admin/analytics/health:
+    get:
+      summary: Health metrics
+  /api/admin/analytics/dau-trend:
+    get:
+      summary: DAU trend
+  /api/admin/analytics/latency-trend:
+    get:
+      summary: Latency trend

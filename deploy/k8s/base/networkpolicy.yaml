@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dcf-light-bot-allow-ingress
+  namespace: dcf-system
+  labels:
+    app.kubernetes.io/name: dcf-light-bot
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dcf-light-bot
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: dcf-light-bot
+      ports:
+        - protocol: TCP
+          port: 3002
+        - protocol: TCP
+          port: 80

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dcf-system
+  labels:
+    app.kubernetes.io/name: dcf-light-bot
+    app.kubernetes.io/part-of: dcf-platform

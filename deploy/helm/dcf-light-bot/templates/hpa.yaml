@@ -1,0 +1,47 @@
+{{- if .Values.server.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "dcf-light-bot.fullname" . }}-server
+  namespace: {{ include "dcf-light-bot.namespace" . }}
+  labels:
+    {{- include "dcf-light-bot.serverLabels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "dcf-light-bot.fullname" . }}-server
+  minReplicas: {{ .Values.server.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.server.autoscaling.cpuAverageUtilization }}
+{{- end }}
+---
+{{- if .Values.client.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "dcf-light-bot.fullname" . }}-client
+  namespace: {{ include "dcf-light-bot.namespace" . }}
+  labels:
+    {{- include "dcf-light-bot.clientLabels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "dcf-light-bot.fullname" . }}-client
+  minReplicas: {{ .Values.client.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.client.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.client.autoscaling.cpuAverageUtilization }}
+{{- end }}

@@ -1,0 +1,5 @@
+npx lint-staged
+
+cd client-suite/apps/web && npx tsc --noEmit && cd ../../..
+
+cd client-suite && npx vitest run --reporter=dot

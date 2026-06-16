@@ -1,0 +1,22 @@
+{
+  "name": "dcf-client-suite",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run -ws build",
+    "dev:web": "npm run -w @dcf/web dev",
+    "typecheck": "npm run -ws typecheck",
+    "lint": "npm run -w @dcf/web lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "typescript-eslint": "^8.59.3"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "default_server_config": {
+    "m.homeserver": {
+      "base_url": "http://127.0.0.1:8008",
+      "server_name": "localhost"
+    }
+  },
+  "brand": "DCF Workspace",
+  "default_theme": "light",
+  "default_language": "zh-hans",
+  "default_country_code": "CN",
+  "login_for_welcome": true,
+  "sso_immediate_redirect": false,
+  "setting_defaults": {
+    "language": "zh-hans",
+    "feature_group_calls": true
+  },
+  "disable_custom_urls": true,
+  "disable_guests": true,
+  "disable_login_language_selector": true,
+  "features": {
+    "feature_group_calls": true,
+    "feature_video_rooms": true
+  },
+  "element_call": {
+    "url": "https://call.element.io",
+    "use_exclusively": false,
+    "participant_limit": 8,
+    "brand": "Element Call"
+  },
+  "jitsi": {
+    "preferred_domain": "meet.element.io",
+    "use_jwt": false
+  },
+  "voip": {
+    "obey_asserted_identity": false
+  },
+  "dcf_login": {
+    "sms_enabled": false,
+    "sms_send_url": "",
+    "sms_verify_login_url": "",
+    "sso_url": ""
+  },
+  "dcf": {
+    "e2ee_enabled": false,
+    "factory_room_alias": "#dcf-factory:localhost"
+  },
+  "show_labs_settings": true,
+  "branding": {
+    "welcome_background_url": "http://127.0.0.1:8081/dcf-login-bg.svg",
+    "auth_header_logo_url": "http://127.0.0.1:8081/dcf-login-logo.svg",
+    "auth_footer": "",
+    "auth_footer_links": [],
+    "welcomeBackgroundUrl": "http://127.0.0.1:8081/dcf-login-bg.svg",
+    "authHeaderLogoUrl": "http://127.0.0.1:8081/dcf-login-logo.svg",
+    "authFooter": "",
+    "authFooterLinks": []
+  }
+}

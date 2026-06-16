@@ -1,0 +1,25 @@
+{
+  "name": "@dcf/ui-tokens",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tailwind-preset": "./src/tailwind-preset.ts",
+    "./colors": "./src/colors.ts",
+    "./shadows": "./src/shadows.ts",
+    "./glass": "./src/glass.ts",
+    "./typography": "./src/typography.ts",
+    "./radius": "./src/radius.ts",
+    "./spacing": "./src/spacing.ts"
+  },
+  "scripts": {
+    "build": "true",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="100%" stop-color="#D63031"/>
+    </radialGradient>
+  </defs>
+  <circle cx="60" cy="60" r="58" fill="url(#bg)"/>
+  <!-- Body -->
+  <ellipse cx="60" cy="68" rx="28" ry="24" fill="#E74C3C"/>
+  <!-- Eyes -->
+  <circle cx="48" cy="58" r="8" fill="white"/>
+  <circle cx="72" cy="58" r="8" fill="white"/>
+  <circle cx="50" cy="57" r="4" fill="#2C3E50"/>
+  <circle cx="74" cy="57" r="4" fill="#2C3E50"/>
+  <circle cx="51" cy="55.5" r="1.5" fill="white"/>
+  <circle cx="75" cy="55.5" r="1.5" fill="white"/>
+  <!-- Smile -->
+  <path d="M48 72 Q60 82 72 72" fill="none" stroke="#2C3E50" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Claws -->
+  <ellipse cx="22" cy="65" rx="10" ry="8" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5"/>
+  <ellipse cx="98" cy="65" rx="10" ry="8" fill="#E74C3C" stroke="#C0392B" stroke-width="1.5"/>
+  <!-- Eye stalks -->
+  <rect x="44" y="42" width="4" height="10" rx="2" fill="#E74C3C"/>
+  <rect x="72" y="42" width="4" height="10" rx="2" fill="#E74C3C"/>
+  <circle cx="46" cy="40" r="5" fill="#FF6B6B"/>
+  <circle cx="74" cy="40" r="5" fill="#FF6B6B"/>
+</svg>

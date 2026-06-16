@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dcf-light-bot
+  namespace: dcf-system
+  labels:
+    app.kubernetes.io/name: dcf-light-bot
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/websocket-services: dcf-server
+spec:
+  tls:
+    - hosts:
+        - dcf.example.com
+      secretName: dcf-light-bot-tls
+  rules:
+    - host: dcf.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: dcf-server
+                port:
+                  number: 3002
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: dcf-server
+                port:
+                  number: 3002
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: dcf-server
+                port:
+                  number: 3002
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dcf-client
+                port:
+                  number: 80

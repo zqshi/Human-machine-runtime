@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dcf-server.fullname" . }}-config
+  labels:
+    {{- include "dcf-server.labels" . | nindent 4 }}
+data:
+  {{- range $key, $val := .Values.env }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+  {{- with .Values.gateway }}
+  {{- if .platformBe }}
+  PLATFORM_BE_API_URL: {{ .platformBe | quote }}
+  {{- end }}
+  {{- if .platformBeCallbackUrl }}
+  PLATFORM_BE_CALLBACK_URL: {{ .platformBeCallbackUrl | quote }}
+  {{- end }}
+  {{- if .clawhub }}
+  CLAWHUB_API_URL: {{ .clawhub | quote }}
+  {{- end }}
+  {{- if .portal }}
+  PORTAL_API_URL: {{ .portal | quote }}
+  {{- end }}
+  {{- if .xspace }}
+  XSPACE_API_URL: {{ .xspace | quote }}
+  {{- end }}
+  {{- if .clawFarm }}
+  CLAW_FARM_API_URL: {{ .clawFarm | quote }}
+  {{- end }}
+  {{- if .clawFarmWsUrl }}
+  CLAW_FARM_WS_URL: {{ .clawFarmWsUrl | quote }}
+  {{- end }}
+  {{- if .litellm }}
+  LITELLM_BASE_URL: {{ .litellm | quote }}
+  {{- end }}
+  {{- if .matrix.homeserverUrl }}
+  MATRIX_HOMESERVER_URL: {{ .matrix.homeserverUrl | quote }}
+  {{- end }}
+  {{- if .matrix.botUserId }}
+  MATRIX_BOT_USER_ID: {{ .matrix.botUserId | quote }}
+  {{- end }}
+  {{- if .weknora.apiUrl }}
+  WEKNORA_API_URL: {{ .weknora.apiUrl | quote }}
+  {{- end }}
+  {{- if .cors.origins }}
+  CORS_ORIGINS: {{ .cors.origins | quote }}
+  {{- end }}
+  {{- end }}

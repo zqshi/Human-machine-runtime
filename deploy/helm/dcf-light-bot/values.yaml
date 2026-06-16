@@ -1,0 +1,140 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: true
+  name: dcf-system
+
+# ─── Server (Node.js Hono + TypeScript) ───────────────────────────
+server:
+  replicaCount: 2
+  image:
+    # 通用镜像仓库占位，部署时替换为企业自有 registry
+    repository: ghcr.io/your-org/dcf-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3002
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    cpuAverageUtilization: 70
+  probes:
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    liveness:
+      path: /health
+      initialDelaySeconds: 15
+      periodSeconds: 15
+
+# ─── Client (Nginx SPA) ────────────────────────────────────────────
+client:
+  replicaCount: 2
+  image:
+    # 通用镜像仓库占位，部署时替换为企业自有 registry
+    repository: ghcr.io/your-org/dcf-client
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuAverageUtilization: 80
+
+# ─── Ingress ───────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/websocket-services: dcf-light-bot-server
+  hosts:
+    - host: dcf.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          backend: server
+        - path: /ws
+          pathType: Prefix
+          backend: server
+        - path: /health
+          pathType: Prefix
+          backend: server
+        - path: /
+          pathType: Prefix
+          backend: client
+  tls:
+    - secretName: dcf-light-bot-tls
+      hosts:
+        - dcf.example.com
+
+# ─── Config (非敏感环境变量) ──────────────────────────────────────
+config:
+  NODE_ENV: "production"
+  PORT: "3002"
+  AUTH_DEFAULT_PROVIDER: "platform-be-proxy"
+  CORS_ORIGINS: "https://dcf.example.com"
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX: "200"
+  # Gateway — 内网微服务地址（通用占位，部署时替换为企业自有 service 名/namespace）
+  PLATFORM_BE_API_URL: "http://platform-be:8000"
+  CLAWHUB_API_URL: "http://clawhub:3000"
+  PORTAL_API_URL: "http://portal-backend:3000"
+  CLAW_FARM_API_URL: "http://claw-farm:8080"
+  XSPACE_API_URL: "http://xspace-agent:8000/xspace"
+  LITELLM_BASE_URL: "http://litellm:4000"
+  GATEWAY_RETRY_COUNT: "3"
+  GATEWAY_CB_THRESHOLD: "5"
+  GATEWAY_TIMEOUT_MS: "10000"
+
+# ─── Secrets (敏感配置) ───────────────────────────────────────────
+secrets:
+  create: true
+  name: ""
+  data:
+    DATABASE_URL: "replace-me"
+    JWT_SECRET: "replace-me"
+    CREDENTIAL_ENCRYPTION_KEY: "replace-me"
+    LITELLM_API_KEY: "replace-me"
+    OIDC_ISSUER: ""
+    OIDC_CLIENT_ID: ""
+    OIDC_CLIENT_SECRET: ""
+
+# ─── Image Pull ────────────────────────────────────────────────────
+imagePullSecrets:
+  # 私有仓库拉取凭证，部署时替换为企业自有 imagePullSecret 名称（或置空使用公开镜像）
+  - name: your-registry-key
+
+# ─── PDB ───────────────────────────────────────────────────────────
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# ─── Network Policy ────────────────────────────────────────────────
+networkPolicy:
+  enabled: true
+  ingress:
+    allowedNamespaces:
+      - ingress-nginx

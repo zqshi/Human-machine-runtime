@@ -1,0 +1,58 @@
+{
+  "name": "dcf-light-bot",
+  "version": "2.0.0",
+  "description": "DCF — 数字同事框架 (Digital Colleague Framework)",
+  "private": true,
+  "scripts": {
+    "dev": "cd server && npm run dev",
+    "build": "cd server && npm run build",
+    "start": "cd server && npm start",
+    "test": "cd server && npm test",
+    "test:watch": "cd server && npm run test:watch",
+    "lint": "cd server && npx eslint src/",
+    "type-check": "cd server && npm run type-check",
+    "db:setup": "cd server && npm run db:setup",
+    "db:migrate": "cd server && npm run db:migrate",
+    "db:seed": "cd server && npm run db:seed",
+    "verify:backend": "cd server && npx tsc --noEmit && npx vitest run",
+    "verify:frontend": "cd client-suite/apps/web && npx tsc --noEmit && cd ../../.. && cd client-suite && npx vitest run",
+    "verify": "npm run verify:backend && npm run verify:frontend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "prepare": "husky",
+    "lint:client": "cd client-suite/apps/web && npx eslint src/",
+    "lint:all": "npm run lint && npm run lint:client"
+  },
+  "lint-staged": {
+    "server/src/**/*.ts": [
+      "prettier --write"
+    ],
+    "client-suite/**/*.{ts,tsx}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "dcf",
+    "digital-colleague",
+    "agent-platform",
+    "multi-tenant",
+    "matrix"
+  ],
+  "author": "秋秋 (Zhang Qiushi)",
+  "license": "MIT",
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.3",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zqshi/dcf-light-bot.git"
+  }
+}

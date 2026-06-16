@@ -1,0 +1,13 @@
+[project]
+name = "dcf-platform"
+version = "0.2.0"
+description = "DCF Platform — Enterprise Agent OS"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = [
+    "service/dcf-server",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

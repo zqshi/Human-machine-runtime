@@ -1,0 +1,26 @@
+replicaCount: 2
+
+env:
+  NODE_ENV: production
+  AUTH_DEFAULT_PROVIDER: platform-be-proxy
+  AUTH_ALLOW_LOCAL_FALLBACK: "true"
+  AUTH_AUTO_REGISTER: "true"
+
+# gateway 端点：以下均为通用占位，部署时替换为企业自有服务地址。
+# - platformBe / platformBeCallbackUrl：企业 SSO（OIDC/SAML）后端及回调地址
+# - clawhub / portal / xspace / clawFarm / litellm：内网各微服务 ClusterDNS 或内网地址
+# - matrix：Conduit/Dendrite 等 Matrix homeserver，按企业实际部署填写
+gateway:
+  platformBe: "https://sso.your-domain.example.com"
+  platformBeCallbackUrl: "https://dcf.your-domain.example.com/api/auth/sso/callback"
+  clawhub: "http://clawhub:3000"
+  portal: "http://portal-backend:3000"
+  xspace: "http://xspace-agent:8000"
+  clawFarm: "http://claw-farm:8080"
+  clawFarmWsUrl: "ws://claw-farm:8080/ws"
+  litellm: "http://litellm:4000"
+  matrix:
+    homeserverUrl: "http://conduit:6167"
+    botUserId: "@dcf-bot:your-domain.example.com"
+  cors:
+    origins: "https://dcf.your-domain.example.com"

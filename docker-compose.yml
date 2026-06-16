@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      # 标准端口映射；若本机 5432 已被占用，改为 "5433:5432" 等避免冲突
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: dcf
+      POSTGRES_PASSWORD: dcf
+      POSTGRES_DB: dcf
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-weknora-db.sh:/docker-entrypoint-initdb.d/init-weknora-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dcf"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  weknora:
+    image: weknora/weknora:latest
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://dcf:dcf@postgres:5432/weknora
+      REDIS_URL: redis://redis:6379/1
+      DISABLE_REGISTRATION: "false"
+      SECRET_KEY: weknora-dev-secret-change-in-production
+    profiles:
+      - weknora
+      - full
+
+  conduit:
+    image: matrixconduit/matrix-conduit:latest
+    ports:
+      - "6167:6167"
+    environment:
+      CONDUIT_CONFIG: /etc/conduit.toml
+    volumes:
+      - conduit_data:/var/lib/matrix-conduit
+      - ./runtime/conduit/conduit.toml:/etc/conduit.toml:ro
+
+  dcf-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: "3002"
+      DATABASE_URL: postgresql://dcf:dcf@postgres:5432/dcf
+      JWT_SECRET: dcf-dev-secret-change-in-production
+      CREDENTIAL_ENCRYPTION_KEY: dcf-dev-encryption-key-change-me!!
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
+      AUTH_DEFAULT_PROVIDER: local
+      MATRIX_HOMESERVER_URL: http://conduit:6167
+      MATRIX_BOT_USER_ID: "@dcf-bot:localhost"
+      LITELLM_BASE_URL: ""
+      CLAWHUB_API_URL: ""
+      PORTAL_API_URL: ""
+      XSPACE_API_URL: ""
+      CLAW_FARM_API_URL: ""
+      PLATFORM_BE_API_URL: ""
+      WEKNORA_API_URL: http://weknora:8080
+      WEKNORA_ENABLED: "${WEKNORA_ENABLED:-}"
+      WEKNORA_ADMIN_API_KEY: "${WEKNORA_ADMIN_API_KEY:-}"
+
+  dcf-web:
+    build:
+      context: ./client-suite
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - dcf-server
+    profiles:
+      - full
+
+volumes:
+  pgdata:
+  redis_data:
+  conduit_data:

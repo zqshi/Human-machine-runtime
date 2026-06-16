@@ -1,0 +1,346 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   Design Tokens as CSS custom properties (from @dcf/ui-tokens)
+   RGB-channel vars (space-separated) for Tailwind opacity support
+   ================================================================ */
+:root {
+  /* --- RGB channels (space-separated) for Tailwind <alpha-value> --- */
+  --c-primary: 0 122 255;
+  --c-primary-light: 51 149 255;
+  --c-primary-dark: 0 99 209;
+  --c-success: 52 199 89;
+  --c-warning: 255 149 0;
+  --c-error: 255 59 48;
+  --c-secondary: 142 142 147;
+  --c-text-primary: 29 29 31;
+  --c-text-secondary: 134 134 139;
+  --c-text-muted: 174 174 178;
+
+  /* --- Composite / non-RGB tokens --- */
+  --bg-light: #F5F5F7;
+  --bg-white: #FFFFFF;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 122, 255, 0.08);
+  --panel-bg: rgba(255, 255, 255, 0.75);
+  --bg-card: rgba(255, 255, 255, 0.85);
+
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-light: rgba(0, 0, 0, 0.04);
+  --border-card: rgba(0, 0, 0, 0.1);
+
+  --glass-sidebar-bg: rgba(249, 249, 249, 0.8);
+  --glass-blur: blur(20px);
+  --glass-popover-bg: rgba(255, 255, 255, 0.85);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.04);
+
+  --dock-width: 80px;
+  --sidebar-width: 320px;
+  --drawer-width: clamp(360px, 55%, 900px);
+
+  --c-purple: 88 86 214;
+  --color-surface-dark: #1C1C1E;
+  --color-fill-tertiary: rgba(0, 0, 0, 0.04);
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+/* ================================================================
+   OpenClaw dark mode — variable overrides
+   ================================================================ */
+[data-mode="openclaw"] {
+  --c-primary: 0 212 184;
+  --c-primary-light: 51 228 204;
+  --c-primary-dark: 0 170 147;
+  --c-text-primary: 241 245 249;
+  --c-text-secondary: 203 213 225;
+  --c-text-muted: 100 116 139;
+  --c-success: 52 199 89;
+  --c-warning: 255 149 0;
+  --c-error: 255 69 58;
+  --c-secondary: 148 163 184;
+
+  --bg-light: #0A0F1E;
+  --bg-white: #0F1629;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(0, 212, 184, 0.12);
+  --panel-bg: rgba(10, 15, 30, 0.7);
+  --bg-card: rgba(255, 255, 255, 0.05);
+
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
+  --border-card: rgba(255, 255, 255, 0.06);
+
+  --glass-sidebar-bg: rgba(10, 15, 30, 0.85);
+  --glass-popover-bg: rgba(15, 22, 41, 0.92);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.4);
+
+  --c-purple: 130 120 255;
+  --color-surface-dark: #1a1f35;
+  --color-fill-tertiary: rgba(255, 255, 255, 0.05);
+
+  /* Block tokens — used by OpenClaw MessageBlock renderers */
+  --block-border: rgba(255, 255, 255, 0.1);
+  --block-bg: rgba(255, 255, 255, 0.03);
+  --block-bg-hover: rgba(255, 255, 255, 0.06);
+  --block-text: #e2e8f0;
+  --block-text-heading: #f1f5f9;
+  --block-text-muted: #64748b;
+  --block-progress: #3b82f6;
+  --block-progress-track: rgba(255, 255, 255, 0.1);
+}
+
+/* ================================================================
+   Base
+   ================================================================ */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body, #root { height: 100%; margin: 0; }
+  html, #root {
+    background: var(--bg-light);
+  }
+  body {
+    font-family: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 13px;
+    color: rgb(var(--c-text-primary));
+    background: var(--bg-light);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Focus-visible ring for keyboard accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ================================================================
+   Custom scrollbar (Apple-style thin)
+   ================================================================ */
+@layer components {
+  .dcf-scrollbar::-webkit-scrollbar { width: 5px; }
+  .dcf-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .dcf-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  .dcf-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.18);
+  }
+}
+
+/* ================================================================
+   Login card entrance animation
+   ================================================================ */
+@keyframes loginCardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.login-card-in {
+  animation: loginCardIn 0.5s ease-out;
+}
+
+/* ================================================================
+   Fade-in animation for messages
+   ================================================================ */
+@keyframes dcf-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dcf-fade-in {
+  animation: dcf-fade-in 0.2s ease-out;
+}
+
+/* ================================================================
+   Chat bubble border-radius (stitch alignment)
+   ================================================================ */
+.chat-bubble-received {
+  border-radius: 18px 18px 18px 4px;
+}
+.chat-bubble-sent {
+  border-radius: 18px 18px 4px 18px;
+}
+
+/* ================================================================
+   Slide-in-right animation (for drawers)
+   ================================================================ */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ================================================================
+   OpenClaw dark-mode scrollbar override
+   ================================================================ */
+[data-mode="openclaw"] .dcf-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+[data-mode="openclaw"] .dcf-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+[data-mode="openclaw"] * {
+  overscroll-behavior: none;
+}
+
+/* ================================================================
+   Material Symbols — variation settings (font-face in index.html)
+   ================================================================ */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ================================================================
+   Tiptap (ProseMirror) editor theme
+   ================================================================ */
+.tiptap-editor .tiptap {
+  min-height: 500px;
+  padding: 0;
+}
+.ProseMirror {
+  color: rgb(var(--c-text-primary));
+  caret-color: rgb(var(--c-primary));
+  min-height: 500px;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.ProseMirror:focus {
+  outline: none;
+}
+.ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+.ProseMirror h1 {
+  font-size: 1.75em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.ProseMirror h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.25em;
+  margin-bottom: 0.4em;
+}
+.ProseMirror h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.ProseMirror p {
+  margin-bottom: 0.5em;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+.ProseMirror ul {
+  list-style-type: disc;
+}
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+.ProseMirror li {
+  margin-bottom: 0.25em;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid rgb(var(--c-primary) / 0.3);
+  padding-left: 1em;
+  color: rgb(var(--c-text-secondary));
+  font-style: italic;
+  margin: 0.75em 0;
+}
+.ProseMirror code {
+  background: rgb(var(--c-primary) / 0.08);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'SF Mono', monospace;
+  font-size: 0.9em;
+}
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.ProseMirror a {
+  color: rgb(var(--c-primary));
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: rgb(var(--c-text-muted));
+  content: attr(data-placeholder);
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
+
+/* ================================================================
+   CodeMirror 6 theme integration
+   ================================================================ */
+.cm-editor {
+  font-family: 'Fira Code', 'SF Mono', 'Menlo', monospace;
+  height: 100%;
+}
+.cm-editor .cm-scroller {
+  overflow: auto;
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+[data-mode="openclaw"] .cm-editor {
+  background: var(--bg-white);
+}
+
+/* ================================================================
+   iOS-style card expand animation
+   ================================================================ */
+@keyframes cardExpandIn {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.card-expand-in {
+  animation: cardExpandIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ================================================================
+   Data modal animations
+   ================================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

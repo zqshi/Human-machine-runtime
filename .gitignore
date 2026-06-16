@@ -1,0 +1,97 @@
+# 依赖
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 构建输出
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+data/
+*.sqlite
+*.sqlite3
+*.db
+
+# 上传文件
+uploads/
+tmp/
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Claude Code 本地配置
+.claude/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 依赖锁定文件（可选，根据团队策略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# 临时文件
+*.tmp
+*.temp
+
+# 证书和密钥
+*.pem
+*.key
+*.crt
+
+# Docker (允许 Dockerfile 和 compose 文件提交，CI 需要)
+.dockerignore
+
+# Kubernetes
+k8s/*.yaml
+k8s/*.yml
+
+# 监控数据
+prometheus-data/
+grafana-data/
+
+# 文档生成
+docs/_build/
+docs/_site/
+
+# 其他
+.cache/
+.parcel-cache/
+
+# local stack runtime artifacts
+runtime/

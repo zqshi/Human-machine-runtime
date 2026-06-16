@@ -1,0 +1,94 @@
+replicaCount: 1
+
+image:
+  # 通用镜像仓库占位，部署时替换为企业自有 registry（如 ghcr.io/your-org/dcf-server）
+  repository: ghcr.io/your-org/dcf-server
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 3002
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: your-domain.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3002
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 3002
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+env:
+  NODE_ENV: production
+  PORT: "3002"
+  AUTH_DEFAULT_PROVIDER: platform-be-proxy
+  AUTH_ALLOW_LOCAL_FALLBACK: "true"
+  AUTH_AUTO_REGISTER: "true"
+  JWT_EXPIRES_IN: 8h
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX: "100"
+
+secrets:
+  DATABASE_URL: ""
+  JWT_SECRET: ""
+  CREDENTIAL_ENCRYPTION_KEY: ""
+  PLATFORM_BE_CLIENT_ID: ""
+  PLATFORM_BE_CLIENT_SECRET: ""
+  LITELLM_API_KEY: ""
+  CLAWHUB_HMAC_SECRET: ""
+
+gateway:
+  platformBe: ""
+  platformBeCallbackUrl: ""
+  clawhub: ""
+  portal: ""
+  xspace: ""
+  clawFarm: ""
+  clawFarmWsUrl: ""
+  litellm: ""
+  matrix:
+    homeserverUrl: ""
+    botUserId: ""
+    botAccessToken: ""
+  weknora:
+    apiUrl: ""
+    jwtSecret: ""
+  cors:
+    origins: ""
