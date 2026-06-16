@@ -4,15 +4,6 @@ import { FilterBar } from '../../components/ui/FilterBar';
 import { StatCard } from '../../components/ui/StatCard';
 import { Icon } from '../../components/ui/Icon';
 
-type LogScope = 'all' | 'admin' | 'service' | 'agent';
-
-const SCOPE_LABELS: Record<LogScope, string> = {
-  all: '全部',
-  admin: '管理',
-  service: '服务',
-  agent: 'Agent',
-};
-
 const ACTION_SUMMARIES: Record<string, string> = {
   'employee.create': '创建员工',
   'employee.update': '更新员工',
@@ -59,8 +50,8 @@ function summarizeAction(action: string): string {
   return ACTION_SUMMARIES[action] || action;
 }
 
-function getFilterDefs(scope: LogScope) {
-  const base = [
+function getFilterDefs() {
+  return [
     { key: 'keyword', label: '关键词', type: 'text' as const, placeholder: '搜索...' },
     {
       key: 'level',
@@ -72,17 +63,9 @@ function getFilterDefs(scope: LogScope) {
         { value: 'info', label: '信息' },
       ],
     },
+    { key: 'actor', label: '操作者', type: 'text' as const, placeholder: '用户名' },
+    { key: 'operation', label: '操作', type: 'text' as const, placeholder: '事件类型' },
   ];
-  if (scope === 'admin' || scope === 'all') {
-    base.push(
-      { key: 'actor', label: '操作者', type: 'text' as const, placeholder: '用户名' },
-      { key: 'operation', label: '操作', type: 'text' as const, placeholder: '事件类型' }
-    );
-  }
-  if (scope === 'agent' || scope === 'all') {
-    base.push({ key: 'trace', label: 'Trace', type: 'text' as const, placeholder: 'Trace ID' });
-  }
-  return base;
 }
 
 function resolveWho(log: Record<string, unknown>): string {
@@ -193,33 +176,31 @@ function LogDetail({ log }: { log: Record<string, unknown> }) {
 
 export function LogsSection() {
   const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
-  const [scope, setScope] = useState<LogScope>('all');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // scope/filters 变化时在渲染阶段标记 loading（避免 useEffect 中同步 setState）
-  const [prevDeps, setPrevDeps] = useState({ scope, filters });
-  if (scope !== prevDeps.scope || filters !== prevDeps.filters) {
-    setPrevDeps({ scope, filters });
+  // filters 变化时在渲染阶段标记 loading（避免 useEffect 中同步 setState）
+  const [prevDeps, setPrevDeps] = useState({ filters });
+  if (filters !== prevDeps.filters) {
+    setPrevDeps({ filters });
     setLoading(true);
   }
 
   const fetchLogs = useCallback(() => {
     adminLogsApi
       .list({
-        scope: scope === 'all' ? undefined : scope,
+        scope: 'admin',
         limit: 200,
         keyword: filters.keyword || undefined,
         level: filters.level || undefined,
         actor: filters.actor || undefined,
         operation: filters.operation || undefined,
-        trace: filters.trace || undefined,
       })
       .then((r) => setLogs(Array.isArray(r) ? r : []))
       .catch(() => setLogs([]))
       .finally(() => setLoading(false));
-  }, [scope, filters]);
+  }, [filters]);
 
   useEffect(fetchLogs, [fetchLogs]);
 
@@ -275,22 +256,9 @@ export function LogsSection() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-            {(['all', 'admin', 'service', 'agent'] as LogScope[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setScope(s);
-                  setFilters({});
-                }}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${scope === s ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
-              >
-                {SCOPE_LABELS[s]}
-              </button>
-            ))}
-          </div>
+          <div className="flex items-center px-1 text-xs font-medium text-gray-700">平台操作日志</div>
           <FilterBar
-            filters={getFilterDefs(scope)}
+            filters={getFilterDefs()}
             values={filters}
             onChange={(k, v) => setFilters((p) => ({ ...p, [k]: v }))}
             onSearch={load}
