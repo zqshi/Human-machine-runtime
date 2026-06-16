@@ -1,16 +1,16 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: dcf-server
-  namespace: dcf-system
+  name: hmr-server
+  namespace: hmr-system
   labels:
-    app.kubernetes.io/name: dcf-light-bot
+    app.kubernetes.io/name: human-machine-runtime
     app.kubernetes.io/component: server
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: dcf-server
+    name: hmr-server
   minReplicas: 2
   maxReplicas: 8
   metrics:
@@ -24,16 +24,16 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: dcf-client
-  namespace: dcf-system
+  name: hmr-client
+  namespace: hmr-system
   labels:
-    app.kubernetes.io/name: dcf-light-bot
+    app.kubernetes.io/name: human-machine-runtime
     app.kubernetes.io/component: client
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: dcf-client
+    name: hmr-client
   minReplicas: 2
   maxReplicas: 5
   metrics:

@@ -1,13 +1,15 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Phase 1：管理控制面后端
 
 ## 目标
-dcf-admin-be 提供租户管理员所需的全部 API，管理前端重写为 React。
+hmr-admin-be 提供租户管理员所需的全部 API，管理前端重写为 React。
 
-## 1.1 dcf-admin-be 服务设计
+## 1.1 hmr-admin-be 服务设计
 
 ### 目录结构
 ```
-service/dcf-admin-be/
+service/hmr-admin-be/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                    # FastAPI app + lifespan + CORS
@@ -140,7 +142,7 @@ export class AdminApiClient {
 ```
 
 ## 1.3 验证标准
-- [ ] dcf-admin-be 全部 API 可通过 httpie/curl 调用
+- [ ] hmr-admin-be 全部 API 可通过 httpie/curl 调用
 - [ ] 管理前端 AdminPage 所有 Section 渲染正常
 - [ ] 创建/编辑/删除数字员工全流程通过
 - [ ] 从 clawhub 获取技能列表成功（联调）

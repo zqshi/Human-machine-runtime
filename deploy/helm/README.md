@@ -1,6 +1,6 @@
 # Helm Deploy Guide
 
-Chart path: `deploy/helm/dcf-light-bot`
+Chart path: `deploy/helm/human-machine-runtime`
 
 ## Validate
 1. Ensure `helm` is installed (`helm version`)
@@ -13,10 +13,10 @@ Chart path: `deploy/helm/dcf-light-bot`
 
 ## Install/Upgrade
 ```bash
-helm upgrade --install dcf-light-bot deploy/helm/dcf-light-bot \
-  --namespace dcf-system \
+helm upgrade --install human-machine-runtime deploy/helm/human-machine-runtime \
+  --namespace hmr-system \
   --create-namespace \
-  -f deploy/helm/dcf-light-bot/values-prod.yaml
+  -f deploy/helm/human-machine-runtime/values-prod.yaml
 ```
 
 ## Environment Values

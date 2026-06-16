@@ -83,7 +83,7 @@ export function DecisionDetailContent({ data }: Props) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
         {/* Header */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">

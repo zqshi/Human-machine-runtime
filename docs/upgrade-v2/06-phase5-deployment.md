@@ -1,13 +1,15 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Phase 5：网关与部署
 
 ## 目标
-完成 Nginx 网关配置和 Helm Charts，使 DCF 可部署到 K8s 集群。
+完成 Nginx 网关配置和 Helm Charts，使 HMR 可部署到 K8s 集群。
 
-## 5.1 dcf-inrouter (Nginx)
+## 5.1 hmr-inrouter (Nginx)
 
 ### 目录结构
 ```
-service/dcf-inrouter/
+service/hmr-inrouter/
 ├── nginx.conf
 ├── entrypoint.sh
 ├── Dockerfile
@@ -26,9 +28,9 @@ http {
     
     # 上游服务（环境变量注入实际地址；下方为各组件业务职责）
     upstream platform_be    { server ${PLATFORM_BE_HOST}:8000; }      # 平台后端
-    upstream dcf_admin_be   { server ${DCF_ADMIN_BE_HOST}:8000; }     # 管理控制面
-    upstream dcf_ops_be     { server ${DCF_OPS_BE_HOST}:8000; }       # 运管平台
-    upstream dcf_ai_gateway { server ${DCF_AI_GATEWAY_HOST}:8000; }   # AI Gateway
+    upstream hmr_admin_be   { server ${HMR_ADMIN_BE_HOST}:8000; }     # 管理控制面
+    upstream hmr_ops_be     { server ${HMR_OPS_BE_HOST}:8000; }       # 运管平台
+    upstream hmr_ai_gateway { server ${HMR_AI_GATEWAY_HOST}:8000; }   # AI Gateway
     upstream clawhub        { server ${CLAWHUB_HOST}:3000; }          # 技能市场
     upstream portal_be      { server ${PORTAL_BE_HOST}:3000; }        # 配置中心
     upstream xspace_agent   { server ${XSPACE_AGENT_HOST}:8000; }     # AI 工作区
@@ -53,21 +55,21 @@ http {
         
         # === 管理控制面 ===
         location /api/v1/admin/ {
-            proxy_pass http://dcf_admin_be/api/v1/admin/;
+            proxy_pass http://hmr_admin_be/api/v1/admin/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
         
         # === 运管平台 ===
         location /api/v1/ops/ {
-            proxy_pass http://dcf_ops_be/api/v1/ops/;
+            proxy_pass http://hmr_ops_be/api/v1/ops/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
         
         # === AI Gateway ===
         location /api/v1/gateway/ {
-            proxy_pass http://dcf_ai_gateway/api/v1/gateway/;
+            proxy_pass http://hmr_ai_gateway/api/v1/gateway/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_read_timeout 300s;  # AI 调用可能较慢
@@ -75,7 +77,7 @@ http {
         
         # === WebSocket ===
         location /ws/ {
-            proxy_pass http://dcf_ai_gateway/ws/;
+            proxy_pass http://hmr_ai_gateway/ws/;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
@@ -118,7 +120,7 @@ http {
 
 ### Chart 结构（每个服务）
 ```
-charts/dcf-admin-be/
+charts/hmr-admin-be/
 ├── Chart.yaml
 ├── values.yaml
 ├── templates/
@@ -130,13 +132,13 @@ charts/dcf-admin-be/
 │   └── serviceaccount.yaml
 ```
 
-### values.yaml 示例 (dcf-admin-be)
+### values.yaml 示例 (hmr-admin-be)
 ```yaml
 # 注：镜像仓库地址为示例占位，企业替换为自有镜像仓库
 replicaCount: 2
 
 image:
-  repository: registry.example.com/dcf_dev/dcf-admin-be   # 示例：企业镜像仓库
+  repository: registry.example.com/hmr_dev/hmr-admin-be   # 示例：企业镜像仓库
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -169,14 +171,14 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 ```
 
-### dcf-inrouter Chart
+### hmr-inrouter Chart
 ```yaml
-# charts/dcf-inrouter/values.yaml
+# charts/hmr-inrouter/values.yaml
 # 注：镜像仓库地址为示例占位，企业替换为自有镜像仓库
 replicaCount: 2
 
 image:
-  repository: registry.example.com/dcf_dev/dcf-inrouter   # 示例：企业镜像仓库
+  repository: registry.example.com/hmr_dev/hmr-inrouter   # 示例：企业镜像仓库
   tag: latest
 
 service:
@@ -185,9 +187,9 @@ service:
 
 upstreams:
   platformBe: "platform-be.svc.cluster.local:8000"               # 平台后端
-  dcfAdminBe: "dcf-admin-be.dcf:8000"
-  dcfOpsBe: "dcf-ops-be.dcf:8000"
-  dcfAiGateway: "dcf-ai-gateway.dcf:8000"
+  hmrAdminBe: "hmr-admin-be.hmr:8000"
+  hmrOpsBe: "hmr-ops-be.hmr:8000"
+  hmrAiGateway: "hmr-ai-gateway.hmr:8000"
   clawhub: "clawhub.svc.cluster.local:3000"                      # 技能市场
   portalBe: "portal-backend.svc.cluster.local:3000"              # 配置中心
   xspaceAgent: "xspace-agent.svc.cluster.local:8000"             # AI 工作区
@@ -197,7 +199,7 @@ upstreams:
 
 ### Python 服务通用 Dockerfile
 ```dockerfile
-# service/dcf-admin-be/Dockerfile
+# service/hmr-admin-be/Dockerfile
 FROM python:3.12-slim AS base
 
 WORKDIR /app
@@ -212,7 +214,7 @@ COPY packages/shared/ /packages/shared/
 RUN uv sync --frozen --no-dev
 
 # 复制代码
-COPY service/dcf-admin-be/ .
+COPY service/hmr-admin-be/ .
 
 # Prisma generate
 RUN uv run prisma generate --schema=/packages/db/prisma/schema.prisma
@@ -225,7 +227,7 @@ CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "800
 ```dockerfile
 FROM nginx:1.25-alpine
 
-COPY service/dcf-inrouter/nginx.conf /etc/nginx/nginx.conf
+COPY service/hmr-inrouter/nginx.conf /etc/nginx/nginx.conf
 COPY apps/web/dist/ /app/static/
 
 EXPOSE 8100
@@ -237,29 +239,29 @@ CMD ["nginx", "-g", "daemon off;"]
 ```yaml
 # deploy/helmfile.yaml
 repositories:
-  - name: dcf
+  - name: hmr
     url: "file://./charts"
 
 releases:
-  - name: dcf-inrouter
-    namespace: dcf
-    chart: dcf/dcf-inrouter
-    values: [values/dcf-inrouter.yaml]
+  - name: hmr-inrouter
+    namespace: hmr
+    chart: hmr/hmr-inrouter
+    values: [values/hmr-inrouter.yaml]
     
-  - name: dcf-admin-be
-    namespace: dcf
-    chart: dcf/dcf-admin-be
-    values: [values/dcf-admin-be.yaml]
+  - name: hmr-admin-be
+    namespace: hmr
+    chart: hmr/hmr-admin-be
+    values: [values/hmr-admin-be.yaml]
     
-  - name: dcf-ops-be
-    namespace: dcf
-    chart: dcf/dcf-ops-be
-    values: [values/dcf-ops-be.yaml]
+  - name: hmr-ops-be
+    namespace: hmr
+    chart: hmr/hmr-ops-be
+    values: [values/hmr-ops-be.yaml]
     
-  - name: dcf-ai-gateway
-    namespace: dcf
-    chart: dcf/dcf-ai-gateway
-    values: [values/dcf-ai-gateway.yaml]
+  - name: hmr-ai-gateway
+    namespace: hmr
+    chart: hmr/hmr-ai-gateway
+    values: [values/hmr-ai-gateway.yaml]
 ```
 
 ## 5.5 Secret 管理
@@ -277,10 +279,10 @@ deploy/manifests/secrets/
 ### 必需 Secret
 | Secret 名 | Key | 来源 |
 |-----------|-----|------|
-| dcf-db | DATABASE_URL | MySQL 连接串 |
-| dcf-db-pg | PG_DATABASE_URL | PostgreSQL 连接串 |
-| dcf-auth | JWT_SECRET, OAUTH_CLIENT_SECRET | 认证密钥 |
-| dcf-ai | ANTHROPIC_API_KEY, LITELLM_API_KEY | AI 模型密钥 |
+| hmr-db | DATABASE_URL | MySQL 连接串 |
+| hmr-db-pg | PG_DATABASE_URL | PostgreSQL 连接串 |
+| hmr-auth | JWT_SECRET, OAUTH_CLIENT_SECRET | 认证密钥 |
+| hmr-ai | ANTHROPIC_API_KEY, LITELLM_API_KEY | AI 模型密钥 |
 
 ## 5.6 CI/CD Pipeline
 

@@ -1,7 +1,7 @@
 {
-  "name": "dcf-light-bot",
+  "name": "human-machine-runtime",
   "version": "2.0.0",
-  "description": "DCF — 数字同事框架 (Digital Colleague Framework)",
+  "description": "HMR — 人机运行时 (Human-Machine Runtime)",
   "private": true,
   "scripts": {
     "dev": "cd server && npm run dev",
@@ -32,7 +32,7 @@
     ]
   },
   "keywords": [
-    "dcf",
+    "hmr",
     "digital-colleague",
     "agent-platform",
     "multi-tenant",
@@ -53,6 +53,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zqshi/dcf-light-bot.git"
+    "url": "https://github.com/zqshi/human-machine-runtime.git"
   }
 }

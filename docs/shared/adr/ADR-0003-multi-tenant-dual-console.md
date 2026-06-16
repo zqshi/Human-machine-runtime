@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # ADR-0003: Multi-Tenant Dual Console Architecture
 
 ## Status
@@ -5,7 +7,7 @@ Accepted
 
 ## Context
 
-DCF 平台需要支持多租户：平台运营方开通租户，每个租户管理员管理各自的员工实例、技能、工具等资源。
+HMR 平台需要支持多租户：平台运营方开通租户，每个租户管理员管理各自的员工实例、技能、工具等资源。
 
 当前系统是完全的单租户模型：
 - `Instance.tenantId` 是 per-instance 自动生成的随机 ID，不是组织级租户标识。

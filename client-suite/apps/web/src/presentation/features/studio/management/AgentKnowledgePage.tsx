@@ -215,7 +215,7 @@ export function AgentKnowledgePage() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-2 dcf-scrollbar">
+          <div className="flex-1 overflow-y-auto p-2 hmr-scrollbar">
             {kbs.map((kb) => (
               <div
                 key={kb.id}
@@ -257,7 +257,7 @@ export function AgentKnowledgePage() {
             <span className="text-[10px] text-slate-500">· {activeDocs.length} 篇文档</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+          <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
             {/* 添加链接 */}
             {showAddLink && (
               <div className="mb-4 p-3 border border-primary/30 bg-primary/[0.04] rounded-xl w-full max-w-2xl">

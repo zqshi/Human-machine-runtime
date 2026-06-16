@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import type { UserProfile } from '../../infrastructure/matrix/MatrixClientAdapter';
-import type { AuthUser, AuthProviderInfo } from '../../infrastructure/api/dcfApiClient';
+import type { AuthUser, AuthProviderInfo } from '../../infrastructure/api/hmrApiClient';
 import { LocalStorageAdapter } from '../../infrastructure/storage/LocalStorageAdapter';
+import { getCurrentOrigin } from '../../infrastructure/navigation';
 
-const AUTH_KEY = 'dcf_auth';
-const SSO_STATE_KEY = 'dcf_sso_state';
+const AUTH_KEY = 'hmr_auth';
+const SSO_STATE_KEY = 'hmr_sso_state';
 
 interface PersistedAuth {
   homeserverUrl: string;
@@ -18,14 +19,14 @@ export type AuthMethod = 'local' | 'sso';
 
 interface AuthState {
   user: UserProfile | null;
-  dcfUser: AuthUser | null;
+  hmrUser: AuthUser | null;
   accessToken: string | null;
   homeserverUrl: string | null;
   deviceId: string | null;
   isLoggedIn: boolean;
   /** Current messaging channel backend */
   channelMode: ChannelMode;
-  /** True when authenticated against DCF backend (cookie session active) */
+  /** True when authenticated against HMR backend (cookie session active) */
   isBackendConnected: boolean;
   /** How this user authenticated */
   authMethod: AuthMethod;
@@ -33,11 +34,11 @@ interface AuthState {
   ssoProviders: AuthProviderInfo[];
 
   setAuth(user: UserProfile, token: string, homeserver: string, deviceId?: string): void;
-  setDcfUser(dcfUser: AuthUser): void;
+  setHmrUser(hmrUser: AuthUser): void;
   setChannelMode(mode: ChannelMode): void;
   setAuthMethod(method: AuthMethod): void;
   setSsoProviders(providers: AuthProviderInfo[]): void;
-  loginDcfOnly(dcfUser: AuthUser): void;
+  loginHmrOnly(hmrUser: AuthUser): void;
   saveSsoState(state: string): void;
   getSsoState(): string | null;
   clearSsoState(): void;
@@ -48,7 +49,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  dcfUser: null,
+  hmrUser: null,
   accessToken: null,
   homeserverUrl: null,
   deviceId: null,
@@ -68,30 +69,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
-  setDcfUser(dcfUser) {
-    set({ dcfUser, isBackendConnected: true });
+  setHmrUser(hmrUser) {
+    set({ hmrUser, isBackendConnected: true });
   },
 
-  loginDcfOnly(dcfUser) {
+  loginHmrOnly(hmrUser) {
     const fakeProfile: UserProfile = {
-      userId: dcfUser.username,
-      displayName: dcfUser.username,
+      userId: hmrUser.username,
+      displayName: hmrUser.username,
       avatarUrl: null,
     };
     set({
       user: fakeProfile,
-      dcfUser,
-      accessToken: 'dcf-session',
-      homeserverUrl: window.location.origin,
+      hmrUser,
+      accessToken: 'hmr-session',
+      homeserverUrl: getCurrentOrigin(),
       isLoggedIn: true,
       isBackendConnected: true,
       channelMode: 'matrix',
       authMethod: 'local',
     });
     LocalStorageAdapter.set(AUTH_KEY, {
-      homeserverUrl: window.location.origin,
-      accessToken: 'dcf-session',
-      userId: dcfUser.username,
+      homeserverUrl: getCurrentOrigin(),
+      accessToken: 'hmr-session',
+      userId: hmrUser.username,
     });
   },
 
@@ -122,7 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearAuth() {
     set({
       user: null,
-      dcfUser: null,
+      hmrUser: null,
       accessToken: null,
       homeserverUrl: null,
       deviceId: null,

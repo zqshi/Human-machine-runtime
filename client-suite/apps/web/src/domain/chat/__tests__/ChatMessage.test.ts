@@ -52,8 +52,8 @@ describe('ChatMessage', () => {
     const botMsg = ChatMessage.create({
       id: 'evt4',
       roomId: '!room:server',
-      senderId: '@dcf-bot:server',
-      senderName: 'DCF Bot',
+      senderId: '@hmr-bot:server',
+      senderName: 'HMR Bot',
       body: 'Hi',
       timestamp: 1700000003000,
     });

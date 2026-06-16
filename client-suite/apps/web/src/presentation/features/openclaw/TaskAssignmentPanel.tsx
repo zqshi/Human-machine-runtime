@@ -136,7 +136,7 @@ export function TaskAssignmentPanel({
                     autoFocus
                     className="w-full h-7 rounded-md border border-white/10 bg-white/[0.04] px-2.5 text-[10px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
                   />
-                  <div className="max-h-36 overflow-y-auto dcf-scrollbar space-y-0.5">
+                  <div className="max-h-36 overflow-y-auto hmr-scrollbar space-y-0.5">
                     {filteredMembers.map((member) => (
                       <button
                         key={member.id}

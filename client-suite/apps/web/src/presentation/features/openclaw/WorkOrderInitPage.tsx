@@ -104,7 +104,7 @@ export function WorkOrderInitPage() {
 
         {/* Body */}
         {!collapsed && (
-          <div className="max-h-[40vh] overflow-y-auto dcf-scrollbar">
+          <div className="max-h-[40vh] overflow-y-auto hmr-scrollbar">
             {/* Context */}
             <div className="px-4 py-3 space-y-2">
               <p className="text-xs text-slate-300 leading-relaxed">{workOrder.context}</p>

@@ -3,7 +3,7 @@ version: '3.9'
 services:
   prometheus:
     image: prom/prometheus:v2.55.0
-    container_name: dcf-prometheus
+    container_name: hmr-prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -18,7 +18,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.28.1
-    container_name: dcf-alertmanager
+    container_name: hmr-alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
@@ -31,7 +31,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.2
-    container_name: dcf-grafana
+    container_name: hmr-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -40,7 +40,7 @@ services:
       - '3001:3000'
     volumes:
       - ../../docs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../../docs/monitoring/grafana-dashboard-dcf-light-bot.json:/var/lib/grafana/dashboards/dcf-light-bot.json:ro
+      - ../../docs/monitoring/grafana-dashboard-human-machine-runtime.json:/var/lib/grafana/dashboards/human-machine-runtime.json:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus

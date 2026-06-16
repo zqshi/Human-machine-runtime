@@ -260,7 +260,7 @@ export function AuditLogPage({ onClose }: AuditLogPageProps) {
 function AuditDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => void }) {
   return (
     <div
-      className="fixed right-0 top-0 z-50 h-full w-96 border-l border-border bg-bg-white-var overflow-y-auto flex flex-col dcf-scrollbar"
+      className="fixed right-0 top-0 z-50 h-full w-96 border-l border-border bg-bg-white-var overflow-y-auto flex flex-col hmr-scrollbar"
       style={{ boxShadow: 'var(--shadow-drawer)', animation: 'slideInRight 0.25s ease-out' }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">

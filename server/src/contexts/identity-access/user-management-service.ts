@@ -3,6 +3,13 @@ import bcrypt from 'bcryptjs';
 import type { UserRepository } from '../../db/repositories/user-repository.js';
 import { ROLE_PERMISSIONS } from './auth-service.js';
 
+/** 从用户记录中剥离敏感字段（passwordHash），用于所有对外返回的出口 */
+function sanitizeUser<T>(user: T | null): T | null {
+  if (!user || typeof user !== 'object') return user;
+  const { passwordHash: _omitted, ...rest } = user as Record<string, unknown>;
+  return rest as T;
+}
+
 export class UserManagementService {
   constructor(private userRepo: UserRepository) {}
 
@@ -31,7 +38,7 @@ export class UserManagementService {
     email?: string;
   }) {
     const hash = await bcrypt.hash(input.password, 10);
-    return this.userRepo.createUser({
+    return sanitizeUser(await this.userRepo.createUser({
       username: input.username.trim(),
       passwordHash: `bcrypt:${hash}`,
       role: input.role ?? 'platform_ops',
@@ -39,11 +46,11 @@ export class UserManagementService {
       displayName: input.displayName,
       email: input.email,
       source: 'platform',
-    });
+    }));
   }
 
   async updateUser(id: number, patch: Record<string, unknown>) {
-    return this.userRepo.updateUser(id, patch);
+    return sanitizeUser(await this.userRepo.updateUser(id, patch));
   }
 
   async resetPassword(userId: number) {
@@ -55,7 +62,7 @@ export class UserManagementService {
   }
 
   async toggleDisable(userId: number) {
-    return this.userRepo.toggleDisable(userId);
+    return sanitizeUser(await this.userRepo.toggleDisable(userId));
   }
 
   async listRoles() {
@@ -87,7 +94,7 @@ export class UserManagementService {
     email?: string;
   }) {
     const hash = await bcrypt.hash(input.password, 10);
-    return this.userRepo.createUser({
+    return sanitizeUser(await this.userRepo.createUser({
       username: input.username.trim(),
       passwordHash: `bcrypt:${hash}`,
       role: input.role ?? 'tenant_ops',
@@ -96,7 +103,7 @@ export class UserManagementService {
       displayName: input.displayName,
       email: input.email,
       source: 'admin',
-    });
+    }));
   }
 
   async deleteUser(id: number) {

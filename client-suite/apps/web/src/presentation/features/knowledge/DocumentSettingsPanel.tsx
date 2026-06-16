@@ -50,7 +50,7 @@ export function DocumentSettingsPanel({ onClose }: DocumentSettingsPanelProps) {
         )}
       </div>
 
-      <div className="flex-1 p-4 space-y-5 overflow-y-auto dcf-scrollbar">
+      <div className="flex-1 p-4 space-y-5 overflow-y-auto hmr-scrollbar">
         {/* Display title */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-text-secondary">展示标题</label>

@@ -146,7 +146,7 @@ export function Dock({ onLogout }: DockProps) {
       <span
         className={`text-[9px] font-semibold tracking-wide ${isOC ? 'text-[#00D4B8]' : 'text-text-secondary'}`}
       >
-        {isOC ? 'Almighty' : 'DCF'}
+        {isOC ? 'Almighty' : 'HMR'}
       </span>
 
       {/* Divider */}

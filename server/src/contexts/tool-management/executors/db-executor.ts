@@ -51,8 +51,10 @@ export class DbExecutor implements IToolExecutor {
       await client.connect();
 
       try {
-        // 强制只读
-        await client.query('SET TRANSACTION READ ONLY');
+        // 连接级只读：pg.Client 默认 autocommit，SET TRANSACTION READ ONLY 只作用于
+        // 当前（自动提交的）语句、不绑定后续事务，只读约束实际失效。
+        // SET default_transaction_read_only = on 使该连接的每个事务都强制 READ ONLY。
+        await client.query('SET default_transaction_read_only = on');
 
         let result: { rows: unknown[]; rowCount: number | null };
 

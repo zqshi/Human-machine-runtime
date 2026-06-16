@@ -73,7 +73,7 @@ export function AIAssistantPanel() {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-auto p-4 space-y-3 dcf-scrollbar">
+      <div className="flex-1 overflow-auto p-4 space-y-3 hmr-scrollbar">
         {messages.length === 0 && (
           <div className="text-center text-text-muted text-xs pt-8">
             <Icon name="chat_bubble_outline" size={32} className="mx-auto mb-2 opacity-40" />

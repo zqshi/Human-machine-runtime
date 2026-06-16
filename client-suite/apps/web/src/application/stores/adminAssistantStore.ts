@@ -8,7 +8,7 @@ export interface AssistantMessage {
   timestamp: number;
 }
 
-const LS_KEY = 'dcf_admin_assistant_history';
+const LS_KEY = 'hmr_admin_assistant_history';
 
 function loadMessages(): AssistantMessage[] {
   try {

@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # 执行计划 — 详细任务拆解
 
 ## Phase 0: 基础设施对齐 (32 tasks)
@@ -13,7 +15,7 @@
 - [P0-08] 验证 pnpm install + uv sync + apps/web dev 正常
 
 ### 0.2 数据库 Schema (10 tasks)
-- [P0-09] 创建 packages/db/prisma/schema.prisma（对齐企业平台 Monorepo（ks-claw）+ DCF 扩展）
+- [P0-09] 创建 packages/db/prisma/schema.prisma（对齐企业平台 Monorepo（ks-claw）+ HMR 扩展）
 - [P0-10] 编写 User, PlatformSession, AuthProvider 等认证相关 model
 - [P0-11] 编写 Tenant, TenantMembership model
 - [P0-12] 编写 DigitalEmployee model
@@ -35,16 +37,16 @@
 - [P0-26] 验证 auth 模块可被各 service 引用
 
 ### 0.4 Charts 骨架 (6 tasks)
-- [P0-27] 创建 charts/dcf-admin-be/ 模板
-- [P0-28] 创建 charts/dcf-ops-be/ 模板
-- [P0-29] 创建 charts/dcf-ai-gateway/ 模板
-- [P0-30] 创建 charts/dcf-inrouter/ 模板
+- [P0-27] 创建 charts/hmr-admin-be/ 模板
+- [P0-28] 创建 charts/hmr-ops-be/ 模板
+- [P0-29] 创建 charts/hmr-ai-gateway/ 模板
+- [P0-30] 创建 charts/hmr-inrouter/ 模板
 - [P0-31] 创建 deploy/helmfile.yaml
 - [P0-32] 创建 deploy/manifests/secrets/ 结构
 
 ## Phase 1: 管理控制面后端 (28 tasks)
 
-### 1.1 dcf-admin-be 核心 (14 tasks)
+### 1.1 hmr-admin-be 核心 (14 tasks)
 - [P1-01] 实现 app/main.py（FastAPI app + lifespan + CORS + error handlers）
 - [P1-02] 实现 app/config/settings.py（pydantic-settings）
 - [P1-03] 实现 app/deps.py（DB 连接 + auth 注入 + tenant context）
@@ -82,7 +84,7 @@
 
 ## Phase 2: 运管平台后端 (18 tasks)
 
-### 2.1 dcf-ops-be 核心 (10 tasks)
+### 2.1 hmr-ops-be 核心 (10 tasks)
 - [P2-01] 实现 app/main.py + settings + deps
 - [P2-02] 实现 tenants.py CRUD + 分页 + 搜索
 - [P2-03] 实现 tenants quotas 管理
@@ -159,7 +161,7 @@
 - [P4-04] 所有 API 请求添加 credentials: 'include'
 
 ### 4.2 IM 通道 (6 tasks)
-- [P4-05] 实现 DcfWebSocketClient.ts（IMatrixClient 适配器）
+- [P4-05] 实现 HmrWebSocketClient.ts（IMatrixClient 适配器）
 - [P4-06] 实现 createMatrixClient 工厂（mode 切换）
 - [P4-07] 升级 useMatrixClient hook（支持新工厂）
 - [P4-08] 升级 chatStore（支持真实消息流）
@@ -189,22 +191,22 @@
 - [P5-04] 本地验证路由正确性
 
 ### 5.2 Docker (4 tasks)
-- [P5-05] 编写 dcf-admin-be Dockerfile
-- [P5-06] 编写 dcf-ops-be Dockerfile
-- [P5-07] 编写 dcf-ai-gateway Dockerfile
+- [P5-05] 编写 hmr-admin-be Dockerfile
+- [P5-06] 编写 hmr-ops-be Dockerfile
+- [P5-07] 编写 hmr-ai-gateway Dockerfile
 - [P5-08] 编写 docker-compose.dev.yaml（本地开发全栈）
 
 ### 5.3 Helm Charts (4 tasks)
-- [P5-09] 完善 charts/dcf-admin-be/（deployment + service + configmap）
-- [P5-10] 完善 charts/dcf-ops-be/
-- [P5-11] 完善 charts/dcf-ai-gateway/
-- [P5-12] 完善 charts/dcf-inrouter/
+- [P5-09] 完善 charts/hmr-admin-be/（deployment + service + configmap）
+- [P5-10] 完善 charts/hmr-ops-be/
+- [P5-11] 完善 charts/hmr-ai-gateway/
+- [P5-12] 完善 charts/hmr-inrouter/
 
 ### 5.4 部署验证 (4 tasks)
 - [P5-13] helm template 全部渲染无报错
 - [P5-14] docker-compose up 全栈启动
 - [P5-15] 创建 deploy/manifests/secrets/ 模板
-- [P5-16] 更新 deploy/helm/dcf-light-bot/（或替换为 helmfile）
+- [P5-16] 更新 deploy/helm/human-machine-runtime/（或替换为 helmfile）
 
 ## 总计: 144 tasks
 - Phase 0: 32 tasks (基础设施)

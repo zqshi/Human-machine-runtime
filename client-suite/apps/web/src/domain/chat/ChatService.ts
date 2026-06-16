@@ -41,7 +41,7 @@ export class ChatService {
   static classifyRoomType(dmUserId: UserId | undefined): RoomType {
     if (!dmUserId) return 'group';
     const id = dmUserId.toLowerCase();
-    if (id.includes('dcf-bot') || id.includes('factory') || id.startsWith('@agent-')) {
+    if (id.includes('hmr-bot') || id.includes('factory') || id.startsWith('@agent-')) {
       return 'bot';
     }
     return 'dm';

@@ -27,7 +27,7 @@ describe('Agent', () => {
       personality: 'analytical',
       model: 'gpt-4o',
     });
-    expect(agent.employeeId).toMatch(/^DCF-/);
+    expect(agent.employeeId).toMatch(/^HMR-/);
     expect(agent.email).toMatch(/@example\.com$/);
   });
 

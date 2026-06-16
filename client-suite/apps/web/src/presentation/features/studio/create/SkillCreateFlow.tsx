@@ -243,7 +243,7 @@ export function SkillCreateFlow({ onBack }: Props) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Chat */}
         <div className="flex-1 flex flex-col min-w-[320px] border-r border-white/[0.06]">
-          <div className="flex-1 p-4 overflow-y-auto dcf-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             <div className="flex flex-col gap-3">
               {messages.map((m) => (
                 <div
@@ -315,7 +315,7 @@ export function SkillCreateFlow({ onBack }: Props) {
             {rightTab === 'structure' ? (
               <div className="flex h-full">
                 {/* File tree */}
-                <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto dcf-scrollbar">
+                <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto hmr-scrollbar">
                   {files.map((f) => (
                     <button
                       key={f.name}
@@ -390,7 +390,7 @@ function TestPanel({
   };
 
   return (
-    <div className="p-4 space-y-3 overflow-y-auto dcf-scrollbar h-full">
+    <div className="p-4 space-y-3 overflow-y-auto hmr-scrollbar h-full">
       {/* 状态提示 */}
       {!skillReady && (
         <div className="flex items-center justify-center h-[120px] text-[11px] text-slate-500">

@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Border Radius
+ * HMR Design Tokens — Border Radius
  * Aligned with stitch tailwind.config
  */
 

@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Runbook: Release
 
 ## Pre-Release Checklist
@@ -16,7 +18,7 @@
 10. Validate persistence backend:
    - `PERSISTENCE_BACKEND=file` with writable `CONTROL_PLANE_STORE`, or
    - `PERSISTENCE_BACKEND=postgres` with valid `POSTGRES_URL`
-11. If `postgres`, run migration [001_control_plane_store.sql](/Users/zqs/Downloads/project/dcf-light-bot/scripts/migrations/001_control_plane_store.sql).
+11. If `postgres`, run migration [001_control_plane_store.sql](/Users/zqs/Downloads/project/human-machine-runtime/scripts/migrations/001_control_plane_store.sql).
 12. Confirm reconcile flags:
    - `KUBERNETES_RECONCILE_ENABLED=true`
    - `KUBERNETES_ROLLBACK_ON_PROVISION_FAILURE=true`
@@ -39,7 +41,7 @@
 2. Tag and push.
 3. Deploy control plane.
    - `npm run k8s:apply`
-   - or `helm upgrade --install dcf-light-bot deploy/helm/dcf-light-bot --namespace dcf-system --create-namespace -f deploy/helm/dcf-light-bot/values-prod.yaml`
+   - or `helm upgrade --install human-machine-runtime deploy/helm/human-machine-runtime --namespace hmr-system --create-namespace -f deploy/helm/human-machine-runtime/values-prod.yaml`
 4. Run smoke checks:
    - `GET /health`
    - `GET /status`
@@ -48,11 +50,11 @@
 5. Run scripted platform check:
    - `npm run check:platform-slo`
 6. Ensure alert rules are loaded:
-   - [prometheus-alert-rules.yaml](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/prometheus-alert-rules.yaml)
+   - [prometheus-alert-rules.yaml](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/prometheus-alert-rules.yaml)
 7. Import Grafana dashboard:
-   - [grafana-dashboard-dcf-light-bot.json](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/grafana-dashboard-dcf-light-bot.json)
+   - [grafana-dashboard-human-machine-runtime.json](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/grafana-dashboard-human-machine-runtime.json)
 8. Follow monitoring setup:
-   - [monitoring README](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/README.md)
+   - [monitoring README](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/README.md)
 9. Optional local validation stack:
    - `npm run observability:up`
    - `npm run observability:check`

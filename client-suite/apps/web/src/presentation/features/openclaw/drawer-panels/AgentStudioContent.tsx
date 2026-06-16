@@ -199,7 +199,7 @@ export default function AgentStudioContent({ data }: ContentProps) {
   ]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto dcf-scrollbar">
+    <div className="flex-1 flex flex-col overflow-y-auto hmr-scrollbar">
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-2.5 mb-1">

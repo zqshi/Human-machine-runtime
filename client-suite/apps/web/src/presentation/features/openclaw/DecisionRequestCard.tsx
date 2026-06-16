@@ -52,7 +52,7 @@ export function DecisionRequestCard({ decision, onAccept, onViewDetail, onDefer 
   }
 
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/[0.04] p-3 space-y-2.5 animate-[dcf-fade-in_0.2s_ease-out]">
+    <div className="rounded-lg border border-primary/30 bg-primary/[0.04] p-3 space-y-2.5 animate-[hmr-fade-in_0.2s_ease-out]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

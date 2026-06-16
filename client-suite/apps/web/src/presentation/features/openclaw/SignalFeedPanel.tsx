@@ -249,7 +249,7 @@ export function SignalFeedPanel({
       </div>
 
       {/* Signal list */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-2 space-y-1.5">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-2 space-y-1.5">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500">
             <Icon name="check_circle" size={32} className="text-slate-600 mb-2" />

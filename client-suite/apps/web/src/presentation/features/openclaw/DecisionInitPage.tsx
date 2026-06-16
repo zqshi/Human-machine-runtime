@@ -122,7 +122,7 @@ export function DecisionInitPage() {
 
         {/* Collapsible body */}
         {!collapsed && (
-          <div className="max-h-[40vh] overflow-y-auto dcf-scrollbar">
+          <div className="max-h-[40vh] overflow-y-auto hmr-scrollbar">
             <div className="px-4 py-3">
               <p className="text-xs text-slate-300 leading-relaxed">{decision.context}</p>
             </div>

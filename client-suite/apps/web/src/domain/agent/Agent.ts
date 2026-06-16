@@ -78,7 +78,7 @@ export class Agent {
 
   private static generateEmployeeId(): string {
     const num = Math.floor(1000 + Math.random() * 9000);
-    return `DCF-${num}`;
+    return `HMR-${num}`;
   }
 
   isPrimary(): boolean {

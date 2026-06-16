@@ -166,7 +166,7 @@ export function McpGatewayFlow({ onBack }: Props) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Config */}
-        <div className="w-[320px] shrink-0 border-r border-white/[0.06] p-5 overflow-y-auto dcf-scrollbar">
+        <div className="w-[320px] shrink-0 border-r border-white/[0.06] p-5 overflow-y-auto hmr-scrollbar">
           <div className="space-y-4">
             <div>
               <label className="block text-[10px] text-slate-400 mb-2">网关类型</label>
@@ -254,7 +254,7 @@ export function McpGatewayFlow({ onBack }: Props) {
               </button>
             )}
           </div>
-          <div className="flex-1 p-4 overflow-y-auto dcf-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             {step !== 'done' ? (
               <div className="flex items-center justify-center h-full text-[11px] text-slate-500">
                 {step === 'discovering' ? '正在发现路由...' : '填写网关信息后点击"连接网关"'}

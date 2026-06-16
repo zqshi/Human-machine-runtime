@@ -32,7 +32,7 @@ export default function MarkdownPanel({ data, onChange }: PanelProps) {
   );
 
   const previewPart = (
-    <div className="h-full overflow-auto p-4 dcf-scrollbar prose prose-sm max-w-none text-text-primary">
+    <div className="h-full overflow-auto p-4 hmr-scrollbar prose prose-sm max-w-none text-text-primary">
       <Markdown remarkPlugins={[remarkGfm]}>{md}</Markdown>
     </div>
   );

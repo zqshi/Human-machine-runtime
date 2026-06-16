@@ -323,7 +323,7 @@ export function PreviewChat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 dcf-scrollbar">
+      <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 hmr-scrollbar">
         {activeSession.messages.map((msg, i) =>
           msg.role === 'bot' ? (
             <div key={i} className="flex gap-2">

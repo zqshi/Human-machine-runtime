@@ -2,10 +2,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "dcf-light-bot.fullname" . }}
-  namespace: {{ include "dcf-light-bot.namespace" . }}
+  name: {{ include "human-machine-runtime.fullname" . }}
+  namespace: {{ include "human-machine-runtime.namespace" . }}
   labels:
-    {{- include "dcf-light-bot.labels" . | nindent 4 }}
+    {{- include "human-machine-runtime.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -29,11 +29,11 @@ spec:
             backend:
               service:
                 {{- if eq .backend "server" }}
-                name: {{ include "dcf-light-bot.fullname" $ }}-server
+                name: {{ include "human-machine-runtime.fullname" $ }}-server
                 port:
                   number: {{ $.Values.server.service.port }}
                 {{- else }}
-                name: {{ include "dcf-light-bot.fullname" $ }}-client
+                name: {{ include "human-machine-runtime.fullname" $ }}-client
                 port:
                   number: {{ $.Values.client.service.port }}
                 {{- end }}

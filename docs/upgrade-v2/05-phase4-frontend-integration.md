@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Phase 4：用户端集成升级
 
 ## 目标
@@ -54,15 +56,15 @@ export interface IMatrixClient {
 }
 ```
 
-### 新增 DCF WebSocket 适配器
+### 新增 HMR WebSocket 适配器
 ```typescript
-// apps/web/src/infrastructure/matrix/DcfWebSocketClient.ts
-export class DcfWebSocketClient implements IMatrixClient {
+// apps/web/src/infrastructure/matrix/HmrWebSocketClient.ts
+export class HmrWebSocketClient implements IMatrixClient {
   private ws: WebSocket | null = null;
   private userId: string;
   
   async connect(): Promise<void> {
-    // 连接 dcf-ai-gateway WebSocket
+    // 连接 hmr-ai-gateway WebSocket
     this.ws = new WebSocket(`/ws/${this.userId}`);
     // 注册事件监听
   }
@@ -87,7 +89,7 @@ export class DcfWebSocketClient implements IMatrixClient {
 // apps/web/src/infrastructure/matrix/createMatrixClient.ts
 export function createMatrixClient(config: AppConfig): IMatrixClient {
   switch (config.channelMode) {
-    case 'dcf':    return new DcfWebSocketClient(config);
+    case 'hmr':    return new HmrWebSocketClient(config);
     case 'matrix': return new RealMatrixClient(config);
     case 'mock':   return new MockMatrixClient();
     default:       return new MockMatrixClient();
@@ -103,7 +105,7 @@ export function createMatrixClient(config: AppConfig): IMatrixClient {
 // 从 Mock 切换到真实 API
 
 export class ApiGateway {
-  // Agent 实例状态 → claw-farm (通过 dcf-admin-be 代理)
+  // Agent 实例状态 → claw-farm (通过 hmr-admin-be 代理)
   async getAgentInstances(): Promise<Instance[]> {
     return this.http.get('/api/v1/admin/instances');
   }
@@ -128,12 +130,12 @@ export class ApiGateway {
     return this.http.get('/clawhub/api/v1/agents', { params });
   }
   
-  // 目标/判断 → dcf-ai-gateway
+  // 目标/判断 → hmr-ai-gateway
   async getObjectives(): Promise<Objective[]> {
     return this.http.get('/api/v1/gateway/objectives');
   }
   
-  // 协作 → dcf-ai-gateway
+  // 协作 → hmr-ai-gateway
   async getCollaborationSessions(): Promise<CollaborationSession[]> {
     return this.http.get('/api/v1/gateway/collaboration/sessions');
   }
@@ -145,7 +147,7 @@ export class ApiGateway {
 | Store | 旧数据源 | 新数据源 |
 |-------|---------|---------|
 | agentStore | 硬编码 Mock | clawhub agents API |
-| chatStore | MockMatrixClient | DcfWebSocketClient |
+| chatStore | MockMatrixClient | HmrWebSocketClient |
 | callStore | WebRTC 本地 | 保留不变 |
 | authStore | 本地密码 | OAuth + platform-be |
 
@@ -203,10 +205,10 @@ export class XSpaceApiClient {
 
 ## 4.5 知识管理 — 后端对接
 
-知识管理是 DCF 独有功能，后端 API 迁移到 dcf-ai-gateway：
+知识管理是 HMR 独有功能，后端 API 迁移到 hmr-ai-gateway：
 
 ```typescript
-// 知识管理 API (dcf-ai-gateway /api/v1/gateway/knowledge/)
+// 知识管理 API (hmr-ai-gateway /api/v1/gateway/knowledge/)
 POST   /documents          # 创建文档
 GET    /documents          # 文档列表
 GET    /documents/{id}     # 文档详情
@@ -222,7 +224,7 @@ POST   /folders            # 创建文件夹
 ```typescript
 // apps/web/src/config.ts
 export const APP_CONFIG = {
-  channelMode: import.meta.env.VITE_CHANNEL_MODE || 'mock',  // dcf | matrix | mock
+  channelMode: import.meta.env.VITE_CHANNEL_MODE || 'mock',  // hmr | matrix | mock
   apiMode: import.meta.env.VITE_API_MODE || 'mock',          // real | mock
   authMode: import.meta.env.VITE_AUTH_MODE || 'mock',        // oauth | mock
 };

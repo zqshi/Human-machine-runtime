@@ -116,7 +116,7 @@ export function WorkspacePanel() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar">
       {/* Create button */}
       <div className="p-2">
         {!showCreate ? (

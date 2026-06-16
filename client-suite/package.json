@@ -1,5 +1,5 @@
 {
-  "name": "dcf-client-suite",
+  "name": "hmr-client-suite",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
@@ -8,9 +8,9 @@
   ],
   "scripts": {
     "build": "npm run -ws build",
-    "dev:web": "npm run -w @dcf/web dev",
+    "dev:web": "npm run -w @hmr/web dev",
     "typecheck": "npm run -ws typecheck",
-    "lint": "npm run -w @dcf/web lint"
+    "lint": "npm run -w @hmr/web lint"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

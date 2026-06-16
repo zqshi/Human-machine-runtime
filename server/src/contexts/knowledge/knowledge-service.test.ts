@@ -38,9 +38,9 @@ function makeMockClient() {
 function makeMockMappingRepo(): IWkMappingRepository {
   const store = new Map<string, WkTenantMapping>();
   return {
-    getByDcfTenantId: vi.fn(async (id: string) => store.get(id) ?? null),
+    getByHmrTenantId: vi.fn(async (id: string) => store.get(id) ?? null),
     save: vi.fn(async (m: WkTenantMapping) => {
-      store.set(m.dcfTenantId, m);
+      store.set(m.hmrTenantId, m);
     }),
     updateApiKey: vi.fn(),
     updateDefaultKbId: vi.fn(),
@@ -78,9 +78,9 @@ function makeMockEntryRepo(): IKnowledgeEntryRepository {
         [...store.values()].filter((e) => e.knowledgeBaseId === kbId) as never[]
     ),
     findById: vi.fn(async (id: string) => (store.get(id) as never) ?? null),
-    findByDcfDocumentId: vi.fn(
+    findByHmrDocumentId: vi.fn(
       async (docId: string) =>
-        ([...store.values()].find((e) => e.dcfDocumentId === docId) as never) ?? null
+        ([...store.values()].find((e) => e.hmrDocumentId === docId) as never) ?? null
     ),
     save: vi.fn(async (entry: Record<string, unknown>) => {
       store.set(entry.id as string, entry);
@@ -128,9 +128,9 @@ describe('KnowledgeService', () => {
   describe('provisionTenant', () => {
     it('registers tenant and saves mapping', async () => {
       const mapping = await service.provisionTenant('tn_1', 'acme', 'Acme Inc');
-      expect(mapping.dcfTenantId).toBe('tn_1');
+      expect(mapping.hmrTenantId).toBe('tn_1');
       expect(mapping.wkTenantId).toBe('wk-tenant-1');
-      expect(client.registerTenant).toHaveBeenCalledWith('dcf-acme', expect.any(String));
+      expect(client.registerTenant).toHaveBeenCalledWith('hmr-acme', expect.any(String));
       expect(mappingRepo.save).toHaveBeenCalled();
     });
 
@@ -183,7 +183,7 @@ describe('KnowledgeService', () => {
         content: '内容',
       });
       expect(entry.wkKnowledgeId).toBe('wk-doc-1');
-      expect(entry.dcfDocumentId).toBe('doc_1');
+      expect(entry.hmrDocumentId).toBe('doc_1');
       expect(client.uploadManualKnowledge).toHaveBeenCalled();
     });
 
@@ -199,7 +199,7 @@ describe('KnowledgeService', () => {
   describe('query', () => {
     it('returns answer from WeKnora', async () => {
       await service.provisionTenant('tn_1', 'acme', 'Acme Inc');
-      const result = await service.query('tn_1', '什么是 DCF？');
+      const result = await service.query('tn_1', '什么是 HMR？');
       expect(result.answer).toBe('答案');
       expect(client.chat).toHaveBeenCalled();
     });

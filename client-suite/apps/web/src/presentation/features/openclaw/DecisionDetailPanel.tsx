@@ -111,7 +111,7 @@ export function DecisionDetailPanel() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-3">
         {/* Deadline */}
         <div className="flex items-center gap-3 text-[10px]">
           <span className="text-slate-500">截止: {formatCountdown(decision.deadline)}</span>

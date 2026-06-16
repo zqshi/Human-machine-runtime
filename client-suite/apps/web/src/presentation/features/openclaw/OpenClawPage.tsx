@@ -314,7 +314,7 @@ export function OpenClawPage() {
         {/* Scrollable area — data-driven content */}
         <div
           ref={scrollAreaRef}
-          className="flex-1 overflow-y-auto dcf-scrollbar px-6 py-4 space-y-4"
+          className="flex-1 overflow-y-auto hmr-scrollbar px-6 py-4 space-y-4"
           data-guide="main-content"
         >
           {/* Discussion mode: context anchors (notification/decision/task/goal in C column) */}

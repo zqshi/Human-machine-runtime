@@ -276,7 +276,7 @@ export function AICreationPanel({
         {showChat && (
           <div className="w-[380px] shrink-0 border-r border-border flex flex-col min-h-0 bg-bg-white-var">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 dcf-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 hmr-scrollbar">
               {messages.length === 0 && (
                 <EmptyChat onSelect={(text) => handleSend(text)} onHover={setActiveTemplate} />
               )}
@@ -321,7 +321,7 @@ export function AICreationPanel({
         {/* Right: Preview (full width in view mode) */}
         <div className="flex-1 min-w-0 flex flex-col min-h-0 bg-bg-light">
           {/* Preview content */}
-          <div className="flex-1 overflow-auto dcf-scrollbar p-6 flex justify-center">
+          <div className="flex-1 overflow-auto hmr-scrollbar p-6 flex justify-center">
             {previewState === 'idle' && (
               <PreviewIdle
                 hoveredTemplate={activeTemplate}

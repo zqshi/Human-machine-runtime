@@ -90,7 +90,7 @@ export function GoalDetailPanel() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-3">
         {/* Description + deadline */}
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 space-y-2">
           <p className="text-xs text-slate-300 leading-relaxed">{goal.description}</p>

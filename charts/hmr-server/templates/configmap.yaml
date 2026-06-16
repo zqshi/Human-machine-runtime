@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "dcf-server.fullname" . }}-config
+  name: {{ include "hmr-server.fullname" . }}-config
   labels:
-    {{- include "dcf-server.labels" . | nindent 4 }}
+    {{- include "hmr-server.labels" . | nindent 4 }}
 data:
   {{- range $key, $val := .Values.env }}
   {{ $key }}: {{ $val | quote }}

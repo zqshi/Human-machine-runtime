@@ -22,7 +22,7 @@ interface ExecutionLogViewerProps {
 export function ExecutionLogViewer({ logs, maxHeight = 200 }: ExecutionLogViewerProps) {
   return (
     <div
-      className="rounded-lg border border-white/10 bg-black/20 overflow-y-auto dcf-scrollbar font-mono text-[11px] leading-relaxed p-2.5"
+      className="rounded-lg border border-white/10 bg-black/20 overflow-y-auto hmr-scrollbar font-mono text-[11px] leading-relaxed p-2.5"
       style={{ maxHeight }}
     >
       {logs.length === 0 ? (

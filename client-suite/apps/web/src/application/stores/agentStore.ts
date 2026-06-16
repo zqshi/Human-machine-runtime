@@ -22,9 +22,9 @@ export interface SharedAgent {
   userId?: string;
 }
 
-const LS_PRIMARY_AGENT_KEY = 'dcf_primary_agent';
-const LS_ACTIVE_CAPS_KEY = 'dcf_active_capabilities';
-const LS_OC_VISITED_KEY = 'dcf_openclaw_visited';
+const LS_PRIMARY_AGENT_KEY = 'hmr_primary_agent';
+const LS_ACTIVE_CAPS_KEY = 'hmr_active_capabilities';
+const LS_OC_VISITED_KEY = 'hmr_openclaw_visited';
 
 interface PrimaryAgentSetupProps {
   name: string;
@@ -167,11 +167,11 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     // Already set up — skip
     if (get().isPrimaryAgentSetup) return;
 
-    const { user, dcfUser } = useAuthStore.getState();
+    const { user, hmrUser } = useAuthStore.getState();
     if (!user) return;
 
-    const displayName = user.displayName || dcfUser?.username || '我的助手';
-    const role = user.role || dcfUser?.role || '员工';
+    const displayName = user.displayName || hmrUser?.username || '我的助手';
+    const role = user.role || hmrUser?.role || '员工';
     const department = user.department || '未设置';
 
     get().setupPrimaryAgent({

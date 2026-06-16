@@ -1,10 +1,12 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # 管理后台 (Admin Console) — 架构设计
 
 > 版本 1.0 | 2026-04-14 | MVP 阶段
 
 ## 1. 产品形态
 
-管理后台是 DCF Control Plane 的 B 端治理界面，面向平台管理员和租户管理员，采用 **Vanilla HTML/CSS/JS MPA（多页应用）** 架构——无前端框架，无构建步骤，每个页面一个 HTML 入口，通过 Express 静态文件服务提供。
+管理后台是 HMR Control Plane 的 B 端治理界面，面向平台管理员和租户管理员，采用 **Vanilla HTML/CSS/JS MPA（多页应用）** 架构——无前端框架，无构建步骤，每个页面一个 HTML 入口，通过 Express 静态文件服务提供。
 
 ### 1.1 技术选型理由
 

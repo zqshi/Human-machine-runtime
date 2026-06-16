@@ -396,14 +396,28 @@ export class AuthService {
     } catch {
       throw new AppError('invalid token', 403, 'AUTH_FORBIDDEN');
     }
+
+    // 回查用户当前状态：防止降权/禁用/删除后旧 token 仍持有原权限
+    const username = String(decoded.sub || '');
+    const allUsers = await this.getMergedUsers();
+    const user = allUsers.find((u) => u.username === username);
+    if (!user) {
+      throw new AppError('user not found', 401, 'AUTH_REQUIRED');
+    }
+    if (user.disabled === true) {
+      throw new AppError('user disabled', 401, 'AUTH_DISABLED');
+    }
+
+    // 以 DB 当前状态为准构造 Principal，不信任 token 内的 role/scope/tenantId
+    const role = String(user.role || '').trim();
+    const scope = user.scope || resolveScope(role);
+    const tenantId = scope === 'tenant' ? user.tenantId || 'default' : null;
     return {
-      username: String(decoded.sub || ''),
-      scope: String((decoded as Record<string, unknown>).scope || 'tenant'),
-      role: String((decoded as Record<string, unknown>).role || ''),
-      tenantId: ((decoded as Record<string, unknown>).tenantId as string) || null,
-      permissions: Array.isArray((decoded as Record<string, unknown>).permissions)
-        ? ((decoded as Record<string, unknown>).permissions as string[])
-        : [],
+      username: user.username,
+      scope,
+      role,
+      tenantId,
+      permissions: this.resolvePermissions(role),
     };
   }
 

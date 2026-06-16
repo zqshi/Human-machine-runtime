@@ -1,7 +1,7 @@
 /**
- * DCF Tailwind Preset
- * Usage: presets: [require('@dcf/ui-tokens/tailwind-preset')]
- *    or: import dcfPreset from '@dcf/ui-tokens/tailwind-preset'
+ * HMR Tailwind Preset
+ * Usage: presets: [require('@hmr/ui-tokens/tailwind-preset')]
+ *    or: import hmrPreset from '@hmr/ui-tokens/tailwind-preset'
  */
 
 import { colors } from './colors';
@@ -9,7 +9,7 @@ import { shadows } from './shadows';
 import { typography } from './typography';
 import { radius } from './radius';
 
-const dcfPreset = {
+const hmrPreset = {
   theme: {
     extend: {
       colors: {
@@ -70,4 +70,4 @@ const dcfPreset = {
   },
 } as const;
 
-export default dcfPreset;
+export default hmrPreset;

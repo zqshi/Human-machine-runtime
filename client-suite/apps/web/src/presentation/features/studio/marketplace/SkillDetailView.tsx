@@ -208,7 +208,7 @@ export function SkillDetailView({ skill }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {/* 概览 */}
         {tab === 'overview' && (
           <div className="w-full max-w-3xl space-y-5">
@@ -251,7 +251,7 @@ export function SkillDetailView({ skill }: Props) {
                 <Icon name="description" size={14} className="text-slate-400" />
                 SKILL.md
               </div>
-              <div className="prose-sm text-[12px] text-slate-300 leading-relaxed whitespace-pre-wrap font-mono bg-[#0d1117] rounded-xl p-4 max-h-[400px] overflow-y-auto dcf-scrollbar">
+              <div className="prose-sm text-[12px] text-slate-300 leading-relaxed whitespace-pre-wrap font-mono bg-[#0d1117] rounded-xl p-4 max-h-[400px] overflow-y-auto hmr-scrollbar">
                 {MOCK_SKILL_MD}
               </div>
             </div>
@@ -262,7 +262,7 @@ export function SkillDetailView({ skill }: Props) {
         {tab === 'files' && (
           <div className="flex gap-4 h-[calc(100vh-220px)]">
             {/* 文件树 */}
-            <div className="w-48 shrink-0 border border-white/[0.08] bg-white/[0.03] rounded-xl p-2 overflow-y-auto dcf-scrollbar">
+            <div className="w-48 shrink-0 border border-white/[0.08] bg-white/[0.03] rounded-xl p-2 overflow-y-auto hmr-scrollbar">
               {MOCK_FILES.map((f) => (
                 <button
                   key={f.name}
@@ -284,7 +284,7 @@ export function SkillDetailView({ skill }: Props) {
               ))}
             </div>
             {/* 文件内容 */}
-            <div className="flex-1 border border-white/[0.08] bg-[#0d1117] rounded-xl p-4 overflow-y-auto dcf-scrollbar">
+            <div className="flex-1 border border-white/[0.08] bg-[#0d1117] rounded-xl p-4 overflow-y-auto hmr-scrollbar">
               {selectedContent ? (
                 <pre className="text-[11px] font-mono text-emerald-300 leading-[1.6] whitespace-pre-wrap">
                   {selectedContent}

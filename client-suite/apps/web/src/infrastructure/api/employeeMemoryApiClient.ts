@@ -1,4 +1,4 @@
-import { ApiError } from './dcfApiClient';
+import { ApiError } from './hmrApiClient';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (path.includes('/undefined') || path.includes('/null')) {

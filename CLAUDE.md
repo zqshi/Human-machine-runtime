@@ -1,4 +1,4 @@
-# DCF Light Bot — 工程宪章 v2
+# HMR Light Bot — 工程宪章 v2
 
 > 本文档是所有 Agent、大模型、开发者在本项目中的**强制执行标准**。
 > 每次会话自动注入，任何代码变更必须遵守以下原则。违反即回退。
@@ -29,19 +29,23 @@ domain/  →  infrastructure/  →  application/  →  presentation/
 | application 包含 DOM 操作            | 出现 document/window/React.createElement        |
 | 循环依赖                             | 任意两个模块互相 import                         |
 
-### 1.3 后端分层（Node.js 管理后台）
+### 1.3 后端分层（server/）
+
+后端按 **DDD 限界上下文** 组织（非顶层四层目录）。业务逻辑按 context 聚合，每个 context 内部按职责划分 `domain`（纯逻辑、零外部依赖）/ `application`（用例编排）/ `adapters`（外部适配）等子目录（按需，非强制）。路由层只做参数校验与转发。
 
 ```
 src/
-  domain/              # 业务实体、值对象、领域服务
-  infrastructure/      # 数据存储、外部API适配
-  interfaces/http/     # 路由层（薄层，只做参数校验+转发）
-    routes/            # API 路由注册
-  app/                 # 启动入口、依赖组装
+  contexts/            # 限界上下文 ×28（agent-core/、runtime-engine/、channel/、tenant-management/…）
+  routes/              # 路由层（薄层）：参数提取 → 校验 → 调用服务 → 返回
+  app/                 # 启动入口、中间件链、依赖组装
+  db/                  # Drizzle schema + migrations + seed
+  middleware/          # auth、cors、rate-limit、audit-trail
+  shared/              # 共享工具（newId、AppError、event-bus）
+  integrations/        # 外部集成（Matrix 等）
 ```
 
 - 路由文件只做：参数提取 → 校验 → 调用服务 → 返回结果。
-- 业务逻辑禁止写在路由处理函数中，必须抽到 domain 或 service 层。
+- 业务逻辑禁止写在路由处理函数中，必须下沉到对应 context 的 domain/application 层。
 
 ---
 
@@ -190,7 +194,7 @@ test       → vitest run
 | 项       | 选型                                  | 约束                         |
 | -------- | ------------------------------------- | ---------------------------- |
 | 框架     | React + TypeScript                    | 严格模式，no any             |
-| 样式     | Tailwind CSS 3.4                      | 通过 `@dcf/ui-tokens` preset |
+| 样式     | Tailwind CSS 3.4                      | 通过 `@hmr/ui-tokens` preset |
 | 状态     | zustand                               | 一个 store 一个文件          |
 | 设计语言 | Apple HIG glass morphism              | 主色 `#007AFF`               |
 | 暗色模式 | `[data-mode="openclaw"]` CSS 变量覆盖 | —                            |
@@ -204,7 +208,7 @@ test       → vitest run
 | 运行时 | Node.js 20+             | ESM，TypeScript strict                   |
 | 框架   | Hono                     | 路由薄层，中间件链式组合                 |
 | ORM    | Drizzle                  | TypeScript-first，PostgreSQL             |
-| 数据库 | PostgreSQL 16            | Docker Compose 本地（5434 端口），生产用托管实例 |
+| 数据库 | PostgreSQL 16            | Docker Compose 本地（5432 端口），生产用托管实例 |
 | IM     | Matrix (Conduit)         | 自有基础设施，Channel Bridge 可插拔      |
 | 认证   | JWT + SSO 预留           | bcrypt 密码，SSO 开关在 system_configs   |
 | 测试   | vitest                   | —                                        |
@@ -221,7 +225,7 @@ test       → vitest run
 ## 八、文件组织
 
 ```
-dcf-light-bot/
+human-machine-runtime/
   server/                             # 新后端（Hono + TypeScript + Drizzle）
     src/
       app/                            # Hono app 入口 + 中间件链

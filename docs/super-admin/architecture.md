@@ -1,10 +1,12 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # 租户运营平台 — 架构设计
 
 > 版本 1.1 | 2026-04-15
 
 ## 1. 定位
 
-租户运营平台（Tenant Operations Platform）是 DCF 平台运营方的专属控制台，负责：
+租户运营平台（Tenant Operations Platform）是 HMR 平台运营方的专属控制台，负责：
 
 - **租户生命周期管理**：开通 / 暂停 / 归档 / 配额调整
 - **平台用户管理**：platform_admin / platform_ops 角色的 CRUD
@@ -324,8 +326,8 @@ ControlPlaneRepository
 ### 8.3 K8s 命名空间
 
 ```
-旧模型: dcf-{instance.tenantId}  → 每个实例独立 namespace（tenantId 是随机的）
-新模型: dcf-{tenant.slug}        → 同租户实例共享 namespace
+旧模型: hmr-{instance.tenantId}  → 每个实例独立 namespace（tenantId 是随机的）
+新模型: hmr-{tenant.slug}        → 同租户实例共享 namespace
 ```
 
 ## 9. 与租户管理后台的边界

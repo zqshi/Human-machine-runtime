@@ -4,15 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APP_PORT="${DCF_APP_PORT:-3010}"
-APP_HOST="${DCF_APP_HOST:-127.0.0.1}"
+APP_PORT="${HMR_APP_PORT:-3010}"
+APP_HOST="${HMR_APP_HOST:-127.0.0.1}"
 MATRIX_HS="${MATRIX_HS:-http://127.0.0.1:8008}"
-BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-dcfbot}"
-BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-dcfbot123}"
+BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-hmrbot}"
+BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-hmrbot123}"
 LOCAL_RATE_LIMIT_MAX_REQUESTS="${LOCAL_RATE_LIMIT_MAX_REQUESTS:-100000}"
 LOCAL_RATE_LIMIT_WINDOW_MS="${LOCAL_RATE_LIMIT_WINDOW_MS:-60000}"
-LOG_FILE="$ROOT_DIR/runtime/dcf-app.log"
-PID_FILE="$ROOT_DIR/runtime/dcf-app.pid"
+LOG_FILE="$ROOT_DIR/runtime/hmr-app.log"
+PID_FILE="$ROOT_DIR/runtime/hmr-app.pid"
 BOT_TOKEN_FILE="$ROOT_DIR/runtime/matrix-bot.token"
 BOT_DEVICE_FILE="$ROOT_DIR/runtime/matrix-bot.device"
 
@@ -62,7 +62,7 @@ ensure_bot_token() {
     break
   done
 
-  docker exec dcf-matrix-synapse register_new_matrix_user --exists-ok --no-admin \
+  docker exec hmr-matrix-synapse register_new_matrix_user --exists-ok --no-admin \
     -u "$BOT_LOCALPART" -p "$BOT_PASSWORD" -c /data/homeserver.yaml http://localhost:8008 >/dev/null
 
   for _ in $(seq 1 10); do
@@ -105,7 +105,7 @@ resolve_bot_device_id() {
 if [ -f "$PID_FILE" ]; then
   OLD_PID="$(cat "$PID_FILE" || true)"
   if [ -n "${OLD_PID:-}" ] && kill -0 "$OLD_PID" >/dev/null 2>&1; then
-    echo "[start] dcf app already running pid=$OLD_PID"
+    echo "[start] hmr app already running pid=$OLD_PID"
     exit 0
   fi
 fi
@@ -113,7 +113,7 @@ fi
 EXISTING_PID="$(lsof -ti:${APP_PORT} 2>/dev/null | head -n 1 || true)"
 if [ -n "${EXISTING_PID:-}" ] && kill -0 "$EXISTING_PID" >/dev/null 2>&1; then
   echo "$EXISTING_PID" > "$PID_FILE"
-  echo "[start] dcf app already listening on ${APP_HOST}:${APP_PORT} pid=$EXISTING_PID"
+  echo "[start] hmr app already listening on ${APP_HOST}:${APP_PORT} pid=$EXISTING_PID"
   exit 0
 fi
 
@@ -153,4 +153,4 @@ done
 
 curl -fsS "http://${APP_HOST}:${APP_PORT}/status" | head -c 240; echo
 
-echo "[ok] dcf app started pid=$APP_PID url=http://${APP_HOST}:${APP_PORT}"
+echo "[ok] hmr app started pid=$APP_PID url=http://${APP_HOST}:${APP_PORT}"

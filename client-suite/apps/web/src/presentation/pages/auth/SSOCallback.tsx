@@ -45,7 +45,7 @@ export function SSOCallback({ onSuccess, onError }: SSOCallbackProps) {
       .ssoCallback(initial.code!, initial.state!)
       .then((res) => {
         if (res.authenticated && res.user) {
-          useAuthStore.getState().setDcfUser(res.user);
+          useAuthStore.getState().setHmrUser(res.user);
           useAuthStore.getState().setAuthMethod('sso');
           onSuccess();
         } else {

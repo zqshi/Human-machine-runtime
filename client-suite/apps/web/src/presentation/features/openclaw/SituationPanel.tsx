@@ -60,7 +60,7 @@ export function SituationPanel() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-6 py-5 space-y-5">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-6 py-5 space-y-5">
         {/* Today's stats */}
         <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div className="flex items-center gap-2 mb-3">

@@ -96,7 +96,7 @@ export function TaskDetailPanel() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-4 space-y-4">
         {/* Progress ring */}
         <div className="flex justify-center">
           <CircularProgress

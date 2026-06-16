@@ -84,7 +84,7 @@ export function TaskInitPage({ onOpenDrawer }: TaskInitPageProps) {
 
         {/* Collapsible body */}
         {!collapsed && (
-          <div className="max-h-[40vh] overflow-y-auto dcf-scrollbar">
+          <div className="max-h-[40vh] overflow-y-auto hmr-scrollbar">
             {/* Progress + subtask summary */}
             <div className="px-4 py-3 flex items-center gap-4">
               <CircularProgress percent={task.progress} size={56} strokeWidth={5} color={task.color} />

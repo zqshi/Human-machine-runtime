@@ -1,13 +1,15 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Monitoring Assets
 
 ## Files
-- Alert rules: [prometheus-alert-rules.yaml](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/prometheus-alert-rules.yaml)
-- Grafana dashboard: [grafana-dashboard-dcf-light-bot.json](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/grafana-dashboard-dcf-light-bot.json)
+- Alert rules: [prometheus-alert-rules.yaml](./prometheus-alert-rules.yaml)
+- Grafana dashboard: [grafana-dashboard-human-machine-runtime.json](./grafana-dashboard-human-machine-runtime.json)
 
 ## Import Dashboard
 1. Open Grafana.
 2. Go to `Dashboards -> New -> Import`.
-3. Upload `grafana-dashboard-dcf-light-bot.json`.
+3. Upload `grafana-dashboard-human-machine-runtime.json`.
 4. Select your Prometheus data source for variable `DS_PROMETHEUS`.
 5. Save dashboard.
 
@@ -27,12 +29,12 @@ Services:
 ## Recommended Alert Wiring
 1. Load alert rules into Prometheus rule files.
 2. Reload Prometheus.
-3. Configure Alertmanager route by `labels.service = dcf-light-bot`.
+3. Configure Alertmanager route by `labels.service = human-machine-runtime`.
 4. Wire notifications to on-call channel.
 
 ## Verification
 1. Check `/metrics` has:
-   - `dcf_health_state`
-   - `dcf_instance_state_total`
-   - `dcf_instance_failure_reason_total`
+   - `hmr_health_state`
+   - `hmr_instance_state_total`
+   - `hmr_instance_failure_reason_total`
 2. Run `npm run check:platform-slo` against a running environment.

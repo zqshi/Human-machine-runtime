@@ -29,7 +29,7 @@ const BRAND: Record<
     logoGradient: 'from-[#007AFF] to-[#0055CC]',
     bg: 'from-blue-50 via-white to-indigo-50',
     dots: ['bg-[#007AFF]/5', 'bg-indigo-400/5', 'bg-blue-400/5'],
-    title: 'DCF 数字员工协作平台',
+    title: 'HMR 数字员工协作平台',
     sub: '登录以开始使用',
     tags: [],
   },
@@ -59,7 +59,7 @@ interface LoginPageProps {
   variant?: Variant;
   onLogin: (homeserver: string, username: string, password: string) => Promise<void>;
   onSsoLogin?: (homeserver: string) => void;
-  onDcfSsoLogin?: () => void;
+  onHmrSsoLogin?: () => void;
 }
 
 const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE as string) || 'auto';
@@ -68,7 +68,7 @@ export function LoginPage({
   variant = 'user',
   onLogin,
   onSsoLogin,
-  onDcfSsoLogin,
+  onHmrSsoLogin,
 }: LoginPageProps) {
   const [homeserver, setHomeserver] = useState('');
   const [username, setUsername] = useState('');
@@ -82,11 +82,11 @@ export function LoginPage({
 
   // SSO-only 模式：自动触发 SSO 登录，无需用户点击
   useEffect(() => {
-    if (AUTH_MODE === 'sso' && onDcfSsoLogin && !ssoAutoTriggered.current) {
+    if (AUTH_MODE === 'sso' && onHmrSsoLogin && !ssoAutoTriggered.current) {
       ssoAutoTriggered.current = true;
-      onDcfSsoLogin();
+      onHmrSsoLogin();
     }
-  }, [onDcfSsoLogin]);
+  }, [onHmrSsoLogin]);
 
   const handleLogin = async () => {
     if (!username || !password) return;
@@ -200,10 +200,10 @@ export function LoginPage({
             </Button>
           )}
 
-          {onDcfSsoLogin && (
+          {onHmrSsoLogin && (
             <Button
               variant={AUTH_MODE === 'sso' ? 'primary' : 'ghost'}
-              onClick={onDcfSsoLogin}
+              onClick={onHmrSsoLogin}
               disabled={loading}
               className="w-full"
               size="lg"

@@ -116,7 +116,7 @@ export function ScheduledTaskRunDetail({
           <div className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
             <Icon name="description" size={13} /> 报告内容
           </div>
-          <div className="prose prose-sm max-w-none bg-white border border-gray-100 rounded-lg p-4 dcf-scrollbar">
+          <div className="prose prose-sm max-w-none bg-white border border-gray-100 rounded-lg p-4 hmr-scrollbar">
             <Markdown remarkPlugins={[remarkGfm]}>{reportMd}</Markdown>
           </div>
         </div>

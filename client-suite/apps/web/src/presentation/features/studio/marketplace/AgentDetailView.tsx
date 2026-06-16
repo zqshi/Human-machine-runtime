@@ -95,7 +95,7 @@ export function AgentDetailView({ agent }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {/* 介绍 */}
         {tab === 'intro' && (
           <div className="w-full max-w-3xl space-y-5">

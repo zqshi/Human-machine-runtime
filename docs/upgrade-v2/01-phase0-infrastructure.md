@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Phase 0：基础设施对齐
 
 > 代号说明：本文中 `ks-claw`（企业平台 Monorepo）、`clawhub`（技能市场）、`portal`/`portal-backend`（配置中心）、`xspace`（AI 工作区）、`claw-farm`（实例编排）均为**可替换的系统组件代号**，企业接入时替换为自有同类系统。
@@ -9,23 +11,23 @@
 
 ### 目标结构
 ```
-dcf-light-bot/
+human-machine-runtime/
 ├── apps/
 │   └── web/                          # client-suite 迁入
 ├── service/
-│   ├── dcf-admin-be/                 # 管理控制面 (FastAPI)
-│   ├── dcf-ops-be/                   # 运管平台 (FastAPI)
-│   ├── dcf-ai-gateway/              # AI Gateway (FastAPI)
-│   └── dcf-inrouter/                # Nginx 网关
+│   ├── hmr-admin-be/                 # 管理控制面 (FastAPI)
+│   ├── hmr-ops-be/                   # 运管平台 (FastAPI)
+│   ├── hmr-ai-gateway/              # AI Gateway (FastAPI)
+│   └── hmr-inrouter/                # Nginx 网关
 ├── packages/
 │   ├── db/                           # Prisma schema (MySQL)
 │   ├── db-pg/                        # Drizzle schema (PostgreSQL)
 │   └── shared/                       # 跨服务共享 Python 包
 ├── charts/
-│   ├── dcf-admin-be/
-│   ├── dcf-ops-be/
-│   ├── dcf-ai-gateway/
-│   └── dcf-inrouter/
+│   ├── hmr-admin-be/
+│   ├── hmr-ops-be/
+│   ├── hmr-ai-gateway/
+│   └── hmr-inrouter/
 ├── deploy/
 │   ├── manifests/secrets/
 │   └── helmfile.yaml
@@ -57,7 +59,7 @@ dcf-light-bot/
 - User, PlatformSession, AuthProvider, UserAuthorization
 - CredentialSecret, CredentialLease, OAuthState, UserApiToken
 
-**新增表**（DCF 管理域）：
+**新增表**（HMR 管理域）：
 - Tenant：租户管理
 - TenantMembership：租户成员
 - DigitalEmployee：数字员工实体
@@ -78,7 +80,7 @@ dcf-light-bot/
 
 ### 认证流程
 ```
-用户 → DCF Web → /api/v1/auth/login → 302 企业 OAuth (OIDC)
+用户 → HMR Web → /api/v1/auth/login → 302 企业 OAuth (OIDC)
 → 企业 IdP 授权 → 回调 /api/v1/auth/callback
 → platform-be 创建/更新 User + Session
 → Set-Cookie: session_token

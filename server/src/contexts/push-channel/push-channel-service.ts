@@ -49,7 +49,7 @@ export class PushChannelService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           msgtype: 'text',
-          text: { content: `[DCF 测试] 推送渠道连通性测试 — ${new Date().toISOString()}` },
+          text: { content: `[HMR 测试] 推送渠道连通性测试 — ${new Date().toISOString()}` },
         }),
         signal: controller.signal,
       });

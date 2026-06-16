@@ -178,7 +178,7 @@ export function FileListView({ departmentName, folderId, onMoveFiles, onBack }: 
 
       {/* Batch action floating bar */}
       {selected.size > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-bg-white-var rounded-2xl shadow-lg border border-border px-6 py-3 flex items-center gap-6 dcf-fade-in">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-bg-white-var rounded-2xl shadow-lg border border-border px-6 py-3 flex items-center gap-6 hmr-fade-in">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
               {selected.size}

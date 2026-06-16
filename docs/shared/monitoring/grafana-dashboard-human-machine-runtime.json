@@ -89,7 +89,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_health_state",
+          "expr": "hmr_health_state",
           "legendFormat": "health",
           "refId": "A"
         }
@@ -131,7 +131,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_instances_total",
+          "expr": "hmr_instances_total",
           "refId": "A"
         }
       ],
@@ -172,7 +172,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_review_pending_total",
+          "expr": "hmr_review_pending_total",
           "refId": "A"
         }
       ],
@@ -213,7 +213,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_review_overdue_total",
+          "expr": "hmr_review_overdue_total",
           "refId": "A"
         }
       ],
@@ -250,7 +250,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_instance_state_total",
+          "expr": "hmr_instance_state_total",
           "legendFormat": "{{state}}",
           "refId": "A"
         }
@@ -288,7 +288,7 @@
       },
       "targets": [
         {
-          "expr": "dcf_instance_failure_reason_total",
+          "expr": "hmr_instance_failure_reason_total",
           "legendFormat": "{{reason}}",
           "refId": "A"
         }
@@ -326,17 +326,17 @@
       },
       "targets": [
         {
-          "expr": "dcf_review_pending_total",
+          "expr": "hmr_review_pending_total",
           "legendFormat": "pending",
           "refId": "A"
         },
         {
-          "expr": "dcf_review_overdue_total",
+          "expr": "hmr_review_overdue_total",
           "legendFormat": "overdue",
           "refId": "B"
         },
         {
-          "expr": "dcf_review_escalated_total",
+          "expr": "hmr_review_escalated_total",
           "legendFormat": "escalated",
           "refId": "C"
         }
@@ -374,7 +374,7 @@
       },
       "targets": [
         {
-          "expr": "increase(dcf_review_escalation_events_total[1h])",
+          "expr": "increase(hmr_review_escalation_events_total[1h])",
           "legendFormat": "{{trigger}}",
           "refId": "A"
         }
@@ -387,7 +387,7 @@
   "schemaVersion": 39,
   "style": "dark",
   "tags": [
-    "dcf",
+    "hmr",
     "openclaw",
     "platform",
     "slo"
@@ -420,8 +420,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "DCF Light Bot - Platform Overview",
-  "uid": "dcf-light-bot-overview",
+  "title": "HMR Light Bot - Platform Overview",
+  "uid": "human-machine-runtime-overview",
   "version": 1,
   "weekStart": ""
 }

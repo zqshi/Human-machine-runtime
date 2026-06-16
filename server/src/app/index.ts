@@ -35,10 +35,10 @@ app.onError((err, c) => {
 
 app.notFound((c) => c.json({ error: 'Not Found' }, 404));
 
-logger.info({ port: config.port }, 'DCF Server starting');
+logger.info({ port: config.port }, 'HMR Server starting');
 
 const server: ServerType = serve({ fetch: app.fetch, port: config.port }, (info) => {
-  logger.info({ port: info.port }, 'DCF Server running');
+  logger.info({ port: info.port }, 'HMR Server running');
 
   if (ctx.matrixBot) {
     ctx.matrixBot.start().catch((err) => {

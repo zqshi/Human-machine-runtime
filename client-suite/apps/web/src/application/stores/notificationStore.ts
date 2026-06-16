@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Notification } from '../../domain/notification/Notification';
 import type { NotificationProps, AgentReaction } from '../../domain/notification/Notification';
 import { Approval } from '../../domain/notification/Approval';
-import { notificationApi } from '../../infrastructure/api/dcfApiClient';
+import { notificationApi } from '../../infrastructure/api/hmrApiClient';
 import { appEvents } from '../events/eventBus';
 import { channelAdapterRegistry } from '../../infrastructure/channels/ChannelAdapterRegistry';
 import type { ChannelType, TriageStatus } from '../../domain/shared/types';
@@ -24,7 +24,7 @@ interface NotificationState {
   setActiveTab(tab: ActiveTab): void;
   markAllAsRead(): void;
   reset(): void;
-  /** Fetch notifications from DCF backend */
+  /** Fetch notifications from HMR backend */
   fetchFromBackend(): Promise<void>;
   mergeCrossChannelNotifications(items: NotificationProps[]): void;
   addCompletionNotification(taskId: string, taskName: string): void;

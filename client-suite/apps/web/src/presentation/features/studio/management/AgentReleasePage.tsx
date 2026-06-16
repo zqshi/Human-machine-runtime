@@ -160,7 +160,7 @@ export function AgentReleasePage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {/* 新建版本弹窗 */}
         {showNewVersion && (
           <div className="mb-6 border border-primary/30 bg-primary/[0.04] rounded-2xl p-4 w-full max-w-2xl mx-auto">

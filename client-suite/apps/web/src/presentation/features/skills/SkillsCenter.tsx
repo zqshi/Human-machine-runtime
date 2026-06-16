@@ -165,7 +165,7 @@ export function SkillsCenter() {
   }, [activeTab, search, skills]);
 
   return (
-    <div className="flex-1 overflow-auto p-6 dcf-scrollbar">
+    <div className="flex-1 overflow-auto p-6 hmr-scrollbar">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-xl font-bold text-text-primary mb-1">技能中心</h2>
         <p className="text-sm text-text-secondary mb-4">为 Agent 装配专业技能</p>

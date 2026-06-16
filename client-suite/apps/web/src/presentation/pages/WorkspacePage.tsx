@@ -35,7 +35,7 @@ export function WorkspacePage() {
     }
   }, []);
 
-  // When backend is connected, fetch live data from DCF API
+  // When backend is connected, fetch live data from HMR API
   useEffect(() => {
     if (!isBackendConnected) return;
     useAgentStore.getState().fetchFromBackend();

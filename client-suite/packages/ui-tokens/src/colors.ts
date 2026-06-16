@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Colors
+ * HMR Design Tokens — Colors
  * Mode-switchable colors use CSS custom properties (RGB channels).
  * Tailwind <alpha-value> pattern: rgb(var(--c-xxx) / <alpha-value>)
  */

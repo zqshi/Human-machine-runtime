@@ -124,8 +124,8 @@ function OpsShell() {
 
 export function OpsApp() {
   const { isLoggedIn } = useAuth();
-  const { restoreSession, ssoRedirect, loginWithToken, initiateDcfSso } = useMatrixClient();
-  const loginDcfOnly = useAuthStore((s) => s.loginDcfOnly);
+  const { restoreSession, ssoRedirect, loginWithToken, initiateHmrSso } = useMatrixClient();
+  const loginHmrOnly = useAuthStore((s) => s.loginHmrOnly);
   const [restoring, setRestoring] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return !(params.has('code') && params.has('state'));
@@ -137,16 +137,16 @@ export function OpsApp() {
     return null;
   });
 
-  const loginDcf = useCallback(
+  const loginHmr = useCallback(
     async (_hs: string, username: string, password: string) => {
       const res = await authApi.login(username, password);
       if (res.authenticated && res.user) {
-        loginDcfOnly(res.user);
+        loginHmrOnly(res.user);
       } else {
         throw new Error(res.error || '登录失败');
       }
     },
-    [loginDcfOnly]
+    [loginHmrOnly]
   );
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export function OpsApp() {
       const loginToken = params.get('loginToken')!;
       window.history.replaceState({}, '', window.location.pathname);
       const hs =
-        localStorage.getItem('dcf_sso_homeserver') ||
+        localStorage.getItem('hmr_sso_homeserver') ||
         `${window.location.protocol}//${window.location.hostname}:8008`;
       loginWithToken(hs, loginToken).finally(() => {
         setSsoType(null);
@@ -170,7 +170,7 @@ export function OpsApp() {
       .me()
       .then((res) => {
         if (res.authenticated && res.user) {
-          loginDcfOnly(res.user);
+          loginHmrOnly(res.user);
         }
       })
       .catch(() => {})
@@ -214,12 +214,12 @@ export function OpsApp() {
       ) : (
         <LoginPage
           variant="ops"
-          onLogin={loginDcf}
+          onLogin={loginHmr}
           onSsoLogin={(hs) => {
-            localStorage.setItem('dcf_sso_homeserver', hs);
+            localStorage.setItem('hmr_sso_homeserver', hs);
             window.location.href = ssoRedirect(hs);
           }}
-          onDcfSsoLogin={() => initiateDcfSso()}
+          onHmrSsoLogin={() => initiateHmrSso()}
         />
       )}
       <ToastContainer />

@@ -104,7 +104,7 @@ export function OrchestrationDashboard() {
         <span className="text-[10px] text-slate-500">{agents.length} Agents</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4 space-y-4">
         {/* Topology */}
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <div className="flex items-center gap-2 mb-3">

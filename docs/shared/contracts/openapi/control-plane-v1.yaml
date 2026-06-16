@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: DCF Light Bot Control Plane API
+  title: HMR Light Bot Control Plane API
   version: 1.11.0
 paths:
   # ── Health & Monitoring ──

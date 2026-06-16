@@ -270,10 +270,12 @@ export class ToolManagementService {
       };
     }
 
-    // 获取凭证（简化版：从 source 中获取加密凭证并解密）
-    // 实际生产应从 credential_vault 中按 credentialId 查询
+    // ⚠️ STUB: 凭证解密链路（credential-vault 按 credentialId 查询 + 解密）未实装。
+    // CredentialService 当前仅有 encrypt/decrypt、无按 ID 查询能力；CredentialStore 无 db 实现。
+    // 接通前用 credentialId 占位 + 空密码，introspect 会因鉴权失败返回错误。
+    // 链路实装后应改为：const cred = await this.credentialSvc.getCredential(source.credentialId)
     const credential: { username: string; password: string } = {
-      username: source.credentialId, // 暂用 credentialId 作占位
+      username: source.credentialId,
       password: '',
     };
 
@@ -503,7 +505,8 @@ export class ToolManagementService {
     // 解密凭证（如有）
     let credential: DecryptedCredential | undefined;
     // 后续实现：从 credential_vault 按 definition 关联的 credentialId 获取密文，解密后注入
-    void this.credentialSvc; // 预留引用，待凭证解密流程实装
+    // credentialSvc 已注入；待 credential-vault 提供 getCredential(id) 后，在 syncDatabase 中按
+    // source.credentialId 解密获取真实 DB 凭证（当前凭证链路未实装，见 syncDatabase STUB 注释）。
 
     const result = await executor.execute(
       definition.executionConfig as Record<string, unknown>,

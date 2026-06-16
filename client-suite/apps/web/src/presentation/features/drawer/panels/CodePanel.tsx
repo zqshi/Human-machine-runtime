@@ -143,7 +143,7 @@ export default function CodePanel({ data, onChange }: PanelProps) {
       </div>
 
       {/* Code editor */}
-      <div className="flex-1 overflow-auto dcf-scrollbar min-h-0">
+      <div className="flex-1 overflow-auto hmr-scrollbar min-h-0">
         <CodeMirror
           value={code}
           extensions={langExts}

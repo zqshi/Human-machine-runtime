@@ -44,7 +44,7 @@ domain/          →  infrastructure/    →  application/      →  presentatio
 
 | 模块 | 文件 | 职责 |
 |------|------|------|
-| **api/** | dcfApiClient, documentAdapter, weKnoraClient | 后端 API 客户端 |
+| **api/** | hmrApiClient, documentAdapter, weKnoraClient | 后端 API 客户端 |
 | **matrix/** | MatrixClientAdapter (IMatrixClient), MockMatrixClient, RealMatrixClient, crypto-wasm-stub | Matrix SDK 适配 |
 | **channels/** | ChannelAdapter, ChannelAdapterRegistry, MockChannelAdapter | 多渠道消息适配 |
 | **mock/** | MockOpenClawDataSource, mockNotificationData, mockDecisionGoalData, MockAppTemplates, MockDocTemplates | Mock 数据工厂（演示模式） |
@@ -140,7 +140,7 @@ zustand stores (application/)
 | 主色 | `#007AFF` (Apple Blue) |
 | 暗色模式 | `[data-mode="openclaw"]` CSS 变量覆盖 |
 | 样式框架 | Tailwind CSS 3.4 |
-| 设计 Token | `@dcf/ui-tokens` preset |
+| 设计 Token | `@hmr/ui-tokens` preset |
 | 卡片风格 | `border-radius: 14px; backdrop-filter: blur` |
 | 字体 | -apple-system, SF Pro |
 

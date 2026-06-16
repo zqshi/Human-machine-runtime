@@ -98,12 +98,12 @@ export const seedData: SeedData = {
 
   systemConfigs: [
     ...productionSeed.systemConfigs,
-    { key: 'feature.decision_console', value: 'true', description: '决策控制台（DCF 新增）' },
-    { key: 'feature.multi_tenant', value: 'true', description: '多租户管理（DCF 新增）' },
-    { key: 'feature.rbac', value: 'true', description: 'RBAC 细粒度权限（DCF 新增）' },
-    { key: 'feature.audit_center', value: 'true', description: '统一审计中心（DCF 新增）' },
-    { key: 'feature.mcp_policy', value: 'true', description: 'MCP 策略管控（DCF 新增）' },
-    { key: 'feature.credential_vault', value: 'true', description: '凭据保险箱（DCF 新增）' },
+    { key: 'feature.decision_console', value: 'true', description: '决策控制台（HMR 新增）' },
+    { key: 'feature.multi_tenant', value: 'true', description: '多租户管理（HMR 新增）' },
+    { key: 'feature.rbac', value: 'true', description: 'RBAC 细粒度权限（HMR 新增）' },
+    { key: 'feature.audit_center', value: 'true', description: '统一审计中心（HMR 新增）' },
+    { key: 'feature.mcp_policy', value: 'true', description: 'MCP 策略管控（HMR 新增）' },
+    { key: 'feature.credential_vault', value: 'true', description: '凭据保险箱（HMR 新增）' },
   ],
 };
 

@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Glass / Frosted effects
+ * HMR Design Tokens — Glass / Frosted effects
  * Apple HIG 玻璃拟态
  */
 

@@ -132,7 +132,7 @@ describe('knowledge routes', () => {
       const res = await app.request('/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: 'tenant-1', query: 'what is DCF?' }),
+        body: JSON.stringify({ tenantId: 'tenant-1', query: 'what is HMR?' }),
       });
       expect(res.status).toBe(200);
       const body = await res.json();

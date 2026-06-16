@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PID_FILE="$ROOT_DIR/runtime/dcf-app.pid"
-APP_PORT="${DCF_APP_PORT:-3010}"
+PID_FILE="$ROOT_DIR/runtime/hmr-app.pid"
+APP_PORT="${HMR_APP_PORT:-3010}"
 
 if [ ! -f "$PID_FILE" ]; then
   echo "[stop] pid file not found, continue to cleanup port ${APP_PORT}"
@@ -36,4 +36,4 @@ for _ in $(seq 1 10); do
 done
 
 rm -f "$PID_FILE"
-echo "[ok] dcf app stopped"
+echo "[ok] hmr app stopped"

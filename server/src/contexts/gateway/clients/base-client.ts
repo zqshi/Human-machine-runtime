@@ -83,6 +83,12 @@ export abstract class BaseGatewayClient {
     if (opts.authToken) {
       headers['Authorization'] = `Bearer ${opts.authToken}`;
     }
+    // FormData 上传：移除默认 application/json，让 fetch 自动设置
+    // multipart/form-data; boundary=...（否则文件会被 JSON.stringify 成 "{}" 损坏）
+    const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
 
     const timeout = this.resolveTimeout(opts.timeoutProfile, opts.timeout);
     const maxAttempts = opts.skipRetry ? 1 : this.retryCount;
@@ -102,7 +108,10 @@ export abstract class BaseGatewayClient {
           const res = await fetch(url, {
             method,
             headers,
-            body: opts.body ? JSON.stringify(opts.body) : undefined,
+            body: (isFormData ? opts.body : opts.body ? JSON.stringify(opts.body) : undefined) as
+          | FormData
+          | string
+          | undefined,
             signal: controller.signal,
           });
 
@@ -158,6 +167,10 @@ export abstract class BaseGatewayClient {
     if (opts.authToken) {
       headers['Authorization'] = `Bearer ${opts.authToken}`;
     }
+    const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
 
     const timeout = this.resolveTimeout(opts.timeoutProfile, opts.timeout);
     const controller = new AbortController();
@@ -168,7 +181,10 @@ export abstract class BaseGatewayClient {
       const res = await fetch(url, {
         method,
         headers,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        body: (isFormData ? opts.body : opts.body ? JSON.stringify(opts.body) : undefined) as
+          | FormData
+          | string
+          | undefined,
         signal: controller.signal,
       });
       this.recordSuccess();

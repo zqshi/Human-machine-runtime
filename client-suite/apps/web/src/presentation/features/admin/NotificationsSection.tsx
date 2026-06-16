@@ -19,8 +19,8 @@ interface PushChannel {
   enabled: boolean;
 }
 
-const DISMISSED_KEY = 'dcf_dismissed_notifications';
-const SNOOZED_KEY = 'dcf_snoozed_notifications';
+const DISMISSED_KEY = 'hmr_dismissed_notifications';
+const SNOOZED_KEY = 'hmr_snoozed_notifications';
 
 function getDismissed(): Set<string> {
   try {

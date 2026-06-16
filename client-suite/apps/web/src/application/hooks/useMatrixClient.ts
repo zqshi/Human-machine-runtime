@@ -2,7 +2,7 @@
  * useMatrixClient — 管理 IMatrixClient 实例的单例 hook
  *
  * Login flow:
- * 1. Try DCF backend auth (/api/auth/login) → sets cookie session
+ * 1. Try HMR backend auth (/api/auth/login) → sets cookie session
  * 2. Connect to real Matrix homeserver via RealMatrixClient
  */
 import { useRef, useCallback, useState } from 'react';
@@ -19,7 +19,7 @@ import { useKnowledgeStore } from '../stores/knowledgeStore';
 import { useTodoStore } from '../stores/todoStore';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
 import { useCallStore } from '../stores/callStore';
-import { authApi } from '../../infrastructure/api/dcfApiClient';
+import { authApi } from '../../infrastructure/api/hmrApiClient';
 import { navigateTo, getCurrentOrigin } from '../../infrastructure/navigation';
 
 let clientInstance: IMatrixClient | null = null;
@@ -156,13 +156,13 @@ export function useMatrixClient() {
       if (loginInProgress) return;
       loginInProgress = true;
       try {
-        const setDcfUser = useAuthStore.getState().setDcfUser;
+        const setHmrUser = useAuthStore.getState().setHmrUser;
 
-        // Step 1: Try DCF backend auth (cookie session)
+        // Step 1: Try HMR backend auth (cookie session)
         try {
           const res = await authApi.login(username, password);
           if (res.authenticated && res.user) {
-            setDcfUser(res.user);
+            setHmrUser(res.user);
           }
         } catch {
           // Backend unreachable — proceed with direct Matrix login
@@ -289,9 +289,9 @@ export function useMatrixClient() {
   }, [clearAuth]);
 
   const restoreSession = useCallback(async () => {
-    const setDcfUser = useAuthStore.getState().setDcfUser;
+    const setHmrUser = useAuthStore.getState().setHmrUser;
 
-    // Step 1: Quick check DCF backend session (short timeout — don't block UI)
+    // Step 1: Quick check HMR backend session (short timeout — don't block UI)
     const persisted = loadPersistedAuth();
 
     try {
@@ -301,7 +301,7 @@ export function useMatrixClient() {
       );
       const meRes = await Promise.race([mePromise, timeout]);
       if (meRes.authenticated && meRes.user) {
-        setDcfUser(meRes.user);
+        setHmrUser(meRes.user);
       }
     } catch {
       // Backend unreachable or slow — proceed with Matrix session
@@ -419,7 +419,7 @@ export function useMatrixClient() {
     }
   }, []);
 
-  const initiateDcfSso = useCallback(async (provider?: string) => {
+  const initiateHmrSso = useCallback(async (provider?: string) => {
     try {
       const { redirectUrl } = await authApi.ssoAuthorize(provider);
       const url = new URL(redirectUrl);
@@ -433,22 +433,22 @@ export function useMatrixClient() {
     }
   }, []);
 
-  const handleDcfSsoCallback = useCallback(
+  const handleHmrSsoCallback = useCallback(
     async (code: string, state: string) => {
       const res = await authApi.ssoCallback(code, state);
       if (!res.authenticated || !res.user) {
         throw new Error(res.error || 'SSO 认证失败');
       }
-      const dcfUser = res.user;
-      useAuthStore.getState().setDcfUser(dcfUser);
+      const hmrUser = res.user;
+      useAuthStore.getState().setHmrUser(hmrUser);
       useAuthStore.getState().setAuthMethod('sso');
 
       const fakeProfile = {
-        userId: dcfUser.username,
-        displayName: dcfUser.username,
+        userId: hmrUser.username,
+        displayName: hmrUser.username,
         avatarUrl: null,
       };
-      setAuth(fakeProfile, 'dcf-session', getCurrentOrigin());
+      setAuth(fakeProfile, 'hmr-session', getCurrentOrigin());
       useAuthStore.getState().setChannelMode('matrix');
       persistAuth();
     },
@@ -474,7 +474,7 @@ export function useMatrixClient() {
     loadOlderMessages,
     editMessage,
     redactMessage,
-    initiateDcfSso,
-    handleDcfSsoCallback,
+    initiateHmrSso,
+    handleHmrSsoCallback,
   };
 }

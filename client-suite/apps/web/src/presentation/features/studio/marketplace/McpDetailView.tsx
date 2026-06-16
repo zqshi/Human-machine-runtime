@@ -180,7 +180,7 @@ export function McpDetailView({ mcp }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {/* 概览 */}
         {tab === 'overview' && (
           <div className="w-full max-w-3xl space-y-5">

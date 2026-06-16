@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Typography
+ * HMR Design Tokens — Typography
  * Font: Inter + PingFang SC (CJK fallback)
  */
 

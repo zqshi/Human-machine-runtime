@@ -1,49 +1,49 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: dcf-light-bot
-  namespace: dcf-system
+  name: human-machine-runtime
+  namespace: hmr-system
   labels:
-    app.kubernetes.io/name: dcf-light-bot
+    app.kubernetes.io/name: human-machine-runtime
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    nginx.ingress.kubernetes.io/websocket-services: dcf-server
+    nginx.ingress.kubernetes.io/websocket-services: hmr-server
 spec:
   tls:
     - hosts:
-        - dcf.example.com
-      secretName: dcf-light-bot-tls
+        - hmr.example.com
+      secretName: human-machine-runtime-tls
   rules:
-    - host: dcf.example.com
+    - host: hmr.example.com
       http:
         paths:
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: dcf-server
+                name: hmr-server
                 port:
                   number: 3002
           - path: /ws
             pathType: Prefix
             backend:
               service:
-                name: dcf-server
+                name: hmr-server
                 port:
                   number: 3002
           - path: /health
             pathType: Prefix
             backend:
               service:
-                name: dcf-server
+                name: hmr-server
                 port:
                   number: 3002
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: dcf-client
+                name: hmr-client
                 port:
                   number: 80

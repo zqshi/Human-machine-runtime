@@ -22,9 +22,9 @@ json_field() {
 
 echo "[step] start/check runtime stack"
 bash "$ROOT_DIR/scripts/start-openclaw-stack.sh"
-bash "$ROOT_DIR/scripts/start-dcf-app.sh"
+bash "$ROOT_DIR/scripts/start-hmr-app.sh"
 bash "$ROOT_DIR/scripts/check-openclaw-stack.sh" >/dev/null
-bash "$ROOT_DIR/scripts/check-dcf-app.sh" >/dev/null
+bash "$ROOT_DIR/scripts/check-hmr-app.sh" >/dev/null
 bash "$ROOT_DIR/scripts/openclaw-smoke.sh" >/dev/null
 
 echo "[step] matrix create-agent e2e"

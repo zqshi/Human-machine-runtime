@@ -7,7 +7,7 @@ import type { Version } from '../../domain/knowledge/Version';
 import type { AuditEntry, AuditOperationType } from '../../domain/knowledge/AuditEntry';
 import type { DocumentPermission } from '../../domain/knowledge/Permission';
 import type { StorageStats, DeptStorage, LargeFile } from '../../domain/knowledge/StorageTypes';
-import { documentApi, categoryApi, uploadApi } from '../../infrastructure/api/dcfApiClient';
+import { documentApi, categoryApi, uploadApi } from '../../infrastructure/api/hmrApiClient';
 import { fromDTO, toCreateDTO, toUpdateDTO } from '../../infrastructure/api/documentAdapter';
 import { knowledgeAdminActions } from './knowledgeAdminActions';
 

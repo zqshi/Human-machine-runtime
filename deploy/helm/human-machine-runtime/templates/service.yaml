@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "human-machine-runtime.fullname" . }}-server
+  namespace: {{ include "human-machine-runtime.namespace" . }}
+  labels:
+    {{- include "human-machine-runtime.serverLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.server.service.type }}
+  selector:
+    {{- include "human-machine-runtime.serverSelector" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.server.service.port }}
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "human-machine-runtime.fullname" . }}-client
+  namespace: {{ include "human-machine-runtime.namespace" . }}
+  labels:
+    {{- include "human-machine-runtime.clientLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.client.service.type }}
+  selector:
+    {{- include "human-machine-runtime.clientSelector" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.client.service.port }}
+      targetPort: http
+      protocol: TCP

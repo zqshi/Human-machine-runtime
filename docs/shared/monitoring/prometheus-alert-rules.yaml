@@ -1,63 +1,63 @@
 groups:
-  - name: dcf-light-bot.core
+  - name: human-machine-runtime.core
     interval: 30s
     rules:
-      - alert: DCFPlatformUnhealthy
-        expr: dcf_health_state < 1
+      - alert: HMRPlatformUnhealthy
+        expr: hmr_health_state < 1
         for: 3m
         labels:
           severity: critical
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
-          summary: "DCF platform health is unhealthy"
-          description: "dcf_health_state has been unhealthy for more than 3 minutes."
+          summary: "HMR platform health is unhealthy"
+          description: "hmr_health_state has been unhealthy for more than 3 minutes."
 
-      - alert: DCFPlatformDegraded
-        expr: dcf_health_state == 1
+      - alert: HMRPlatformDegraded
+        expr: hmr_health_state == 1
         for: 10m
         labels:
           severity: warning
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
-          summary: "DCF platform is degraded"
-          description: "dcf_health_state is degraded for more than 10 minutes."
+          summary: "HMR platform is degraded"
+          description: "hmr_health_state is degraded for more than 10 minutes."
 
-      - alert: DCFOverdueReviews
-        expr: dcf_review_overdue_total >= 5
+      - alert: HMROverdueReviews
+        expr: hmr_review_overdue_total >= 5
         for: 5m
         labels:
           severity: warning
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
           summary: "Too many overdue reviews"
           description: "Overdue review count is above threshold."
 
-      - alert: DCFReviewEscalationStorm
-        expr: increase(dcf_review_escalation_events_total[15m]) >= 10
+      - alert: HMRReviewEscalationStorm
+        expr: increase(hmr_review_escalation_events_total[15m]) >= 10
         for: 1m
         labels:
           severity: warning
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
           summary: "Review escalations are spiking"
           description: "Escalation events in last 15m exceeded threshold."
 
-      - alert: DCFInstanceFailureBurst
-        expr: dcf_instance_state_total{state="failed"} >= 3
+      - alert: HMRInstanceFailureBurst
+        expr: hmr_instance_state_total{state="failed"} >= 3
         for: 2m
         labels:
           severity: critical
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
           summary: "Multiple failed instances"
           description: "Failed instance count exceeded threshold."
 
-      - alert: DCFRuntimeTimeoutFailures
-        expr: dcf_instance_failure_reason_total{reason="timeout"} >= 2
+      - alert: HMRRuntimeTimeoutFailures
+        expr: hmr_instance_failure_reason_total{reason="timeout"} >= 2
         for: 5m
         labels:
           severity: warning
-          service: dcf-light-bot
+          service: human-machine-runtime
         annotations:
           summary: "Runtime timeout failures detected"
           description: "Instance timeout failure bucket is above threshold."

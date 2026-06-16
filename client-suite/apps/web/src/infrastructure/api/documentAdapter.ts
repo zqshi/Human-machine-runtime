@@ -3,7 +3,7 @@
  *
  * Converts between backend DocumentDTO and frontend Document domain model.
  */
-import type { DocumentDTO } from './dcfApiClient';
+import type { DocumentDTO } from './hmrApiClient';
 import type { DocumentType, DocumentProps } from '../../domain/knowledge/Document';
 import { Document } from '../../domain/knowledge/Document';
 

@@ -54,14 +54,14 @@ export {
   agentApi,
   authApi,
   appCatalogApi,
-} from '../../infrastructure/api/dcfApiClient';
+} from '../../infrastructure/api/hmrApiClient';
 export type {
   Employee,
   EmployeeResourceConfig,
   AgentRuntime,
   EmployeeRemote,
   AppCatalogItem,
-} from '../../infrastructure/api/dcfApiClient';
+} from '../../infrastructure/api/hmrApiClient';
 
 export type {
   OpenclawConfig,

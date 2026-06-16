@@ -178,7 +178,7 @@ export function RoomList({ onSelectRoom, onLeaveRoom }: RoomListProps) {
       </div>
 
       {/* Room list */}
-      <div className="flex-1 overflow-auto px-2 py-2 dcf-scrollbar">
+      <div className="flex-1 overflow-auto px-2 py-2 hmr-scrollbar">
         {(() => {
           const pinnedRooms = rooms.filter((r) => r.pinned);
           const botRooms = rooms.filter((r) => !r.pinned && r.type === 'bot');

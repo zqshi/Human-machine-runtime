@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 #
-# 注册测试用户到 Synapse (Matrix) + DCF 后端
+# 注册测试用户到 Synapse (Matrix) + HMR 后端
 #
-# 前置条件: dcf-matrix-synapse 容器运行中
+# 前置条件: hmr-matrix-synapse 容器运行中
 #
 # 账号 (密码统一 test123):
 #   test1 — 管理者   (tenant_admin)
@@ -30,8 +30,8 @@ register_user() {
   local user="$1" pass="$2" display="$3"
   echo -n "  registering ${user}... "
 
-  if docker ps --format '{{.Names}}' | grep -q '^dcf-matrix-synapse$'; then
-    docker exec dcf-matrix-synapse register_new_matrix_user \
+  if docker ps --format '{{.Names}}' | grep -q '^hmr-matrix-synapse$'; then
+    docker exec hmr-matrix-synapse register_new_matrix_user \
       --exists-ok --no-admin \
       -u "$user" -p "$pass" \
       -c /data/homeserver.yaml "http://localhost:8008" >/dev/null 2>&1

@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../components/ui/Icon';
 
-const LS_KEY = 'dcf_oc_guide_done';
+const LS_KEY = 'hmr_oc_guide_done';
 
 interface TourStep {
   target: string;

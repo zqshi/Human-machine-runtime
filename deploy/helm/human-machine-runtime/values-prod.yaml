@@ -1,16 +1,16 @@
-# DCF Light Bot — 生产环境 values override
+# HMR Light Bot — 生产环境 values override
 # ⚠️  敏感配置（密钥、密码）通过外部 Secret 注入，不在此文件中填写
-# 使用方式: helm install -f values.yaml -f values-prod.yaml dcf-light-bot ./
+# 使用方式: helm install -f values.yaml -f values-prod.yaml human-machine-runtime ./
 
 namespace:
-  name: dcf-system
+  name: hmr-system
 
 # ─── Server ──────────────────────────────────────────────────────
 server:
   replicaCount: 2
   image:
     # 通用镜像仓库占位，部署时替换为企业自有 registry
-    repository: ghcr.io/your-org/dcf-server
+    repository: ghcr.io/your-org/hmr-server
     tag: stable
     pullPolicy: IfNotPresent
   resources:
@@ -31,7 +31,7 @@ client:
   replicaCount: 2
   image:
     # 通用镜像仓库占位，部署时替换为企业自有 registry
-    repository: ghcr.io/your-org/dcf-client
+    repository: ghcr.io/your-org/hmr-client
     tag: stable
     pullPolicy: IfNotPresent
   autoscaling:
@@ -45,7 +45,7 @@ ingress:
   enabled: true
   className: nginx
   hosts:
-    - host: dcf.your-domain.example.com
+    - host: hmr.your-domain.example.com
       paths:
         - path: /api
           pathType: Prefix
@@ -60,16 +60,16 @@ ingress:
           pathType: Prefix
           backend: client
   tls:
-    - secretName: dcf-light-bot-tls
+    - secretName: human-machine-runtime-tls
       hosts:
-        - dcf.your-domain.example.com
+        - hmr.your-domain.example.com
 
 # ─── Config（非敏感）──────────────────────────────────────────────
 config:
   NODE_ENV: "production"
   PORT: "3002"
   AUTH_DEFAULT_PROVIDER: "platform-be-proxy"
-  CORS_ORIGINS: "https://dcf.your-domain.example.com"
+  CORS_ORIGINS: "https://hmr.your-domain.example.com"
   RATE_LIMIT_WINDOW_MS: "60000"
   RATE_LIMIT_MAX: "200"
   # Gateway — 内网微服务地址（通用占位，部署时替换为企业自有 service 名/namespace）
@@ -86,7 +86,7 @@ config:
 # ─── Secrets（引用外部 Secret，不在此处填写真实值）─────────────────
 secrets:
   create: false
-  name: dcf-light-bot-secret
+  name: human-machine-runtime-secret
 
 # ─── PDB ─────────────────────────────────────────────────────────
 pdb:

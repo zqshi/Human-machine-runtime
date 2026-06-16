@@ -5,7 +5,7 @@ import { ChatRoom } from '../ChatRoom';
 describe('ChatService', () => {
   const rooms = [
     ChatRoom.create({ id: '!dm1:s', name: 'Alice', type: 'dm' }),
-    ChatRoom.create({ id: '!bot1:s', name: 'DCF Bot', type: 'bot' }),
+    ChatRoom.create({ id: '!bot1:s', name: 'HMR Bot', type: 'bot' }),
     ChatRoom.create({ id: '!grp1:s', name: 'Team', type: 'group' }),
     ChatRoom.create({ id: '!bot2:s', name: 'Agent X', type: 'bot' }),
   ];
@@ -34,7 +34,7 @@ describe('ChatService', () => {
   });
 
   it('classifies room type from userId', () => {
-    expect(ChatService.classifyRoomType('@dcf-bot:s')).toBe('bot');
+    expect(ChatService.classifyRoomType('@hmr-bot:s')).toBe('bot');
     expect(ChatService.classifyRoomType('@factory:s')).toBe('bot');
     expect(ChatService.classifyRoomType('@agent-code:s')).toBe('bot');
     expect(ChatService.classifyRoomType('@alice:s')).toBe('dm');

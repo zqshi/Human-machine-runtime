@@ -7,7 +7,7 @@ export function createHealthRoutes(ctx: AppContext) {
   app.get('/', (c) => {
     return c.json({
       status: 'ok',
-      service: 'dcf-server',
+      service: 'hmr-server',
       timestamp: new Date().toISOString(),
     });
   });
@@ -37,7 +37,7 @@ export function createHealthRoutes(ctx: AppContext) {
     const gateways = ctx.gatewayHealth.getStatus();
     return c.json({
       status: 'ok',
-      service: 'dcf-server',
+      service: 'hmr-server',
       timestamp: new Date().toISOString(),
       auth: { defaultProvider: ctx.authService.getRegistry().listRegistered() },
       gateways,

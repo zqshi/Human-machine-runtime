@@ -13,7 +13,7 @@ export function SensingPage() {
         <h1 className="text-base font-semibold text-slate-100">感知与反馈</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-6">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
           <SignalRadar />
           <PatternBoard />

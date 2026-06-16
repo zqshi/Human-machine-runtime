@@ -59,7 +59,7 @@ export function AgentDetailPanel({ agent, onClose }: AgentDetailProps) {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4">
         {activeTab === 'overview' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">

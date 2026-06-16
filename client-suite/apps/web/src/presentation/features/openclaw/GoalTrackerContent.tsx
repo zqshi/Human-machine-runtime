@@ -57,7 +57,7 @@ export function GoalTrackerContent() {
   const completedGoals = goals.filter((g) => g.status === 'completed' || g.status === 'archived' || g.status === 'cancelled');
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 pb-4 space-y-4">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 pb-4 space-y-4">
       {goals.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-slate-500">
           <Icon name="flag" size={36} className="text-slate-600 mb-2" />

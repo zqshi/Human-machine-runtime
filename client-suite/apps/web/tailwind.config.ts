@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss';
-import { tailwindPreset } from '@dcf/ui-tokens';
+import { tailwindPreset } from '@hmr/ui-tokens';
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],

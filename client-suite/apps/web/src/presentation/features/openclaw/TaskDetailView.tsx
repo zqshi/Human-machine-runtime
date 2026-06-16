@@ -98,7 +98,7 @@ export function TaskDetailView() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto dcf-scrollbar px-6 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto hmr-scrollbar px-6 py-4 space-y-3">
           {cotMessages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
@@ -154,7 +154,7 @@ export function TaskDetailView() {
         </div>
 
         {/* Scrollable */}
-        <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-4 space-y-5">
           {/* Circular progress */}
           <div className="flex justify-center py-2">
             <CircularProgress percent={task.progress} label={task.status === 'completed' ? '已完成' : '扫描中'} />

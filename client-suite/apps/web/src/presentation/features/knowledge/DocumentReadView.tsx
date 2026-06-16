@@ -115,7 +115,7 @@ export function DocumentReadView({ onBack }: DocumentReadViewProps) {
       </div>
 
       {/* Document content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar">
         <div className="max-w-3xl mx-auto px-8 py-8">
           {/* Title + meta */}
           <div className="mb-8">

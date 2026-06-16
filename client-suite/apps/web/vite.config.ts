@@ -12,7 +12,7 @@ export default defineConfig({
     port: 5176,
     host: '127.0.0.1',
     proxy: {
-      // Proxy API calls to DCF backend during dev
+      // Proxy API calls to HMR backend during dev
       '/api': {
         target: 'http://127.0.0.1:3002',
         changeOrigin: true,

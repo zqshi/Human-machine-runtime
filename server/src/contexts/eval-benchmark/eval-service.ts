@@ -222,7 +222,10 @@ export class EvalService {
       taskDescription: ctx.taskDescription,
       expectedBehavior: ctx.expectedBehavior,
       expectedOutput: ctx.expectedOutput,
-      actualOutput: '[Simulated output — Phase 1 placeholder]', // Phase 3: 替换为真实 Agent 执行结果
+      // ⚠️ STUB: 评测系统当前使用模拟输出。Phase 3 接入真实 Agent 执行前，
+      // actualOutput 为占位串，evaluator 评分基于伪数据，verdict 不可作为真实 Agent
+      // 质量依据，不应进入线上决策门禁。
+      actualOutput: '[Simulated output — Phase 1 placeholder]',
       toolCallsLog: [],
       context: ctx.context,
     };

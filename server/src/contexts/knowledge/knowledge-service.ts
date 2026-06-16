@@ -35,7 +35,7 @@ export interface IKnowledgeBaseRepository {
 export interface IKnowledgeEntryRepository {
   findByKbId(knowledgeBaseId: string): Promise<KnowledgeEntry[]>;
   findById(id: string): Promise<KnowledgeEntry | null>;
-  findByDcfDocumentId(dcfDocumentId: string): Promise<KnowledgeEntry | null>;
+  findByHmrDocumentId(hmrDocumentId: string): Promise<KnowledgeEntry | null>;
   save(entry: KnowledgeEntry): Promise<void>;
   updateSyncStatus(id: string, status: SyncStatus): Promise<void>;
   delete(id: string): Promise<void>;
@@ -91,17 +91,17 @@ export class KnowledgeService {
   /* ---- Tenant Provisioning ---- */
 
   async provisionTenant(
-    dcfTenantId: string,
+    hmrTenantId: string,
     tenantSlug: string,
     tenantName: string
   ): Promise<WkTenantMapping> {
-    const existing = await this.mappingRepo.getByDcfTenantId(dcfTenantId);
+    const existing = await this.mappingRepo.getByHmrTenantId(hmrTenantId);
     if (existing) return existing;
 
-    const username = `dcf-${tenantSlug}`;
+    const username = `hmr-${tenantSlug}`;
     const password = randomUUID();
 
-    this.logger.info('provisioning WeKnora tenant', { dcfTenantId, username });
+    this.logger.info('provisioning WeKnora tenant', { hmrTenantId, username });
 
     const reg = await this.client.registerTenant(username, password);
 
@@ -113,7 +113,7 @@ export class KnowledgeService {
 
     const mapping: WkTenantMapping = {
       id: newId('wkm'),
-      dcfTenantId,
+      hmrTenantId,
       wkTenantId: reg.tenant_id,
       wkUserId: reg.user_id,
       wkApiKey: this.encryption.encrypt(apiKey),
@@ -133,25 +133,25 @@ export class KnowledgeService {
         type: 'document',
       });
       mapping.defaultKbId = defaultKb.id;
-      await this.mappingRepo.updateDefaultKbId(dcfTenantId, defaultKb.id);
+      await this.mappingRepo.updateDefaultKbId(hmrTenantId, defaultKb.id);
     } catch (err) {
       this.logger.warn('failed to create default KB, will retry later', {
-        dcfTenantId,
+        hmrTenantId,
         error: String(err),
       });
     }
 
     this.logger.info('WeKnora tenant provisioned', {
-      dcfTenantId,
+      hmrTenantId,
       wkTenantId: reg.tenant_id,
     });
 
     return mapping;
   }
 
-  async deprovisionTenant(dcfTenantId: string): Promise<void> {
-    await this.mappingRepo.updateStatus(dcfTenantId, 'deprovisioned');
-    this.logger.info('WeKnora tenant deprovisioned', { dcfTenantId });
+  async deprovisionTenant(hmrTenantId: string): Promise<void> {
+    await this.mappingRepo.updateStatus(hmrTenantId, 'deprovisioned');
+    this.logger.info('WeKnora tenant deprovisioned', { hmrTenantId });
   }
 
   /* ---- Knowledge Base CRUD ---- */
@@ -266,7 +266,7 @@ export class KnowledgeService {
       throw new AppError('knowledge base does not belong to tenant', 403, 'KB_TENANT_MISMATCH');
     }
 
-    const existing = await this.entryRepo.findByDcfDocumentId(doc.id);
+    const existing = await this.entryRepo.findByHmrDocumentId(doc.id);
     if (existing) {
       const apiKey = await this.resolveApiKey(tenantId);
       await this.client.deleteKnowledge(apiKey, kb.wkKnowledgeBaseId, existing.wkKnowledgeId);
@@ -278,7 +278,7 @@ export class KnowledgeService {
       title: doc.title,
       content: doc.content,
       metadata: {
-        source: 'dcf',
+        source: 'hmr',
         documentId: doc.id,
         type: doc.type || 'doc',
       },
@@ -289,7 +289,7 @@ export class KnowledgeService {
       knowledgeBaseId: kbId,
       tenantId,
       wkKnowledgeId: wkKnowledge.id,
-      dcfDocumentId: doc.id,
+      hmrDocumentId: doc.id,
       title: doc.title,
       sourceType: 'manual',
       parseStatus: (wkKnowledge.parse_status as KnowledgeEntry['parseStatus']) || 'pending',
@@ -301,7 +301,7 @@ export class KnowledgeService {
 
     await this.entryRepo.save(entry);
     this.logger.info('document synced to WeKnora', {
-      dcfDocId: doc.id,
+      hmrDocId: doc.id,
       wkKnowledgeId: wkKnowledge.id,
     });
     return entry;
@@ -325,7 +325,7 @@ export class KnowledgeService {
       knowledgeBaseId: kbId,
       tenantId,
       wkKnowledgeId: wkKnowledge.id,
-      dcfDocumentId: null,
+      hmrDocumentId: null,
       title: wkKnowledge.title || input.url,
       sourceType: 'url',
       parseStatus: (wkKnowledge.parse_status as KnowledgeEntry['parseStatus']) || 'pending',
@@ -409,20 +409,20 @@ export class KnowledgeService {
   /* ---- Internals ---- */
 
   private async resolveApiKey(tenantId: string): Promise<string> {
-    const mapping = await this.mappingRepo.getByDcfTenantId(tenantId);
+    const mapping = await this.mappingRepo.getByHmrTenantId(tenantId);
     if (!mapping || mapping.status !== 'active') {
       throw new AppError('WeKnora not provisioned for this tenant', 404, 'WK_NOT_PROVISIONED');
     }
     return this.encryption.decrypt(mapping.wkApiKey);
   }
 
-  private async resolveWkKbIds(tenantId: string, dcfKbIds?: string[]): Promise<string[]> {
-    if (!dcfKbIds?.length) {
-      const mapping = await this.mappingRepo.getByDcfTenantId(tenantId);
+  private async resolveWkKbIds(tenantId: string, hmrKbIds?: string[]): Promise<string[]> {
+    if (!hmrKbIds?.length) {
+      const mapping = await this.mappingRepo.getByHmrTenantId(tenantId);
       return mapping?.defaultKbId ? [mapping.defaultKbId] : [];
     }
     const wkIds: string[] = [];
-    for (const id of dcfKbIds) {
+    for (const id of hmrKbIds) {
       const kb = await this.kbRepo.findById(id);
       if (kb && kb.tenantId === tenantId) {
         wkIds.push(kb.wkKnowledgeBaseId);

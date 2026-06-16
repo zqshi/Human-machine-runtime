@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Production Readiness Checklist
 
 ## Security
@@ -16,7 +18,7 @@
 - [ ] Matrix `!create_agent` load tested for idempotent instance creation
 - [ ] Kubernetes manifests reviewed and customized (`deploy/k8s/base`)
 - [ ] Kubernetes manifest check passed (`npm run check:k8s-manifests`)
-- [ ] Helm chart values reviewed and customized (`deploy/helm/dcf-light-bot/values-*.yaml`)
+- [ ] Helm chart values reviewed and customized (`deploy/helm/human-machine-runtime/values-*.yaml`)
 - [ ] Helm chart check passed (`npm run check:helm-chart`)
 - [ ] Production config guardrail check passed (`npm run check:prod-config`)
 - [ ] Release preflight matrix check passed (`npm run check:release-preflight`)
@@ -26,11 +28,11 @@
 - [ ] Audit export endpoint verified (`/api/control/audits/export?format=ndjson`)
 - [ ] Audit retention configured (`AUDIT_RETENTION_*`, `AUDIT_ARCHIVE_*`)
 - [ ] Prometheus metrics endpoint verified (`/metrics`)
-- [ ] Instance label metrics verified (`dcf_instance_state_total`, `dcf_instance_failure_reason_total`)
+- [ ] Instance label metrics verified (`hmr_instance_state_total`, `hmr_instance_failure_reason_total`)
 - [ ] Health threshold config validated (`HEALTH_UNHEALTHY_*`, `HEALTH_DEGRADED_*`)
-- [ ] Prometheus alerts loaded from [prometheus-alert-rules.yaml](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/prometheus-alert-rules.yaml)
-- [ ] Grafana dashboard imported from [grafana-dashboard-dcf-light-bot.json](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/grafana-dashboard-dcf-light-bot.json)
-- [ ] Monitoring guide followed: [README.md](/Users/zqs/Downloads/project/dcf-light-bot/docs/monitoring/README.md)
+- [ ] Prometheus alerts loaded from [prometheus-alert-rules.yaml](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/prometheus-alert-rules.yaml)
+- [ ] Grafana dashboard imported from [grafana-dashboard-human-machine-runtime.json](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/grafana-dashboard-human-machine-runtime.json)
+- [ ] Monitoring guide followed: [README.md](/Users/zqs/Downloads/project/human-machine-runtime/docs/monitoring/README.md)
 - [ ] Local observability stack validated (`npm run observability:up` + `npm run observability:check`)
 - [ ] Scripted check passed (`npm run check:platform-slo`)
 - [ ] Error logs shipped to centralized sink

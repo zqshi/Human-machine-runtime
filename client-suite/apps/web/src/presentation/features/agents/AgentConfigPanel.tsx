@@ -48,7 +48,7 @@ export function AgentConfigPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4 space-y-5">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4 space-y-5">
         {Object.entries(grouped).map(([category, caps]) => (
           <div key={category}>
             <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">

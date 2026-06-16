@@ -11,13 +11,13 @@ set -euo pipefail
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
 CONTEXT="${CONTEXT:-default}"   # 企业按自有 kubeconfig context 设置
-PID_DIR="/tmp/dcf-pf"
+PID_DIR="/tmp/hmr-pf"
 mkdir -p "$PID_DIR"
 
 declare -A FORWARDS=(
   # 格式：<逻辑名>=<namespace>:<svc资源>:<本地端口>:<远端端口>
   # namespace / service 名称请替换为各企业集群中的实际资源
-  ["litellm"]="dcf-base:svc/llmproxy-litellm:14000:8080"
+  ["litellm"]="hmr-base:svc/llmproxy-litellm:14000:8080"
   ["clawhub"]="clawhub:svc/clawhub:13080:3080"
   ["portal"]="claw-farm:svc/portal-backend:13090:3090"
   ["claw-farm"]="claw-farm:svc/claw-farm:18080:8080"

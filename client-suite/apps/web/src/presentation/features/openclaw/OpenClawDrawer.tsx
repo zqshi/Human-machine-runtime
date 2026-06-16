@@ -79,7 +79,7 @@ function CoTDetailContent({ data }: ContentProps) {
   const completedCount = message.cotSteps.filter((s) => s.status === 'done').length;
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
       {/* CoT header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -231,7 +231,7 @@ function TaskDetailContent({ data }: ContentProps) {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
         <section className="flex justify-center py-2">
           <CircularProgress
             percent={task.progress}
@@ -322,7 +322,7 @@ function TaskDetailContent({ data }: ContentProps) {
 
 function SourceDetailContent({ data }: ContentProps) {
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
       <section>
         <h4 className="text-xs font-medium text-slate-300 mb-2">
           {(data.title as string) ?? '来源详情'}
@@ -344,7 +344,7 @@ function DataExplorerContent({ data }: ContentProps) {
   const rows = (data.rows ?? []) as string[][];
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3">
       <div className="overflow-x-auto rounded-lg border border-white/10">
         <table className="w-full text-[11px]">
           <thead>
@@ -392,7 +392,7 @@ function CodeViewerContent({ data }: ContentProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-2">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-slate-400">
           {language}
@@ -421,7 +421,7 @@ function ExecutionLogContent({ data }: ContentProps) {
     }>
   ).map((l) => ({ time: formatTimestamp(l.timestamp), level: l.level, message: l.message }));
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3">
       <ExecutionLogViewer logs={logs} maxHeight={500} />
     </div>
   );
@@ -441,7 +441,7 @@ function CollaborationChainContent({ data }: ContentProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
       <p className="text-xs text-slate-400">{chain.description}</p>
       <CollaborationChainGraph chain={chain} />
     </div>
@@ -472,7 +472,7 @@ function ActivityDetailContent({ data }: ContentProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
       {/* Activity header */}
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
@@ -537,7 +537,7 @@ function NotificationDetailContent({ data }: ContentProps) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3 space-y-4">
         {/* Notification header */}
         <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
           <div className="flex items-center gap-2 mb-2">

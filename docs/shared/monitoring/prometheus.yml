@@ -12,10 +12,10 @@ alerting:
             - alertmanager:9093
 
 scrape_configs:
-  - job_name: dcf-light-bot
+  - job_name: human-machine-runtime
     metrics_path: /metrics
     static_configs:
       - targets:
           - host.docker.internal:3000
         labels:
-          service: dcf-light-bot
+          service: human-machine-runtime

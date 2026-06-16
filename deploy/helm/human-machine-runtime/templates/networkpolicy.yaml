@@ -2,14 +2,14 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "dcf-light-bot.fullname" . }}-allow-ingress
-  namespace: {{ include "dcf-light-bot.namespace" . }}
+  name: {{ include "human-machine-runtime.fullname" . }}-allow-ingress
+  namespace: {{ include "human-machine-runtime.namespace" . }}
   labels:
-    {{- include "dcf-light-bot.labels" . | nindent 4 }}
+    {{- include "human-machine-runtime.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "dcf-light-bot.name" . }}
+      app.kubernetes.io/name: {{ include "human-machine-runtime.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
@@ -22,7 +22,7 @@ spec:
         {{- end }}
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "dcf-light-bot.name" . }}
+              app.kubernetes.io/name: {{ include "human-machine-runtime.name" . }}
       ports:
         - protocol: TCP
           port: 3002

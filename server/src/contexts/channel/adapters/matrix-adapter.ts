@@ -19,7 +19,7 @@ export class MatrixChannelAdapter implements IChannelAdapter {
   }
 
   async sendMessage(target: ChannelTarget, message: ChannelMessage): Promise<void> {
-    const txnId = `dcf_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const txnId = `hmr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const body =
       message.type === 'rich_text'
         ? {

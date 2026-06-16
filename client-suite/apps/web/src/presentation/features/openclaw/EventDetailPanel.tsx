@@ -293,7 +293,7 @@ export function EventDetailPanel() {
       </div>
 
       {/* Scrollable content: email detail or chat-style */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-4 py-3">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-3">
         {isEmail ? (
           <EmailDetail
             subject={notification.title.replace(/^Email\s*·\s*/, '')}

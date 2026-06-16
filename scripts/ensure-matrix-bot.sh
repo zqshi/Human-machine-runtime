@@ -5,10 +5,10 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 MATRIX_HS="${MATRIX_HS:-http://127.0.0.1:8008}"
-BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-dcfbot}"
-BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-dcfbot123}"
+BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-hmrbot}"
+BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-hmrbot123}"
 BOT_DISPLAY_NAME="${MATRIX_BOT_DISPLAY_NAME:-数字工厂bot}"
-FACTORY_ROOM_ALIAS_LOCALPART="${FACTORY_ROOM_ALIAS_LOCALPART:-dcf-factory}"
+FACTORY_ROOM_ALIAS_LOCALPART="${FACTORY_ROOM_ALIAS_LOCALPART:-hmr-factory}"
 FACTORY_ROOM_NAME="${FACTORY_ROOM_NAME:-数字工厂服务台}"
 FACTORY_ROOM_TOPIC="${FACTORY_ROOM_TOPIC:-数字员工创建与协作入口（非加密房间）}"
 MATRIX_E2EE_ENABLED="${MATRIX_E2EE_ENABLED:-false}"
@@ -44,12 +44,12 @@ if ! wait_matrix; then
   exit 0
 fi
 
-if ! docker ps --format '{{.Names}}' | grep -q '^dcf-matrix-synapse$'; then
+if ! docker ps --format '{{.Names}}' | grep -q '^hmr-matrix-synapse$'; then
   echo "[warn] synapse container not found, skip bot bootstrap"
   exit 0
 fi
 
-docker exec dcf-matrix-synapse register_new_matrix_user \
+docker exec hmr-matrix-synapse register_new_matrix_user \
   --exists-ok --no-admin \
   -u "$BOT_LOCALPART" -p "$BOT_PASSWORD" \
   -c /data/homeserver.yaml "http://localhost:8008" >/dev/null

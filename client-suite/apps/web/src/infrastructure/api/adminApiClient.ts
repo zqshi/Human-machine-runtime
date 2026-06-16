@@ -4,7 +4,7 @@
  * Covers all /api/admin/* and /api/platform/* routes.
  */
 
-import { ApiError } from './dcfApiClient';
+import { ApiError } from './hmrApiClient';
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (path.includes('/undefined') || path.includes('/null')) {

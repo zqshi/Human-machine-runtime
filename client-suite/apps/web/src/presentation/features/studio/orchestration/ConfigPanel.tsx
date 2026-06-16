@@ -382,7 +382,7 @@ export function ConfigPanel() {
                 autoFocus
               />
             </div>
-            <div className="flex-1 p-3 overflow-y-auto space-y-1 dcf-scrollbar">
+            <div className="flex-1 p-3 overflow-y-auto space-y-1 hmr-scrollbar">
               {filteredMcps.length === 0 && (
                 <div className="text-center py-4 text-[11px] text-slate-500">无可添加的工具</div>
               )}
@@ -442,7 +442,7 @@ export function ConfigPanel() {
                 autoFocus
               />
             </div>
-            <div className="flex-1 p-3 overflow-y-auto space-y-1 dcf-scrollbar">
+            <div className="flex-1 p-3 overflow-y-auto space-y-1 hmr-scrollbar">
               {filteredSkills.length === 0 && (
                 <div className="text-center py-4 text-[11px] text-slate-500">无可添加的技能</div>
               )}

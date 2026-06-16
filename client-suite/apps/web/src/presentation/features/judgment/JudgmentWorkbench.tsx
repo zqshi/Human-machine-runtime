@@ -207,7 +207,7 @@ export function JudgmentWorkbench() {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4 space-y-4">
         {/* Analytics overview */}
         <AnalyticsCard analytics={analytics} />
 

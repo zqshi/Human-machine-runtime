@@ -83,7 +83,7 @@ export function PushConfigDialog({ open, onClose }: PushConfigDialogProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto dcf-scrollbar p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto hmr-scrollbar p-5 space-y-5">
           {/* Channel matrix */}
           <div>
             <div className="flex items-center gap-1.5 mb-3">

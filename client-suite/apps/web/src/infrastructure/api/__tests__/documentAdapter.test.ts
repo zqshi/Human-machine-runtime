@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fromDTO, toCreateDTO, toUpdateDTO } from '../documentAdapter';
-import type { DocumentDTO } from '../dcfApiClient';
+import type { DocumentDTO } from '../hmrApiClient';
 
 function makeDTO(overrides: Partial<DocumentDTO> = {}): DocumentDTO {
   return {

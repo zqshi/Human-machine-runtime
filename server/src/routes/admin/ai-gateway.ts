@@ -169,8 +169,9 @@ export function createAdminAiGatewayRoutes(
 
   app.put('/models/:id', async (c) => {
     const id = parseInt(c.req.param('id'), 10);
-    const body = await c.req.json();
-    const model = await repo.updateModel(id, body);
+    const parsed = await parseBody(c, createModelSchema);
+    if ('error' in parsed) return badRequest(c, parsed.error);
+    const model = await repo.updateModel(id, parsed.data);
     if (!model) return c.json({ error: 'model not found' }, 404);
     return c.json(model);
   });
@@ -439,8 +440,9 @@ export function createAdminAiGatewayRoutes(
 
   app.put('/risk-rules/:id', async (c) => {
     const ruleId = decodeURIComponent(c.req.param('id'));
-    const body = await c.req.json();
-    const rule = await repo.updateRiskRule(ruleId, body);
+    const parsed = await parseBody(c, createRiskRuleSchema);
+    if ('error' in parsed) return badRequest(c, parsed.error);
+    const rule = await repo.updateRiskRule(ruleId, parsed.data);
     if (!rule) return c.json({ error: 'rule not found' }, 404);
     return c.json(rule);
   });

@@ -72,7 +72,7 @@ export function MessageBubble({ message, onAction }: MessageBubbleProps) {
 
   return (
     <div
-      className={`flex gap-2.5 dcf-fade-in ${isOwn ? 'flex-row-reverse' : ''}`}
+      className={`flex gap-2.5 hmr-fade-in ${isOwn ? 'flex-row-reverse' : ''}`}
       onContextMenu={handleContext}
     >
       <Avatar

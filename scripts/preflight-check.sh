@@ -27,7 +27,7 @@ warn() {
   WARN=$((WARN + 1))
 }
 
-echo "═══ DCF Production Preflight Check ═══"
+echo "═══ HMR Production Preflight Check ═══"
 echo ""
 
 # 1. Required env vars
@@ -38,13 +38,13 @@ check "JWT_SECRET is set" "$([ -n "$JWT_SECRET" ] && echo true || echo false)"
 check "CREDENTIAL_ENCRYPTION_KEY is set" "$([ -n "$CREDENTIAL_ENCRYPTION_KEY" ] && echo true || echo false)"
 
 # Check for insecure defaults
-if [ "$JWT_SECRET" = "dcf-dev-secret-change-in-production" ]; then
+if [ "$JWT_SECRET" = "hmr-dev-secret-change-in-production" ]; then
   check "JWT_SECRET is not dev default" "false"
 else
   check "JWT_SECRET is not dev default" "true"
 fi
 
-if [ "$CREDENTIAL_ENCRYPTION_KEY" = "dcf-dev-encryption-key-change-me!!" ]; then
+if [ "$CREDENTIAL_ENCRYPTION_KEY" = "hmr-dev-encryption-key-change-me!!" ]; then
   check "CREDENTIAL_ENCRYPTION_KEY is not dev default" "false"
 else
   check "CREDENTIAL_ENCRYPTION_KEY is not dev default" "true"

@@ -24,9 +24,9 @@ export async function authMiddleware(c: Context, next: Next) {
       return c.json({ error: 'Missing token' }, 401);
     }
 
-    const dcfPrincipal = await tryDcfJwt(token);
-    if (dcfPrincipal) {
-      c.set('user', dcfPrincipal);
+    const hmrPrincipal = await tryHmrJwt(token);
+    if (hmrPrincipal) {
+      c.set('user', hmrPrincipal);
       await next();
       return;
     }
@@ -44,7 +44,7 @@ export async function authMiddleware(c: Context, next: Next) {
 
   const sessionCookie = parseCookie(
     c.req.header('cookie') ?? '',
-    config.auth?.session?.cookieName ?? 'dcf_session'
+    config.auth?.session?.cookieName ?? 'hmr_session'
   );
   if (sessionCookie) {
     const authService = c.get('authService') as
@@ -65,7 +65,7 @@ export async function authMiddleware(c: Context, next: Next) {
   return c.json({ error: 'Missing or invalid Authorization header' }, 401);
 }
 
-async function tryDcfJwt(token: string): Promise<Principal | null> {
+async function tryHmrJwt(token: string): Promise<Principal | null> {
   try {
     const { payload } = await jose.jwtVerify(token, jwtSecret);
     const decoded = payload as unknown as JwtPayload;

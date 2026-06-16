@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: dcf-system
+  name: hmr-system
   labels:
-    app.kubernetes.io/name: dcf-light-bot
-    app.kubernetes.io/part-of: dcf-platform
+    app.kubernetes.io/name: human-machine-runtime
+    app.kubernetes.io/part-of: hmr-platform

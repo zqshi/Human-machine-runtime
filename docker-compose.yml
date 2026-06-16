@@ -5,14 +5,14 @@ services:
       # 标准端口映射；若本机 5432 已被占用，改为 "5433:5432" 等避免冲突
       - "5432:5432"
     environment:
-      POSTGRES_USER: dcf
-      POSTGRES_PASSWORD: dcf
-      POSTGRES_DB: dcf
+      POSTGRES_USER: hmr
+      POSTGRES_PASSWORD: hmr
+      POSTGRES_DB: hmr
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/init-weknora-db.sh:/docker-entrypoint-initdb.d/init-weknora-db.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dcf"]
+      test: ["CMD-SHELL", "pg_isready -U hmr"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -39,7 +39,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://dcf:dcf@postgres:5432/weknora
+      DATABASE_URL: postgresql://hmr:hmr@postgres:5432/weknora
       REDIS_URL: redis://redis:6379/1
       DISABLE_REGISTRATION: "false"
       SECRET_KEY: weknora-dev-secret-change-in-production
@@ -57,7 +57,7 @@ services:
       - conduit_data:/var/lib/matrix-conduit
       - ./runtime/conduit/conduit.toml:/etc/conduit.toml:ro
 
-  dcf-server:
+  hmr-server:
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -69,13 +69,13 @@ services:
     environment:
       NODE_ENV: development
       PORT: "3002"
-      DATABASE_URL: postgresql://dcf:dcf@postgres:5432/dcf
-      JWT_SECRET: dcf-dev-secret-change-in-production
-      CREDENTIAL_ENCRYPTION_KEY: dcf-dev-encryption-key-change-me!!
+      DATABASE_URL: postgresql://hmr:hmr@postgres:5432/hmr
+      JWT_SECRET: hmr-dev-secret-change-in-production
+      CREDENTIAL_ENCRYPTION_KEY: hmr-dev-encryption-key-change-me!!
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
       AUTH_DEFAULT_PROVIDER: local
       MATRIX_HOMESERVER_URL: http://conduit:6167
-      MATRIX_BOT_USER_ID: "@dcf-bot:localhost"
+      MATRIX_BOT_USER_ID: "@hmr-bot:localhost"
       LITELLM_BASE_URL: ""
       CLAWHUB_API_URL: ""
       PORTAL_API_URL: ""
@@ -86,14 +86,14 @@ services:
       WEKNORA_ENABLED: "${WEKNORA_ENABLED:-}"
       WEKNORA_ADMIN_API_KEY: "${WEKNORA_ADMIN_API_KEY:-}"
 
-  dcf-web:
+  hmr-web:
     build:
       context: ./client-suite
       dockerfile: Dockerfile
     ports:
       - "8080:80"
     depends_on:
-      - dcf-server
+      - hmr-server
     profiles:
       - full
 

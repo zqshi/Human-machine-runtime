@@ -191,7 +191,7 @@ export function AppCreateFlow({ onBack }: Props) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Chat */}
         <div className="flex-1 flex flex-col min-w-[320px] border-r border-white/[0.06]">
-          <div className="flex-1 p-4 overflow-y-auto dcf-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             <div className="flex flex-col gap-3">
               {messages.map((m) => (
                 <div
@@ -268,7 +268,7 @@ export function AppCreateFlow({ onBack }: Props) {
           <div className="flex-1 overflow-hidden">
             {rightTab === 'files' && (
               <div className="flex h-full">
-                <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto dcf-scrollbar">
+                <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto hmr-scrollbar">
                   {files.map((f) => (
                     <button
                       key={f.name}

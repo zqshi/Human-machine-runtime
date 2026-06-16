@@ -70,7 +70,7 @@ export function AgentManagementPage() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-2 overflow-y-auto dcf-scrollbar">
+        <nav className="flex-1 px-2 py-2 overflow-y-auto hmr-scrollbar">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="mb-1">
               <div className="px-3 pt-2 pb-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-600">

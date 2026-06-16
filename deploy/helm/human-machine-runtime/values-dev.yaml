@@ -1,5 +1,5 @@
 namespace:
-  name: dcf-system-dev
+  name: hmr-system-dev
 
 image:
   tag: dev
@@ -8,14 +8,14 @@ replicaCount: 1
 
 ingress:
   hosts:
-    - host: dcf-dev.example.com
+    - host: hmr-dev.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: dcf-light-bot-dev-tls
+    - secretName: human-machine-runtime-dev-tls
       hosts:
-        - dcf-dev.example.com
+        - hmr-dev.example.com
 
 hpa:
   enabled: false
@@ -24,11 +24,11 @@ networkPolicy:
   ingress:
     allowedNamespaces:
       - ingress-nginx
-      - dcf-system-dev
+      - hmr-system-dev
 
 config:
-  PLATFORM_BASE_URL: "https://dcf-dev.example.com"
-  KUBERNETES_NAMESPACE_PREFIX: "dcf-dev"
+  PLATFORM_BASE_URL: "https://hmr-dev.example.com"
+  KUBERNETES_NAMESPACE_PREFIX: "hmr-dev"
   AUDIT_RETENTION_TTL_DAYS: "7"
   ASSET_REVIEW_SLA_HOURS: "8"
   METRICS_REFRESH_INTERVAL_MS: "30000"

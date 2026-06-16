@@ -1,7 +1,7 @@
 /**
  * WeKnora RAG API Client
  *
- * All requests go through DCF backend proxy: /api/control/knowledge/*
+ * All requests go through HMR backend proxy: /api/control/knowledge/*
  * The backend injects WeKnora service-account auth automatically.
  * Backend requires tenantId — derived from auth session (injected server-side).
  */
@@ -92,7 +92,7 @@ export const weKnoraApi = {
   },
 
   /**
-   * Sync a document to WeKnora knowledge base via DCF backend.
+   * Sync a document to WeKnora knowledge base via HMR backend.
    * kbId is optional — defaults to 'default' for general document sync.
    */
   syncDocument(doc: {
@@ -136,7 +136,7 @@ export const weKnoraApi = {
   },
 
   /**
-   * Stream chat completion via SSE through DCF backend proxy.
+   * Stream chat completion via SSE through HMR backend proxy.
    * Calls onChunk for each token, onDone when complete.
    */
   async chat(

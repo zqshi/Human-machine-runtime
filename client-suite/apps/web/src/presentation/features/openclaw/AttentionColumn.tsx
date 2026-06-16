@@ -332,12 +332,12 @@ export function AttentionColumn({ collapsed, onToggleCollapse }: AttentionColumn
 
       {/* Tab content */}
       {aColumnTab === 'history' ? (
-        <div className="flex-1 overflow-y-auto dcf-scrollbar">
+        <div className="flex-1 overflow-y-auto hmr-scrollbar">
           <ConversationHistoryList />
         </div>
       ) : (
         /* Grouped list */
-        <div className="flex-1 overflow-y-auto dcf-scrollbar">
+        <div className="flex-1 overflow-y-auto hmr-scrollbar">
           {!hasContent ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
               <Icon name="notifications_none" size={36} className="text-slate-600 mb-2" />

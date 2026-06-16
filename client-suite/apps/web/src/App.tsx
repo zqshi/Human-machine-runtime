@@ -1,13 +1,13 @@
 /**
  * App — 应用入口
  * 根据认证状态切换 LoginPage / WorkspacePage
- * 支持 Matrix SSO loginToken 回调 + DCF OIDC code/state 回调
+ * 支持 Matrix SSO loginToken 回调 + HMR OIDC code/state 回调
  */
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './application/hooks/useAuth';
 import { useMatrixClient } from './application/hooks/useMatrixClient';
 import { useAuthStore } from './application/stores/authStore';
-import { authApi } from './infrastructure/api/dcfApiClient';
+import { authApi } from './infrastructure/api/hmrApiClient';
 import { useAgentStore } from './application/stores/agentStore';
 import { initPushPolicy } from './application/services/PushPolicyService';
 import { LoginPage } from './presentation/pages/LoginPage';
@@ -26,21 +26,21 @@ function detectSsoCallback(): 'oidc' | 'matrix' | null {
 
 export default function App() {
   const { isLoggedIn } = useAuth();
-  const { restoreSession, ssoRedirect, loginWithToken, initiateDcfSso } = useMatrixClient();
-  const loginDcfOnly = useAuthStore((s) => s.loginDcfOnly);
+  const { restoreSession, ssoRedirect, loginWithToken, initiateHmrSso } = useMatrixClient();
+  const loginHmrOnly = useAuthStore((s) => s.loginHmrOnly);
   const [ssoType, setSsoType] = useState<'oidc' | 'matrix' | null>(() => detectSsoCallback());
   const [restoring, setRestoring] = useState(() => detectSsoCallback() !== 'oidc');
 
-  const loginDcf = useCallback(
+  const loginHmr = useCallback(
     async (_hs: string, username: string, password: string) => {
       const res = await authApi.login(username, password);
       if (res.authenticated && res.user) {
-        loginDcfOnly(res.user);
+        loginHmrOnly(res.user);
       } else {
         throw new Error(res.error || '登录失败');
       }
     },
-    [loginDcfOnly]
+    [loginHmrOnly]
   );
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function App() {
       const loginToken = params.get('loginToken')!;
       window.history.replaceState({}, '', window.location.pathname);
       const hs =
-        localStorage.getItem('dcf_sso_homeserver') ||
+        localStorage.getItem('hmr_sso_homeserver') ||
         `${window.location.protocol}//${window.location.hostname}:8008`;
       loginWithToken(hs, loginToken).finally(() => {
         setSsoType(null);
@@ -64,7 +64,7 @@ export default function App() {
       .me()
       .then((res) => {
         if (res.authenticated && res.user) {
-          loginDcfOnly(res.user);
+          loginHmrOnly(res.user);
         }
       })
       .catch(() => {})
@@ -125,12 +125,12 @@ export default function App() {
         <WorkspacePage />
       ) : (
         <LoginPage
-          onLogin={loginDcf}
+          onLogin={loginHmr}
           onSsoLogin={(hs) => {
-            localStorage.setItem('dcf_sso_homeserver', hs);
+            localStorage.setItem('hmr_sso_homeserver', hs);
             window.location.href = ssoRedirect(hs);
           }}
-          onDcfSsoLogin={() => initiateDcfSso()}
+          onHmrSsoLogin={() => initiateHmrSso()}
         />
       )}
       <CallOverlay />

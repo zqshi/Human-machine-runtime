@@ -13,7 +13,7 @@ import {
 
 describe('validateSlug', () => {
   it('accepts valid slugs', () => {
-    expect(validateSlug('dcf-demo')).toEqual({ valid: true, slug: 'dcf-demo' });
+    expect(validateSlug('hmr-demo')).toEqual({ valid: true, slug: 'hmr-demo' });
     expect(validateSlug('ab')).toEqual({ valid: true, slug: 'ab' });
   });
   it('rejects empty', () => {

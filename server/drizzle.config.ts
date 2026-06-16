@@ -27,6 +27,6 @@ export default defineConfig({
   out: "./src/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://dcf:dcf@localhost:5432/dcf",
+    url: process.env.DATABASE_URL || "postgresql://hmr:hmr@localhost:5432/hmr",
   },
 });

@@ -1,5 +1,5 @@
 import type { StorageStats, DeptStorage, LargeFile } from '../../domain/knowledge/StorageTypes';
-import { knowledgeAuditApi, storageApi } from '../../infrastructure/api/dcfApiClient';
+import { knowledgeAuditApi, storageApi } from '../../infrastructure/api/hmrApiClient';
 import type { KnowledgeState, AuditLogFilter } from './knowledgeStore';
 
 type SetFn = (

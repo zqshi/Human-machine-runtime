@@ -82,7 +82,7 @@ export function ProjectBoardContent({ data }: ContentProps) {
       {/* Board + optional detail panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Kanban columns */}
-        <div className={`flex-1 overflow-x-auto dcf-scrollbar flex gap-2 px-3 py-3 ${selectedCard ? 'max-w-[55%]' : ''}`}>
+        <div className={`flex-1 overflow-x-auto hmr-scrollbar flex gap-2 px-3 py-3 ${selectedCard ? 'max-w-[55%]' : ''}`}>
           {board.columns.map((col) => {
             const colCards = board.getCardsByColumn(col.id);
             return (
@@ -96,7 +96,7 @@ export function ProjectBoardContent({ data }: ContentProps) {
                   </span>
                 </div>
                 {/* Cards */}
-                <div className="flex-1 overflow-y-auto dcf-scrollbar space-y-2">
+                <div className="flex-1 overflow-y-auto hmr-scrollbar space-y-2">
                   {colCards.map((card) => (
                     <KanbanCard
                       key={card.id}
@@ -321,7 +321,7 @@ function AgentDetailPanel({ card, onClose }: AgentDetailPanelProps) {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto dcf-scrollbar px-3 py-3 space-y-4">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar px-3 py-3 space-y-4">
         {/* Reasoning Steps */}
         {card.reasoningSteps.length > 0 && (
           <section>

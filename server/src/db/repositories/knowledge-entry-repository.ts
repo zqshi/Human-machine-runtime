@@ -25,11 +25,11 @@ export class KnowledgeEntryRepository implements IKnowledgeEntryRepository {
     return rows[0] ? this.toModel(rows[0]) : null;
   }
 
-  async findByDcfDocumentId(dcfDocumentId: string): Promise<KnowledgeEntry | null> {
+  async findByHmrDocumentId(hmrDocumentId: string): Promise<KnowledgeEntry | null> {
     const rows = await this.db
       .select()
       .from(knowledgeEntries)
-      .where(eq(knowledgeEntries.dcfDocumentId, dcfDocumentId))
+      .where(eq(knowledgeEntries.hmrDocumentId, hmrDocumentId))
       .limit(1);
     return rows[0] ? this.toModel(rows[0]) : null;
   }
@@ -42,7 +42,7 @@ export class KnowledgeEntryRepository implements IKnowledgeEntryRepository {
         knowledgeBaseId: entry.knowledgeBaseId,
         tenantId: entry.tenantId,
         wkKnowledgeId: entry.wkKnowledgeId,
-        dcfDocumentId: entry.dcfDocumentId,
+        hmrDocumentId: entry.hmrDocumentId,
         title: entry.title,
         sourceType: entry.sourceType,
         parseStatus: entry.parseStatus,
@@ -78,7 +78,7 @@ export class KnowledgeEntryRepository implements IKnowledgeEntryRepository {
       knowledgeBaseId: row.knowledgeBaseId,
       tenantId: row.tenantId,
       wkKnowledgeId: row.wkKnowledgeId,
-      dcfDocumentId: row.dcfDocumentId,
+      hmrDocumentId: row.hmrDocumentId,
       title: row.title,
       sourceType: row.sourceType as KnowledgeEntry['sourceType'],
       parseStatus: row.parseStatus as KnowledgeEntry['parseStatus'],

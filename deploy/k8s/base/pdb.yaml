@@ -1,14 +1,14 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: dcf-server
-  namespace: dcf-system
+  name: hmr-server
+  namespace: hmr-system
   labels:
-    app.kubernetes.io/name: dcf-light-bot
+    app.kubernetes.io/name: human-machine-runtime
     app.kubernetes.io/component: server
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: dcf-light-bot
+      app.kubernetes.io/name: human-machine-runtime
       app.kubernetes.io/component: server

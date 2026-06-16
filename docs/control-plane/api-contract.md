@@ -1,4 +1,6 @@
-# DCF Control Plane — API 契约
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
+# HMR Control Plane — API 契约
 
 > 版本 1.11.0 | 2026-04-14
 

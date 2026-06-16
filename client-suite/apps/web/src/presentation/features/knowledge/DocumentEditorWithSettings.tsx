@@ -359,7 +359,7 @@ export function DocumentEditorWithSettings({
 
           {/* Content — click anywhere to focus editor */}
           <div
-            className={`flex-1 overflow-y-auto p-8 relative dcf-scrollbar ${noCopy ? 'select-none' : ''}`}
+            className={`flex-1 overflow-y-auto p-8 relative hmr-scrollbar ${noCopy ? 'select-none' : ''}`}
             onClick={() => {
               if (editor && !editor.isFocused) editor.commands.focus('end');
             }}
@@ -400,7 +400,7 @@ export function DocumentEditorWithSettings({
             <h3 className="text-sm font-semibold text-text-primary">文档设置</h3>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-5 dcf-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 hmr-scrollbar">
             {/* Title */}
             <div>
               <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1.5 block">

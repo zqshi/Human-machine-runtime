@@ -55,7 +55,7 @@ export function AgentAnalyticsPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {/* 指标卡片 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[

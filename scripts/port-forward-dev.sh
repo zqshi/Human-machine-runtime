@@ -7,8 +7,8 @@ set -euo pipefail
 KUBECONFIG_PATH="${KUBECONFIG:-/Users/zqs/Downloads/config.yaml}"
 export KUBECONFIG="$KUBECONFIG_PATH"
 
-PID_DIR="/tmp/dcf-port-forward"
-LOG_DIR="/tmp/dcf-port-forward/logs"
+PID_DIR="/tmp/hmr-port-forward"
+LOG_DIR="/tmp/hmr-port-forward/logs"
 CTX="dev-service"
 
 forward_one() {
@@ -35,12 +35,12 @@ start() {
   forward_one portal       claw-farm svc/portal-backend     13090 3090
   forward_one clawhub      clawhub   svc/clawhub            13080 3080
   forward_one platform-be  claw-farm svc/ks-claw-platform   18100 8100
-  forward_one litellm      dcf-base  svc/llmproxy-litellm   14000 8080
+  forward_one litellm      hmr-base  svc/llmproxy-litellm   14000 8080
   forward_one xspace       xspace    svc/xspace-agent       18081 8080
   forward_one supabase-kong supabase svc/supabase-supabase-kong 18084 8000
   forward_one claw-manager claw-farm svc/claw-manager        18090 8090
   forward_one mcp-server   claw-farm svc/ksc-mcp-server     18082 8080
-  forward_one dev-pg       dcf-base  pod/pg-forward         15432 5432
+  forward_one dev-pg       hmr-base  pod/pg-forward         15432 5432
 
   echo ""
   echo "Waiting for connections..."

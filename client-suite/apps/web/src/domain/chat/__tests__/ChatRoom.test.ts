@@ -18,7 +18,7 @@ describe('ChatRoom', () => {
   it('creates a bot room', () => {
     const room = ChatRoom.create({
       id: '!bot:server',
-      name: 'DCF Bot',
+      name: 'HMR Bot',
       type: 'bot',
       avatarLetter: 'D',
     });

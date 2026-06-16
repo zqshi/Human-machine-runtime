@@ -57,7 +57,7 @@ export async function migrateObservability(db: MigrateDb): Promise<void> {
       knowledge_base_id VARCHAR(64) NOT NULL,
       tenant_id VARCHAR(64) NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
       wk_knowledge_id VARCHAR(128) NOT NULL,
-      dcf_document_id VARCHAR(64),
+      hmr_document_id VARCHAR(64),
       title VARCHAR(512) NOT NULL,
       source_type VARCHAR(32) NOT NULL DEFAULT 'manual',
       parse_status VARCHAR(32) NOT NULL DEFAULT 'pending',
@@ -71,7 +71,7 @@ export async function migrateObservability(db: MigrateDb): Promise<void> {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS weknora_tenant_mappings (
       id VARCHAR(64) PRIMARY KEY,
-      dcf_tenant_id VARCHAR(64) NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+      hmr_tenant_id VARCHAR(64) NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
       wk_tenant_id VARCHAR(128) NOT NULL,
       wk_user_id VARCHAR(128) NOT NULL,
       wk_api_key TEXT NOT NULL,
@@ -148,10 +148,10 @@ export async function migrateObservability(db: MigrateDb): Promise<void> {
   );
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_ke_tenant ON knowledge_entries(tenant_id)`);
   await db.execute(
-    sql`CREATE INDEX IF NOT EXISTS idx_ke_dcf_doc ON knowledge_entries(dcf_document_id)`
+    sql`CREATE INDEX IF NOT EXISTS idx_ke_hmr_doc ON knowledge_entries(hmr_document_id)`
   );
   await db.execute(
-    sql`CREATE INDEX IF NOT EXISTS idx_wk_mapping_tenant ON weknora_tenant_mappings(dcf_tenant_id)`
+    sql`CREATE INDEX IF NOT EXISTS idx_wk_mapping_tenant ON weknora_tenant_mappings(hmr_tenant_id)`
   );
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS idx_wk_mapping_status ON weknora_tenant_mappings(status)`

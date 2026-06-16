@@ -5,7 +5,7 @@
       "server_name": "localhost"
     }
   },
-  "brand": "DCF Workspace",
+  "brand": "HMR Workspace",
   "default_theme": "light",
   "default_language": "zh-hans",
   "default_country_code": "CN",
@@ -35,24 +35,24 @@
   "voip": {
     "obey_asserted_identity": false
   },
-  "dcf_login": {
+  "hmr_login": {
     "sms_enabled": false,
     "sms_send_url": "",
     "sms_verify_login_url": "",
     "sso_url": ""
   },
-  "dcf": {
+  "hmr": {
     "e2ee_enabled": false,
-    "factory_room_alias": "#dcf-factory:localhost"
+    "factory_room_alias": "#hmr-factory:localhost"
   },
   "show_labs_settings": true,
   "branding": {
-    "welcome_background_url": "http://127.0.0.1:8081/dcf-login-bg.svg",
-    "auth_header_logo_url": "http://127.0.0.1:8081/dcf-login-logo.svg",
+    "welcome_background_url": "http://127.0.0.1:8081/hmr-login-bg.svg",
+    "auth_header_logo_url": "http://127.0.0.1:8081/hmr-login-logo.svg",
     "auth_footer": "",
     "auth_footer_links": [],
-    "welcomeBackgroundUrl": "http://127.0.0.1:8081/dcf-login-bg.svg",
-    "authHeaderLogoUrl": "http://127.0.0.1:8081/dcf-login-logo.svg",
+    "welcomeBackgroundUrl": "http://127.0.0.1:8081/hmr-login-bg.svg",
+    "authHeaderLogoUrl": "http://127.0.0.1:8081/hmr-login-logo.svg",
     "authFooter": "",
     "authFooterLinks": []
   }

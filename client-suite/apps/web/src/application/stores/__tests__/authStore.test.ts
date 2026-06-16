@@ -48,8 +48,8 @@ describe('authStore', () => {
     expect(s.deviceId).toBe('dev1');
   });
 
-  it('setDcfUser marks backend connected', () => {
-    useAuthStore.getState().setDcfUser({ id: 'u1', username: 'admin' } as never);
+  it('setHmrUser marks backend connected', () => {
+    useAuthStore.getState().setHmrUser({ id: 'u1', username: 'admin' } as never);
     expect(useAuthStore.getState().isBackendConnected).toBe(true);
   });
 

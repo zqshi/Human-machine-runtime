@@ -1,4 +1,4 @@
-import { ApiError } from './dcfApiClient';
+import { ApiError } from './hmrApiClient';
 
 async function request<T>(path: string, init?: RequestInit, timeoutMs = 8_000): Promise<T> {
   const controller = new AbortController();

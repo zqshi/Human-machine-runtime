@@ -99,7 +99,7 @@ export function DocEditorContent({ data }: ContentProps) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Section navigation */}
-        <div className="w-36 shrink-0 border-r border-white/[0.06] overflow-y-auto dcf-scrollbar py-2">
+        <div className="w-36 shrink-0 border-r border-white/[0.06] overflow-y-auto hmr-scrollbar py-2">
           {sections.map((s, i) => (
             <button
               key={i}
@@ -124,7 +124,7 @@ export function DocEditorContent({ data }: ContentProps) {
         </div>
 
         {/* Editor area */}
-        <div className="flex-1 overflow-y-auto dcf-scrollbar" onScroll={handleScroll}>
+        <div className="flex-1 overflow-y-auto hmr-scrollbar" onScroll={handleScroll}>
           <div
             ref={editorRef}
             contentEditable

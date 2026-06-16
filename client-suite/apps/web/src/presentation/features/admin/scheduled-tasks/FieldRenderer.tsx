@@ -304,7 +304,7 @@ function MarkdownField({
           basicSetup={{ lineNumbers: true, foldGutter: false }}
         />
       ) : (
-        <div className="h-[240px] overflow-auto p-3 dcf-scrollbar prose prose-sm max-w-none">
+        <div className="h-[240px] overflow-auto p-3 hmr-scrollbar prose prose-sm max-w-none">
           {md.trim() ? (
             <Markdown remarkPlugins={[remarkGfm]}>{md}</Markdown>
           ) : (

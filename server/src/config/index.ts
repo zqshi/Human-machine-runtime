@@ -14,11 +14,11 @@ export const config = {
   port: optionalInt('PORT', 3002),
 
   db: {
-    url: optional('DATABASE_URL', 'postgresql://dcf:dcf@localhost:5432/dcf'),
+    url: optional('DATABASE_URL', 'postgresql://hmr:hmr@localhost:5432/hmr'),
   },
 
   jwt: {
-    secret: optional('JWT_SECRET', 'dcf-dev-secret-change-in-production'),
+    secret: optional('JWT_SECRET', 'hmr-dev-secret-change-in-production'),
     expiresIn: optional('JWT_EXPIRES_IN', '24h'),
   },
 
@@ -40,9 +40,9 @@ export const config = {
     allowLocalFallback: optional('AUTH_ALLOW_LOCAL_FALLBACK', 'true') === 'true',
     autoRegister: optional('AUTH_AUTO_REGISTER', 'true') === 'true',
     session: {
-      secret: optional('SESSION_SECRET', 'dcf-session-secret-change-in-production'),
+      secret: optional('SESSION_SECRET', 'hmr-session-secret-change-in-production'),
       maxAgeSec: optionalInt('SESSION_MAX_AGE_SEC', 86_400),
-      cookieName: optional('SESSION_COOKIE_NAME', 'dcf_session'),
+      cookieName: optional('SESSION_COOKIE_NAME', 'hmr_session'),
     },
     oidc: {
       issuer: optional('OIDC_ISSUER', ''),
@@ -66,13 +66,13 @@ export const config = {
   },
 
   credential: {
-    encryptionKey: optional('CREDENTIAL_ENCRYPTION_KEY', 'dcf-dev-encryption-key-change-me!!'),
+    encryptionKey: optional('CREDENTIAL_ENCRYPTION_KEY', 'hmr-dev-encryption-key-change-me!!'),
     leaseDefaultTtlSec: optionalInt('CREDENTIAL_LEASE_TTL_SEC', 3600),
   },
 
   matrix: {
     homeserverUrl: optional('MATRIX_HOMESERVER_URL', 'http://localhost:6167'),
-    botUserId: optional('MATRIX_BOT_USER_ID', '@dcf-bot:localhost'),
+    botUserId: optional('MATRIX_BOT_USER_ID', '@hmr-bot:localhost'),
     botAccessToken: optional('MATRIX_BOT_ACCESS_TOKEN', ''),
   },
 
@@ -109,7 +109,7 @@ export const config = {
     adminApiKey: optional('WEKNORA_ADMIN_API_KEY', ''),
     encryptionKey: optional(
       'WEKNORA_ENCRYPTION_KEY',
-      optional('CREDENTIAL_ENCRYPTION_KEY', 'dcf-dev-encryption-key-change-me!!')
+      optional('CREDENTIAL_ENCRYPTION_KEY', 'hmr-dev-encryption-key-change-me!!')
     ),
   },
 
@@ -150,9 +150,9 @@ export const config = {
 export type Config = typeof config;
 
 const INSECURE_DEFAULTS = [
-  'dcf-dev-secret-change-in-production',
-  'dcf-dev-encryption-key-change-me!!',
-  'dcf-session-secret-change-in-production',
+  'hmr-dev-secret-change-in-production',
+  'hmr-dev-encryption-key-change-me!!',
+  'hmr-session-secret-change-in-production',
 ];
 
 export function validateProductionConfig(): void {

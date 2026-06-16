@@ -54,11 +54,11 @@ if ! wait_for_docker; then
 fi
 
 if ! docker image inspect openclaw:local >/dev/null 2>&1; then
-  if docker image inspect dcf/openclaw:local >/dev/null 2>&1; then
-    echo "[start] tag dcf/openclaw:local -> openclaw:local"
-    docker tag dcf/openclaw:local openclaw:local
+  if docker image inspect hmr/openclaw:local >/dev/null 2>&1; then
+    echo "[start] tag hmr/openclaw:local -> openclaw:local"
+    docker tag hmr/openclaw:local openclaw:local
   else
-    echo "[error] image openclaw:local not found, and dcf/openclaw:local not found"
+    echo "[error] image openclaw:local not found, and hmr/openclaw:local not found"
     exit 1
   fi
 fi
@@ -80,7 +80,7 @@ docker compose -f "$COMPOSE_FILE" up -d
 
 if [ "${MATRIX_RESTART_ON_START}" = "true" ]; then
   echo "[start] restarting matrix-synapse to clear stale throttling state"
-  docker restart dcf-matrix-synapse >/dev/null
+  docker restart hmr-matrix-synapse >/dev/null
 fi
 
 for i in $(seq 1 60); do
@@ -104,7 +104,7 @@ done
 
 if [ "$OPENCLAW_OK" -ne 1 ]; then
   echo "[error] openclaw gateway not ready on :18789"
-  docker logs --tail 80 dcf-openclaw-gateway || true
+  docker logs --tail 80 hmr-openclaw-gateway || true
   exit 1
 fi
 
@@ -119,7 +119,7 @@ done
 
 if [ "$ELEMENT_OK" -ne 1 ]; then
   echo "[error] matrix element web not ready on :8081"
-  docker logs --tail 80 dcf-matrix-element-web || true
+  docker logs --tail 80 hmr-matrix-element-web || true
   exit 1
 fi
 
@@ -137,7 +137,7 @@ if [ "$WEKNORA_ENABLED" = "true" ]; then
   done
   if [ "$WEKNORA_OK" -ne 1 ]; then
     echo "[warn] weknora app not ready on :19000 (non-fatal, continuing)"
-    docker logs --tail 40 dcf-weknora-app 2>/dev/null || true
+    docker logs --tail 40 hmr-weknora-app 2>/dev/null || true
   else
     echo "[ok] weknora app ready"
   fi

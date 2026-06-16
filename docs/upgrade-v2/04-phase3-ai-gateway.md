@@ -1,13 +1,15 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # Phase 3：AI Gateway 迁移
 
 ## 目标
-将 DCF 旧 Node.js 后端的 AI 能力全量迁移到 Python FastAPI，保留所有业务逻辑。
+将 HMR 旧 Node.js 后端的 AI 能力全量迁移到 Python FastAPI，保留所有业务逻辑。
 
-## 3.1 dcf-ai-gateway 服务设计
+## 3.1 hmr-ai-gateway 服务设计
 
 ### 目录结构
 ```
-service/dcf-ai-gateway/
+service/hmr-ai-gateway/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py
@@ -91,7 +93,7 @@ service/dcf-ai-gateway/
 
 | 旧模块 | 新模块 | 核心逻辑 |
 |--------|--------|---------|
-| MatrixBot.js | (删除) | DCF 不再自建 Matrix |
+| MatrixBot.js | (删除) | HMR 不再自建 Matrix |
 | MatrixRelay.js | matrix_relay.py | 保留接口，后端改为 WebSocket |
 | WeKnoraService.js | weknora.py | 外部集成保留 |
 
@@ -129,7 +131,7 @@ class LLMClient:
     """统一 LLM 调用客户端
     
     支持两种模式：
-    1. 直连模式：直接调用 provider API（保留 DCF 原有逻辑）
+    1. 直连模式：直接调用 provider API（保留 HMR 原有逻辑）
     2. LiteLLM 代理模式：通过 LiteLLM 统一路由
     """
     
@@ -158,10 +160,10 @@ class LLMClient:
 ```python
 # app/api/v1/websocket.py
 class ConnectionManager:
-    """管理 DCF 用户端的 WebSocket 连接
+    """管理 HMR 用户端的 WebSocket 连接
     
     消息流：
-    DCF Web Client ←WebSocket→ dcf-ai-gateway ←HTTP/WS→ OpenClaw Pod
+    HMR Web Client ←WebSocket→ hmr-ai-gateway ←HTTP/WS→ OpenClaw Pod
     """
     
     async def connect(self, ws: WebSocket, user_id: str):

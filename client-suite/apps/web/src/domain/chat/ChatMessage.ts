@@ -123,7 +123,7 @@ export class ChatMessage {
 
   get isBot(): boolean {
     const id = this.senderId.toLowerCase();
-    return id.includes('dcf-bot') || id.includes('factory') || id.startsWith('@agent-');
+    return id.includes('hmr-bot') || id.includes('factory') || id.startsWith('@agent-');
   }
 
   isFromUser(userId: UserId): boolean {

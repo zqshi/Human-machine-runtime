@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <title>DCF Workspace 登录</title>
+    <title>HMR Workspace 登录</title>
     <style>
       :root {
         --bg-a: #f3f8ff;
@@ -57,7 +57,7 @@
         padding: clamp(20px, 3.2vh, 42px) clamp(18px, 2.8vw, 38px);
         background:
           linear-gradient(160deg, rgba(255, 255, 255, 0.88) 0%, rgba(246, 250, 255, 0.7) 100%),
-          url("/dcf-login-bg.svg") center/cover no-repeat;
+          url("/hmr-login-bg.svg") center/cover no-repeat;
         border-right: 1px solid var(--line);
         overflow: hidden;
       }
@@ -248,8 +248,8 @@
       <section class="card">
         <aside class="hero">
           <div class="hero-logo">
-            <img src="/dcf-login-logo.svg" alt="DCF" />
-            <span>DCF Workspace</span>
+            <img src="/hmr-login-logo.svg" alt="HMR" />
+            <span>HMR Workspace</span>
           </div>
           <h1>企业数字员工协作入口</h1>
           <p>
@@ -352,11 +352,11 @@
               if (hs && hs.base_url) state.hsUrl = String(hs.base_url);
               if (hs && hs.server_name) state.serverName = String(hs.server_name);
               if (cfg && cfg.default_server_name) state.serverName = String(cfg.default_server_name);
-              var dcf = (cfg && cfg.dcf_login) || {};
-              state.smsEnabled = Boolean(dcf.sms_enabled);
-              state.smsSendUrl = String(dcf.sms_send_url || "");
-              state.smsVerifyLoginUrl = String(dcf.sms_verify_login_url || "");
-              state.ssoUrl = String(dcf.sso_url || "");
+              var hmr = (cfg && cfg.hmr_login) || {};
+              state.smsEnabled = Boolean(hmr.sms_enabled);
+              state.smsSendUrl = String(hmr.sms_send_url || "");
+              state.smsVerifyLoginUrl = String(hmr.sms_verify_login_url || "");
+              state.ssoUrl = String(hmr.sso_url || "");
             })
             .catch(function () {});
         }

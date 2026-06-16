@@ -36,7 +36,7 @@ export function FeedEnhancedPage({ onClose }: FeedEnhancedPageProps) {
     <div className="flex-1 flex overflow-hidden bg-bg-white-var relative">
       {/* Success toast */}
       {showToast && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-success text-white text-xs font-medium shadow-lg flex items-center gap-2 dcf-fade-in">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-success text-white text-xs font-medium shadow-lg flex items-center gap-2 hmr-fade-in">
           <Icon name="check_circle" size={14} />
           订阅成功！已同步最新动态
           <button type="button" onClick={() => setShowToast(false)} className="ml-1">

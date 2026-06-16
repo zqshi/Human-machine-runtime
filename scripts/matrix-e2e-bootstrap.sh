@@ -5,11 +5,11 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 MATRIX_HS="${MATRIX_HS:-http://127.0.0.1:8008}"
-DCF_APP_PORT="${DCF_APP_PORT:-3010}"
-DCF_BASE_URL="${DCF_BASE_URL:-http://127.0.0.1:${DCF_APP_PORT}}"
+HMR_APP_PORT="${HMR_APP_PORT:-3010}"
+HMR_BASE_URL="${HMR_BASE_URL:-http://127.0.0.1:${HMR_APP_PORT}}"
 CONTROL_PLANE_ADMIN_TOKEN="${CONTROL_PLANE_ADMIN_TOKEN:-dev-admin-token}"
-BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-dcfbot}"
-BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-dcfbot123}"
+BOT_LOCALPART="${MATRIX_BOT_LOCALPART:-hmrbot}"
+BOT_PASSWORD="${MATRIX_BOT_PASSWORD:-hmrbot123}"
 USER_LOCALPART="${MATRIX_USER_LOCALPART:-opsuser}"
 USER_PASSWORD="${MATRIX_USER_PASSWORD:-opsuser123}"
 AGENT_NAME="${MATRIX_AGENT_NAME:-matrix-auto-agent-$(date +%H%M%S)}"
@@ -98,7 +98,7 @@ JSON
     return
   fi
 
-  docker exec dcf-matrix-synapse register_new_matrix_user --exists-ok --no-admin -u "$user" -p "$pass" -c /data/homeserver.yaml "http://localhost:8008" >/dev/null
+  docker exec hmr-matrix-synapse register_new_matrix_user --exists-ok --no-admin -u "$user" -p "$pass" -c /data/homeserver.yaml "http://localhost:8008" >/dev/null
   for _ in $(seq 1 8); do
     login_res="$(with_retry 3 curl -sS -X POST "${MATRIX_HS}/_matrix/client/v3/login" -H 'content-type: application/json' -d "${login_body}")"
     if echo "$login_res" | rg -q '"access_token"'; then
@@ -123,7 +123,7 @@ echo "[e2e] create room"
 ROOM_RES="$(with_retry 8 curl -sS -X POST "${MATRIX_HS}/_matrix/client/v3/createRoom" \
   -H "Authorization: Bearer ${USER_TOKEN}" \
   -H 'content-type: application/json' \
-  -d "{\"name\":\"dcf-e2e-room\",\"preset\":\"private_chat\"}")"
+  -d "{\"name\":\"hmr-e2e-room\",\"preset\":\"private_chat\"}")"
 if ! echo "$ROOM_RES" | rg -q '"room_id"'; then
   echo "[error] create room failed: $ROOM_RES"
   exit 1
@@ -173,7 +173,7 @@ for i in $(seq 1 30); do
   if [ $(( i % 8 )) -eq 0 ]; then
     send_create_command "txn_$(date +%s)_${i}"
   fi
-  RES="$(curl -sS "${DCF_BASE_URL}/api/control/instances?name=${AGENT_NAME}" -H "Authorization: Bearer ${CONTROL_PLANE_ADMIN_TOKEN}")"
+  RES="$(curl -sS "${HMR_BASE_URL}/api/control/instances?name=${AGENT_NAME}" -H "Authorization: Bearer ${CONTROL_PLANE_ADMIN_TOKEN}")"
   if is_rate_limited "$RES"; then
     sleep "$(retry_wait_seconds "$RES")"
     continue

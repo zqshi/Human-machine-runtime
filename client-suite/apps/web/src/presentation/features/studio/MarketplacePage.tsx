@@ -311,7 +311,7 @@ export function MarketplacePage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 hmr-scrollbar">
         {(loading || (activeTab === 'apps' && appsLoading)) && (
           <div className="flex items-center justify-center py-12 text-sm text-slate-500">
             加载中...

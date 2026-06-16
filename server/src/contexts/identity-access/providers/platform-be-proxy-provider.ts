@@ -39,7 +39,7 @@ export interface PlatformBeAuthResult extends AuthResult {
   permissions?: string[];
 }
 
-const PLATFORM_BE_ROLE_TO_DCF: Record<string, string> = {
+const PLATFORM_BE_ROLE_TO_HMR: Record<string, string> = {
   admin: 'platform_admin',
   operator: 'tenant_ops',
   user: 'tenant_ops',
@@ -146,10 +146,10 @@ export class PlatformBeProxyProvider implements IAuthProvider {
     return (await res.json()) as PlatformBeTokenResponse;
   }
 
-  resolveDcfRole(platformBeRoles?: string[]): string {
+  resolveHmrRole(platformBeRoles?: string[]): string {
     if (!platformBeRoles?.length) return 'tenant_ops';
     for (const role of platformBeRoles) {
-      const mapped = PLATFORM_BE_ROLE_TO_DCF[role];
+      const mapped = PLATFORM_BE_ROLE_TO_HMR[role];
       if (mapped) return mapped;
     }
     return 'tenant_ops';

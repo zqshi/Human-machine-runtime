@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hmr-server
+description: HMR — 企业决策指挥运行时（多租户管控 + 认证中枢 + 人机协同平台）
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

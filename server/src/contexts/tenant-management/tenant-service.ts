@@ -45,8 +45,8 @@ export interface TenantInstanceSummary {
 }
 
 export interface IKnowledgeProvisioner {
-  provisionTenant(dcfTenantId: string, tenantSlug: string, tenantName: string): Promise<unknown>;
-  deprovisionTenant(dcfTenantId: string): Promise<void>;
+  provisionTenant(hmrTenantId: string, tenantSlug: string, tenantName: string): Promise<unknown>;
+  deprovisionTenant(hmrTenantId: string): Promise<void>;
 }
 
 export class TenantService {

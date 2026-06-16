@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Shadows
+ * HMR Design Tokens — Shadows
  * Apple-style ultra-light shadows
  */
 

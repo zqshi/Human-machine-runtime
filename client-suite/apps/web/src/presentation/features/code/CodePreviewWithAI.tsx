@@ -8,11 +8,11 @@ import { Icon } from '../../components/ui/Icon';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 const CODE_LINES = [
-  { num: 1, tokens: [{ text: 'const ', cls: 'text-[#569CD6]' }, { text: 'generateExecutiveSummary', cls: 'text-[#DCDCAA]' }, { text: ' = (', cls: 'text-white/80' }, { text: 'data', cls: 'text-[#9CDCFE]' }, { text: ') => {', cls: 'text-white/80' }] },
-  { num: 2, tokens: [{ text: '  const ', cls: 'text-[#569CD6]' }, { text: 'summary', cls: 'text-[#9CDCFE]' }, { text: ' = {', cls: 'text-white/80' }] },
-  { num: 3, tokens: [{ text: '    year: ', cls: 'text-[#9CDCFE]' }, { text: '2024', cls: 'text-[#B5CEA8]' }, { text: ',', cls: 'text-white/80' }] },
-  { num: 4, tokens: [{ text: '    growth: ', cls: 'text-[#9CDCFE]' }, { text: '"45%"', cls: 'text-[#CE9178]' }, { text: ',', cls: 'text-white/80' }] },
-  { num: 5, tokens: [{ text: '    status: ', cls: 'text-[#9CDCFE]' }, { text: '"completed"', cls: 'text-[#CE9178]' }] },
+  { num: 1, tokens: [{ text: 'const ', cls: 'text-[#569CD6]' }, { text: 'generateExecutiveSummary', cls: 'text-[#DCDCAA]' }, { text: ' = (', cls: 'text-white/80' }, { text: 'data', cls: 'text-[#9CHMRE]' }, { text: ') => {', cls: 'text-white/80' }] },
+  { num: 2, tokens: [{ text: '  const ', cls: 'text-[#569CD6]' }, { text: 'summary', cls: 'text-[#9CHMRE]' }, { text: ' = {', cls: 'text-white/80' }] },
+  { num: 3, tokens: [{ text: '    year: ', cls: 'text-[#9CHMRE]' }, { text: '2024', cls: 'text-[#B5CEA8]' }, { text: ',', cls: 'text-white/80' }] },
+  { num: 4, tokens: [{ text: '    growth: ', cls: 'text-[#9CHMRE]' }, { text: '"45%"', cls: 'text-[#CE9178]' }, { text: ',', cls: 'text-white/80' }] },
+  { num: 5, tokens: [{ text: '    status: ', cls: 'text-[#9CHMRE]' }, { text: '"completed"', cls: 'text-[#CE9178]' }] },
   { num: 6, tokens: [{ text: '  };', cls: 'text-white/80' }] },
   { num: 7, tokens: [{ text: '  // 处理年度报告核心指标', cls: 'text-[#6A9955]' }] },
   { num: 8, tokens: [{ text: '  return ', cls: 'text-[#C586C0]' }, { text: '`2024财年是企业转型的关键。`', cls: 'text-[#CE9178]' }, { text: ';', cls: 'text-white/80' }] },

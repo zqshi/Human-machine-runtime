@@ -11,7 +11,7 @@ export {
   logsApi,
   employeeApi,
   agentApi,
-} from '../../infrastructure/api/dcfApiClient';
+} from '../../infrastructure/api/hmrApiClient';
 export { weKnoraApi } from '../../infrastructure/api/weKnoraClient';
 export type { ChatMessage as WeKnoraChatMessage } from '../../infrastructure/api/weKnoraClient';
 export {

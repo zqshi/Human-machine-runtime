@@ -61,7 +61,7 @@ export function DecisionPatternLibrary() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4 space-y-2">
         {filtered.map((pattern) => (
           <div
             key={pattern.id}

@@ -86,7 +86,7 @@ export function GroupInfoPanel({ roomId, roomName, onClose }: GroupInfoPanelProp
               群成员 ({members.length})
             </span>
           </div>
-          <div className="max-h-40 overflow-y-auto space-y-1 dcf-scrollbar">
+          <div className="max-h-40 overflow-y-auto space-y-1 hmr-scrollbar">
             {members.map((m) => (
               <div key={m.userId} className="flex items-center gap-2 py-1.5 px-2 rounded-lg">
                 <Avatar letter={m.displayName[0]} size={28} />
@@ -116,7 +116,7 @@ export function GroupInfoPanel({ roomId, roomName, onClose }: GroupInfoPanelProp
           </div>
           {searching && <p className="text-xs text-text-muted mt-1">搜索中...</p>}
           {searchResults.length > 0 && (
-            <div className="mt-2 max-h-32 overflow-y-auto space-y-1 dcf-scrollbar">
+            <div className="mt-2 max-h-32 overflow-y-auto space-y-1 hmr-scrollbar">
               {searchResults.map((u) => (
                 <div
                   key={u.userId}

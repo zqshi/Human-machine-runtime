@@ -100,7 +100,7 @@ function IncomingCallCard() {
   return (
     <div className="fixed inset-0 z-[9000] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-slate-900/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 text-center dcf-fade-in">
+      <div className="relative bg-slate-900/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10 text-center hmr-fade-in">
         <Avatar letter={call.peerName[0]} size={64} />
         <h3 className="text-lg font-semibold text-white mt-4">{call.peerName}</h3>
         <p className="text-sm text-white/60 mt-1">
@@ -161,7 +161,7 @@ function DirectCallPanel() {
   const isVideo = call.mode === 'video';
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9000] w-80 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden dcf-fade-in">
+    <div className="fixed bottom-6 right-6 z-[9000] w-80 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden hmr-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
         <div className="flex items-center gap-2 min-w-0">
@@ -269,7 +269,7 @@ function GroupCallPanel() {
   const isVideo = call.mode === 'video';
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9000] w-96 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden dcf-fade-in">
+    <div className="fixed bottom-6 right-6 z-[9000] w-96 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden hmr-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
         <div className="flex items-center gap-2 min-w-0">

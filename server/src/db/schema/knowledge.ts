@@ -41,7 +41,7 @@ export const knowledgeEntries = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
     wkKnowledgeId: varchar('wk_knowledge_id', { length: 128 }).notNull(),
-    dcfDocumentId: varchar('dcf_document_id', { length: 64 }),
+    hmrDocumentId: varchar('hmr_document_id', { length: 64 }),
     title: varchar('title', { length: 512 }).notNull(),
     sourceType: varchar('source_type', { length: 32 }).notNull().default('manual'),
     parseStatus: varchar('parse_status', { length: 32 }).notNull().default('pending'),
@@ -53,7 +53,7 @@ export const knowledgeEntries = pgTable(
   (table) => [
     index('idx_ke_kb').on(table.knowledgeBaseId),
     index('idx_ke_tenant').on(table.tenantId),
-    index('idx_ke_dcf_doc').on(table.dcfDocumentId),
+    index('idx_ke_hmr_doc').on(table.hmrDocumentId),
   ]
 );
 
@@ -63,7 +63,7 @@ export const weknoTenantMappings = pgTable(
   'weknora_tenant_mappings',
   {
     id: varchar('id', { length: 64 }).primaryKey(),
-    dcfTenantId: varchar('dcf_tenant_id', { length: 64 })
+    hmrTenantId: varchar('hmr_tenant_id', { length: 64 })
       .notNull()
       .unique()
       .references(() => tenants.id, { onDelete: 'cascade' }),
@@ -77,7 +77,7 @@ export const weknoTenantMappings = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index('idx_wk_mapping_tenant').on(table.dcfTenantId),
+    index('idx_wk_mapping_tenant').on(table.hmrTenantId),
     index('idx_wk_mapping_status').on(table.status),
   ]
 );

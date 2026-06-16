@@ -132,7 +132,7 @@ export function MyAssetsTab() {
       </div>
 
       {/* Asset List */}
-      <div className="flex-1 overflow-y-auto space-y-2 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto space-y-2 hmr-scrollbar">
         {loading && (
           <div className="flex items-center justify-center py-12 text-slate-500 text-sm">
             加载中...

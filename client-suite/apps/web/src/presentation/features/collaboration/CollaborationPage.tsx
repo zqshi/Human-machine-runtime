@@ -10,7 +10,7 @@ export function CollaborationPage() {
         <span className="ml-auto text-xs text-slate-500">实时拓扑</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-6">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-6">
         <CollaborationTopology />
       </div>
     </div>

@@ -1,20 +1,20 @@
-# DCF Server Deployment (Node.js Hono + TypeScript)
+# HMR Server Deployment (Node.js Hono + TypeScript)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "dcf-light-bot.fullname" . }}-server
-  namespace: {{ include "dcf-light-bot.namespace" . }}
+  name: {{ include "human-machine-runtime.fullname" . }}-server
+  namespace: {{ include "human-machine-runtime.namespace" . }}
   labels:
-    {{- include "dcf-light-bot.serverLabels" . | nindent 4 }}
+    {{- include "human-machine-runtime.serverLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.server.replicaCount }}
   selector:
     matchLabels:
-      {{- include "dcf-light-bot.serverSelector" . | nindent 6 }}
+      {{- include "human-machine-runtime.serverSelector" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "dcf-light-bot.serverSelector" . | nindent 8 }}
+        {{- include "human-machine-runtime.serverSelector" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -30,9 +30,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "dcf-light-bot.fullname" . }}-config
+                name: {{ include "human-machine-runtime.fullname" . }}-config
             - secretRef:
-                name: {{ include "dcf-light-bot.secretName" . }}
+                name: {{ include "human-machine-runtime.secretName" . }}
           readinessProbe:
             httpGet:
               path: {{ .Values.server.probes.readiness.path }}
@@ -48,23 +48,23 @@ spec:
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
 ---
-# DCF Client Deployment (Nginx SPA)
+# HMR Client Deployment (Nginx SPA)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "dcf-light-bot.fullname" . }}-client
-  namespace: {{ include "dcf-light-bot.namespace" . }}
+  name: {{ include "human-machine-runtime.fullname" . }}-client
+  namespace: {{ include "human-machine-runtime.namespace" . }}
   labels:
-    {{- include "dcf-light-bot.clientLabels" . | nindent 4 }}
+    {{- include "human-machine-runtime.clientLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.client.replicaCount }}
   selector:
     matchLabels:
-      {{- include "dcf-light-bot.clientSelector" . | nindent 6 }}
+      {{- include "human-machine-runtime.clientSelector" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "dcf-light-bot.clientSelector" . | nindent 8 }}
+        {{- include "human-machine-runtime.clientSelector" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

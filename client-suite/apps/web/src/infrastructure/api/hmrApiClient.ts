@@ -1,8 +1,8 @@
 /**
- * DCF Backend API Client
+ * HMR Backend API Client
  *
- * Wraps fetch() for the DCF backend REST API.
- * Uses cookie-based session auth (Set-Cookie: dcf_admin_session).
+ * Wraps fetch() for the HMR backend REST API.
+ * Uses cookie-based session auth (Set-Cookie: hmr_admin_session).
  * In dev mode, Vite proxy forwards /api → http://127.0.0.1:3000.
  */
 

@@ -12,7 +12,7 @@ env:
 # - matrix：Conduit/Dendrite 等 Matrix homeserver，按企业实际部署填写
 gateway:
   platformBe: "https://sso.your-domain.example.com"
-  platformBeCallbackUrl: "https://dcf.your-domain.example.com/api/auth/sso/callback"
+  platformBeCallbackUrl: "https://hmr.your-domain.example.com/api/auth/sso/callback"
   clawhub: "http://clawhub:3000"
   portal: "http://portal-backend:3000"
   xspace: "http://xspace-agent:8000"
@@ -21,6 +21,6 @@ gateway:
   litellm: "http://litellm:4000"
   matrix:
     homeserverUrl: "http://conduit:6167"
-    botUserId: "@dcf-bot:your-domain.example.com"
+    botUserId: "@hmr-bot:your-domain.example.com"
   cors:
-    origins: "https://dcf.your-domain.example.com"
+    origins: "https://hmr.your-domain.example.com"

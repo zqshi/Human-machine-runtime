@@ -38,7 +38,7 @@ describe('auth routes', () => {
       const body = await res.json();
       expect(body.success).toBe(true);
       expect(body.data.token).toBe('mock-token');
-      expect(res.headers.get('Set-Cookie')).toContain('dcf_session=sess-123');
+      expect(res.headers.get('Set-Cookie')).toContain('hmr_session=sess-123');
     });
 
     it('returns 400 for missing credentials', async () => {

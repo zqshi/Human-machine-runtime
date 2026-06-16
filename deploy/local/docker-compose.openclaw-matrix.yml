@@ -1,7 +1,7 @@
 services:
   matrix-synapse:
     image: ghcr.io/element-hq/synapse:latest
-    container_name: dcf-matrix-synapse
+    container_name: hmr-matrix-synapse
     restart: unless-stopped
     ports:
       - "8008:8008"
@@ -10,18 +10,18 @@ services:
     environment:
       SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
     networks:
-      - dcf-network
+      - hmr-network
 
   openclaw-gateway:
     image: openclaw:local
-    container_name: dcf-openclaw-gateway
+    container_name: hmr-openclaw-gateway
     depends_on:
       - matrix-synapse
     restart: unless-stopped
     environment:
       HOME: /home/node
       TERM: xterm-256color
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-dcf-local-token}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-hmr-local-token}
     volumes:
       - ../../runtime/openclaw/config:/home/node/.openclaw
       - ../../runtime/openclaw/workspace:/home/node/.openclaw/workspace
@@ -41,11 +41,11 @@ services:
         "18789"
       ]
     networks:
-      - dcf-network
+      - hmr-network
 
   matrix-element-web:
     image: vectorim/element-web:v1.12.11
-    container_name: dcf-matrix-element-web
+    container_name: hmr-matrix-element-web
     depends_on:
       - matrix-synapse
     restart: unless-stopped
@@ -53,24 +53,24 @@ services:
       - "8081:80"
     volumes:
       - ./element-web-config.json:/app/config.json:ro
-      - ./element-assets/dcf-login-logo.svg:/app/dcf-login-logo.svg:ro
-      - ./element-assets/dcf-login-bg.svg:/app/dcf-login-bg.svg:ro
+      - ./element-assets/hmr-login-logo.svg:/app/hmr-login-logo.svg:ro
+      - ./element-assets/hmr-login-bg.svg:/app/hmr-login-bg.svg:ro
       - ./element-assets/welcome.html:/app/welcome.html:ro
-      - ./element-assets/dcf-matrix-locale.js:/app/dcf-matrix-locale.js:ro
-      - ./element-assets/dcf-matrix-drawer.js:/app/dcf-matrix-drawer.js:ro
+      - ./element-assets/hmr-matrix-locale.js:/app/hmr-matrix-locale.js:ro
+      - ./element-assets/hmr-matrix-drawer.js:/app/hmr-matrix-drawer.js:ro
       - ./element-assets/nginx-default.conf:/etc/nginx/templates/default.conf.template:ro
       - ../../src/interfaces/http/lite-ui:/app/lite:ro
       - ../../node_modules/matrix-js-sdk/dist:/app/lite_vendor:ro
       - ../../client-suite/apps/web/dist:/app/client-suite:ro
     networks:
-      - dcf-network
+      - hmr-network
 
   # ─── WeKnora RAG Services ──────────────────────────────────────────
   # TODO: 投产前验证镜像名 — 运行 docker pull 确认以下镜像存在
   #       若 WeKnora 官方镜像名不同，需同步修改此处和 nginx 反代
   weknora-pg:
     image: pgvector/pgvector:pg16
-    container_name: dcf-weknora-pg
+    container_name: hmr-weknora-pg
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${WEKNORA_DB_USER:-postgres}
@@ -84,11 +84,11 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - dcf-network
+      - hmr-network
 
   weknora-redis:
     image: redis:7-alpine
-    container_name: dcf-weknora-redis
+    container_name: hmr-weknora-redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -96,18 +96,18 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - dcf-network
+      - hmr-network
 
   weknora-docreader:
     image: wechatopenai/weknora-docreader:latest
-    container_name: dcf-weknora-docreader
+    container_name: hmr-weknora-docreader
     restart: unless-stopped
     networks:
-      - dcf-network
+      - hmr-network
 
   weknora-app:
     image: wechatopenai/weknora-app:latest
-    container_name: dcf-weknora-app
+    container_name: hmr-weknora-app
     restart: unless-stopped
     depends_on:
       weknora-pg:
@@ -133,21 +133,21 @@ services:
     volumes:
       - weknora-storage:/data
     networks:
-      - dcf-network
+      - hmr-network
 
   weknora-ui:
     image: wechatopenai/weknora-ui:latest
-    container_name: dcf-weknora-ui
+    container_name: hmr-weknora-ui
     restart: unless-stopped
     depends_on:
       - weknora-app
     ports:
       - "19001:80"
     networks:
-      - dcf-network
+      - hmr-network
 
 networks:
-  dcf-network:
+  hmr-network:
     driver: bridge
 
 volumes:

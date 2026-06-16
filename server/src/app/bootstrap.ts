@@ -566,7 +566,7 @@ export function createAppContext(db: Database): AppContext {
     documentService.setSyncHook({
       async onPublished(doc) {
         if (!doc.tenantId) return;
-        const mapping = await wkMappingRepo.getByDcfTenantId(doc.tenantId);
+        const mapping = await wkMappingRepo.getByHmrTenantId(doc.tenantId);
         const kbId = mapping?.defaultKbId;
         if (!kbId) return;
         const htmlContent = (doc.content as Record<string, unknown>)?.html || '';

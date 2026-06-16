@@ -105,7 +105,7 @@ export function McpOpenApiFlow({ onBack }: Props) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Chat */}
         <div className="flex-1 flex flex-col min-w-[340px] border-r border-white/[0.06]">
-          <div className="flex-1 p-4 overflow-y-auto dcf-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             <div className="flex flex-col gap-3 max-w-[480px]">
               {messages.map((m) => (
                 <div
@@ -179,7 +179,7 @@ export function McpOpenApiFlow({ onBack }: Props) {
               </button>
             ))}
           </div>
-          <div className="flex-1 p-4 overflow-y-auto dcf-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             {activeTab === 'endpoints' &&
               (phase >= 1 ? (
                 <div className="space-y-2">

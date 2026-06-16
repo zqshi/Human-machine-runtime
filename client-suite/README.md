@@ -1,4 +1,4 @@
-# DCF Client Suite
+# HMR Client Suite
 
 基于 React + TypeScript 的用户端 SPA，采用严格 DDD 四层架构。
 
@@ -19,7 +19,7 @@ graph LR
 
   subgraph Infrastructure["Infrastructure 层"]
     Matrix["MatrixClient (Real / Mock)"]
-    API["DCF API Client"]
+    API["HMR API Client"]
     Channel["ChannelAdapter"]
   end
 
@@ -43,7 +43,7 @@ graph LR
 |----|------|
 | 框架 | React 18 + TypeScript strict |
 | 构建 | Vite |
-| 样式 | Tailwind CSS 3.4 + `@dcf/ui-tokens` preset |
+| 样式 | Tailwind CSS 3.4 + `@hmr/ui-tokens` preset |
 | 状态 | zustand（一 store 一文件） |
 | IM | matrix-js-sdk（RealMatrixClient）+ MockMatrixClient（Demo） |
 | 通话 | WebRTC via matrix-js-sdk VoIP |
@@ -77,7 +77,7 @@ apps/web/src/
     shared/                  #   types, enums
   infrastructure/            # 外部适配器
     matrix/                  #   IMatrixClient, RealMatrixClient, MockMatrixClient
-    api/                     #   DCF Backend API client
+    api/                     #   HMR Backend API client
   application/               # 用例编排
     stores/                  #   authStore, chatStore, uiStore, callStore, ...
     hooks/                   #   useMatrixClient, useCall, ...

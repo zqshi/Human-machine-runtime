@@ -144,7 +144,7 @@ export function CreateGroupModal({ onCreated, onClose }: CreateGroupModalProps) 
           </div>
           {searching && <p className="text-xs text-text-muted mt-1">搜索中...</p>}
           {searchResults.length > 0 && (
-            <div className="mt-2 max-h-32 overflow-y-auto space-y-1 dcf-scrollbar">
+            <div className="mt-2 max-h-32 overflow-y-auto space-y-1 hmr-scrollbar">
               {searchResults.map((u) => (
                 <button
                   key={u.userId}

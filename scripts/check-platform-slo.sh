@@ -27,12 +27,12 @@ echo "[ok] /health reachable"
 echo "[ok] /status reachable"
 echo "[ok] /metrics reachable"
 
-if ! grep -q 'dcf_health_state' <<<"${metrics_text}"; then
-  echo "[fail] metrics missing dcf_health_state"
+if ! grep -q 'hmr_health_state' <<<"${metrics_text}"; then
+  echo "[fail] metrics missing hmr_health_state"
   exit 1
 fi
-if ! grep -q 'dcf_instance_state_total' <<<"${metrics_text}"; then
-  echo "[fail] metrics missing dcf_instance_state_total"
+if ! grep -q 'hmr_instance_state_total' <<<"${metrics_text}"; then
+  echo "[fail] metrics missing hmr_instance_state_total"
   exit 1
 fi
 

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: human-machine-runtime
+description: HMR Platform — Node.js Hono/TS backend + React SPA (Nginx)
+type: application
+version: 0.4.0
+appVersion: "3.0.0"
+keywords:
+  - clawmate
+  - hmr
+  - hono
+  - drizzle
+  - multi-tenant
+  - control-plane
+home: https://github.com/zqshi/human-machine-runtime
+sources:
+  - https://github.com/zqshi/human-machine-runtime
+maintainers:
+  - name: zqshi

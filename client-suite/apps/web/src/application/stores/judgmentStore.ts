@@ -6,7 +6,7 @@ import {
   createJudgmentRecord,
 } from '../../infrastructure/api/openclawApiAdapter';
 
-const STORAGE_KEY = 'dcf-judgment-records';
+const STORAGE_KEY = 'hmr-judgment-records';
 
 interface JudgmentState {
   records: JudgmentRecord[];

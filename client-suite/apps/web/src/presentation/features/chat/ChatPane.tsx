@@ -173,7 +173,7 @@ export function ChatPane() {
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
             <Icon name="hub" size={28} className="text-primary" />
           </div>
-          <h2 className="text-lg font-semibold text-text-primary mb-1">欢迎使用 DCF</h2>
+          <h2 className="text-lg font-semibold text-text-primary mb-1">欢迎使用 HMR</h2>
           <p className="text-sm text-text-secondary mb-6">选择一个会话开始聊天，或从下方快速进入</p>
           <div className="grid gap-3">
             {entries.map((e) => (
@@ -205,7 +205,7 @@ export function ChatPane() {
         <ChatHeader />
         <div
           ref={scrollRef}
-          className="flex-1 overflow-auto px-5 py-4 flex flex-col gap-4 dcf-scrollbar"
+          className="flex-1 overflow-auto px-5 py-4 flex flex-col gap-4 hmr-scrollbar"
         >
           {syncing && (
             <div className="flex items-center justify-center py-8 gap-2">

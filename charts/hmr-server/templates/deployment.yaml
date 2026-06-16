@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "dcf-server.fullname" . }}
+  name: {{ include "hmr-server.fullname" . }}
   labels:
-    {{- include "dcf-server.labels" . | nindent 4 }}
+    {{- include "hmr-server.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "dcf-server.selectorLabels" . | nindent 6 }}
+      {{- include "hmr-server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "dcf-server.selectorLabels" . | nindent 8 }}
+        {{- include "hmr-server.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: dcf-server
+        - name: hmr-server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -28,9 +28,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "dcf-server.fullname" . }}-config
+                name: {{ include "hmr-server.fullname" . }}-config
             - secretRef:
-                name: {{ include "dcf-server.fullname" . }}-secret
+                name: {{ include "hmr-server.fullname" . }}-secret
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

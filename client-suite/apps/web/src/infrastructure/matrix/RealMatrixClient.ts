@@ -19,7 +19,7 @@ import { ChatMessage } from '../../domain/chat/ChatMessage';
 import { ChatRoom } from '../../domain/chat/ChatRoom';
 import type { RoomId, UserId, ConnectionState } from '../../domain/shared/types';
 
-const BOT_PATTERNS = [/^@dcf-bot/, /^@factory/, /^@agent-/];
+const BOT_PATTERNS = [/^@hmr-bot/, /^@factory/, /^@agent-/];
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -227,8 +227,8 @@ export class RealMatrixClient implements IMatrixClient {
 
         const senderId = ev.getSender() ?? '';
         const member = room.getMember(senderId);
-        const agentCard = content['dcf.agent_card'] ?? null;
-        const drawerContent = content['dcf.drawer_content'] ?? null;
+        const agentCard = content['hmr.agent_card'] ?? null;
+        const drawerContent = content['hmr.drawer_content'] ?? null;
 
         let contentType: ChatMessage['contentType'] = 'text';
         if (agentCard) contentType = 'agent-card';

@@ -47,7 +47,7 @@ export function CollaborationTopology() {
         <span className="text-[10px] text-slate-500">{sessions.length} 活跃会话</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto dcf-scrollbar p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto hmr-scrollbar p-4 space-y-3">
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500">
             <Icon name="group_off" size={32} className="text-slate-600 mb-2" />

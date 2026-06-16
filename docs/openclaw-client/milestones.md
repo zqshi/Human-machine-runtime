@@ -1,3 +1,5 @@
+> ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5432）。
+
 # OpenClaw Client Suite — 里程碑计划
 
 > 版本 1.0 | 2026-04-14
@@ -11,7 +13,7 @@
 - 知识库 CRUD（文件夹/文档/版本/权限/审计）
 - 代码编辑器集成（CodeMirror 多语言）
 - 待办管理
-- 设计系统基础（@dcf/ui-tokens + Apple HIG glass morphism）
+- 设计系统基础（@hmr/ui-tokens + Apple HIG glass morphism）
 
 **交付物**: 可用的对话 + 知识库 + 待办功能。
 
@@ -55,9 +57,9 @@
 - 跨会话上下文关联
 
 ### 后端对接
-- MockOpenClawDataSource → DCF API 客户端切换
+- MockOpenClawDataSource → HMR API 客户端切换
 - Matrix RealMatrixClient 联调（解决 crypto-wasm 兼容）
-- 认证对接（authStore → DCF JWT）
+- 认证对接（authStore → HMR JWT）
 - 实时通知推送
 
 **交付物**: 完整上下文空间，后端数据打通。

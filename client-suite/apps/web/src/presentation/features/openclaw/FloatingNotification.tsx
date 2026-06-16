@@ -20,14 +20,14 @@ export function FloatingNotification() {
     <div className="fixed bottom-6 right-6 z-40">
       {/* Popup — absolutely positioned above the bell */}
       {expanded && (
-        <div className="absolute bottom-14 right-0 w-72 rounded-xl border border-white/10 bg-bg-white-var shadow-2xl overflow-hidden animate-[dcf-fade-in_0.2s_ease-out]">
+        <div className="absolute bottom-14 right-0 w-72 rounded-xl border border-white/10 bg-bg-white-var shadow-2xl overflow-hidden animate-[hmr-fade-in_0.2s_ease-out]">
           <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
             <span className="text-xs font-medium text-slate-200">通知</span>
             <button onClick={() => setExpanded(false)} className="text-slate-500 hover:text-slate-300">
               <Icon name="close" size={14} />
             </button>
           </div>
-          <div className="max-h-48 overflow-y-auto dcf-scrollbar">
+          <div className="max-h-48 overflow-y-auto hmr-scrollbar">
             {notifications.length === 0 && (
               <div className="px-3 py-4 text-xs text-slate-500 text-center">暂无通知</div>
             )}

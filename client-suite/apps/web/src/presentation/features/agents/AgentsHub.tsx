@@ -130,7 +130,7 @@ export function AgentsHub() {
         </header>
 
         {/* Content — scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6 dcf-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 hmr-scrollbar">
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-slate-500">
               <Icon name="smart_toy" size={40} className="opacity-30 mx-auto mb-2" />
@@ -181,7 +181,7 @@ export function AgentsHub() {
 
   // ─── IM 模式（浅色） ───
   return (
-    <div className="flex-1 overflow-auto dcf-scrollbar">
+    <div className="flex-1 overflow-auto hmr-scrollbar">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text-primary">Agent Team</h2>

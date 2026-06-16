@@ -1,5 +1,5 @@
 /**
- * DCF Design Tokens — Spacing & Layout
+ * HMR Design Tokens — Spacing & Layout
  */
 
 export const spacing = {

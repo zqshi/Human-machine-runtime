@@ -6,7 +6,7 @@ import { newId, nowIso } from '../../shared/utils.js';
 
 export interface WkTenantMapping {
   id: string;
-  dcfTenantId: string;
+  hmrTenantId: string;
   wkTenantId: string;
   wkUserId: string;
   wkApiKey: string;
@@ -18,23 +18,23 @@ export interface WkTenantMapping {
 }
 
 export interface IWkMappingRepository {
-  getByDcfTenantId(dcfTenantId: string): Promise<WkTenantMapping | null>;
+  getByHmrTenantId(hmrTenantId: string): Promise<WkTenantMapping | null>;
   save(mapping: WkTenantMapping): Promise<void>;
-  updateApiKey(dcfTenantId: string, apiKey: string): Promise<void>;
-  updateDefaultKbId(dcfTenantId: string, kbId: string): Promise<void>;
-  updateStatus(dcfTenantId: string, status: string): Promise<void>;
-  delete(dcfTenantId: string): Promise<void>;
+  updateApiKey(hmrTenantId: string, apiKey: string): Promise<void>;
+  updateDefaultKbId(hmrTenantId: string, kbId: string): Promise<void>;
+  updateStatus(hmrTenantId: string, status: string): Promise<void>;
+  delete(hmrTenantId: string): Promise<void>;
   listAll(): Promise<WkTenantMapping[]>;
 }
 
 export class WkMappingRepository implements IWkMappingRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  async getByDcfTenantId(dcfTenantId: string): Promise<WkTenantMapping | null> {
+  async getByHmrTenantId(hmrTenantId: string): Promise<WkTenantMapping | null> {
     const rows = await this.db
       .select()
       .from(weknoTenantMappings)
-      .where(eq(weknoTenantMappings.dcfTenantId, dcfTenantId))
+      .where(eq(weknoTenantMappings.hmrTenantId, hmrTenantId))
       .limit(1);
     return rows[0] ? this.toModel(rows[0]) : null;
   }
@@ -44,7 +44,7 @@ export class WkMappingRepository implements IWkMappingRepository {
       .insert(weknoTenantMappings)
       .values({
         id: mapping.id || newId('wkm'),
-        dcfTenantId: mapping.dcfTenantId,
+        hmrTenantId: mapping.hmrTenantId,
         wkTenantId: mapping.wkTenantId,
         wkUserId: mapping.wkUserId,
         wkApiKey: mapping.wkApiKey,
@@ -53,7 +53,7 @@ export class WkMappingRepository implements IWkMappingRepository {
         defaultKbId: mapping.defaultKbId,
       })
       .onConflictDoUpdate({
-        target: weknoTenantMappings.dcfTenantId,
+        target: weknoTenantMappings.hmrTenantId,
         set: {
           wkTenantId: mapping.wkTenantId,
           wkUserId: mapping.wkUserId,
@@ -66,31 +66,31 @@ export class WkMappingRepository implements IWkMappingRepository {
       });
   }
 
-  async updateApiKey(dcfTenantId: string, apiKey: string): Promise<void> {
+  async updateApiKey(hmrTenantId: string, apiKey: string): Promise<void> {
     await this.db
       .update(weknoTenantMappings)
       .set({ wkApiKey: apiKey, updatedAt: new Date() })
-      .where(eq(weknoTenantMappings.dcfTenantId, dcfTenantId));
+      .where(eq(weknoTenantMappings.hmrTenantId, hmrTenantId));
   }
 
-  async updateDefaultKbId(dcfTenantId: string, kbId: string): Promise<void> {
+  async updateDefaultKbId(hmrTenantId: string, kbId: string): Promise<void> {
     await this.db
       .update(weknoTenantMappings)
       .set({ defaultKbId: kbId, updatedAt: new Date() })
-      .where(eq(weknoTenantMappings.dcfTenantId, dcfTenantId));
+      .where(eq(weknoTenantMappings.hmrTenantId, hmrTenantId));
   }
 
-  async updateStatus(dcfTenantId: string, status: string): Promise<void> {
+  async updateStatus(hmrTenantId: string, status: string): Promise<void> {
     await this.db
       .update(weknoTenantMappings)
       .set({ status, updatedAt: new Date() })
-      .where(eq(weknoTenantMappings.dcfTenantId, dcfTenantId));
+      .where(eq(weknoTenantMappings.hmrTenantId, hmrTenantId));
   }
 
-  async delete(dcfTenantId: string): Promise<void> {
+  async delete(hmrTenantId: string): Promise<void> {
     await this.db
       .delete(weknoTenantMappings)
-      .where(eq(weknoTenantMappings.dcfTenantId, dcfTenantId));
+      .where(eq(weknoTenantMappings.hmrTenantId, hmrTenantId));
   }
 
   async listAll(): Promise<WkTenantMapping[]> {
@@ -101,7 +101,7 @@ export class WkMappingRepository implements IWkMappingRepository {
   private toModel(row: typeof weknoTenantMappings.$inferSelect): WkTenantMapping {
     return {
       id: row.id,
-      dcfTenantId: row.dcfTenantId,
+      hmrTenantId: row.hmrTenantId,
       wkTenantId: row.wkTenantId,
       wkUserId: row.wkUserId,
       wkApiKey: row.wkApiKey,

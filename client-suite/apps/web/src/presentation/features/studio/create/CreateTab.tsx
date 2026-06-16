@@ -106,7 +106,7 @@ export function CreateTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-8 overflow-y-auto dcf-scrollbar">
+    <div className="flex-1 flex flex-col items-center justify-center px-8 overflow-y-auto hmr-scrollbar">
       <div className="w-full max-w-2xl">
         {/* Title */}
         <h1 className="text-[22px] font-bold text-center text-slate-100 mb-6">你想要创造什么？</h1>

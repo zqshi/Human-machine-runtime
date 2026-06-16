@@ -15,8 +15,8 @@ interface TypingInfo {
 
 const typingTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
-const LS_GROUPS_KEY = 'dcf_room_groups';
-const LS_GROUP_MAP_KEY = 'dcf_room_group_map';
+const LS_GROUPS_KEY = 'hmr_room_groups';
+const LS_GROUP_MAP_KEY = 'hmr_room_group_map';
 
 function loadGroups(): RoomGroup[] {
   try {

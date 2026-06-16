@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 BROWSER_USE_PROJECT="${BROWSER_USE_PROJECT:-/Users/zqs/Downloads/project/browser-use}"
-SESSION_NAME="${BROWSER_USE_SESSION_NAME:-dcf-user-e2e}"
-APP_URL="${DCF_BASE_URL:-http://127.0.0.1:3010}"
+SESSION_NAME="${BROWSER_USE_SESSION_NAME:-hmr-user-e2e}"
+APP_URL="${HMR_BASE_URL:-http://127.0.0.1:3010}"
 E2E_DIR="$ROOT_DIR/runtime/e2e"
 AGENT_NAME="${MATRIX_AGENT_NAME:-browser-e2e-agent-$(date +%H%M%S)}"
 MATRIX_OUTPUT_FILE="$E2E_DIR/matrix-e2e-${AGENT_NAME}.log"
@@ -32,11 +32,11 @@ ensure_stacks() {
     MATRIX_RESTART_ON_START=false bash scripts/start-openclaw-stack.sh
   fi
 
-  if bash scripts/check-dcf-app.sh >/dev/null 2>&1; then
-    echo "[e2e] dcf app already healthy"
+  if bash scripts/check-hmr-app.sh >/dev/null 2>&1; then
+    echo "[e2e] hmr app already healthy"
   else
-    echo "[e2e] dcf app not healthy, starting"
-    bash scripts/start-dcf-app.sh
+    echo "[e2e] hmr app not healthy, starting"
+    bash scripts/start-hmr-app.sh
   fi
 }
 

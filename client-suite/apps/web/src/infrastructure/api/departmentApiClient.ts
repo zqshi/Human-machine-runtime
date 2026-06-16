@@ -4,7 +4,7 @@
  * 部门实体 CRUD — 对接后端 /api/control/departments（v3.0 部门实体化）。
  * tenantId 从 auth session cookie 读取（与 weKnoraClient 同源），调用方无需显式传入。
  */
-import { ApiError } from './dcfApiClient';
+import { ApiError } from './hmrApiClient';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (path.includes('/undefined') || path.includes('/null')) {

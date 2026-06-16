@@ -146,7 +146,7 @@ export default function DocPanel({ data, onChange }: PanelProps) {
       <DocToolbar editor={editor} />
       <EditorContent
         editor={editor}
-        className="flex-1 overflow-auto p-4 dcf-scrollbar prose prose-sm max-w-none text-text-primary"
+        className="flex-1 overflow-auto p-4 hmr-scrollbar prose prose-sm max-w-none text-text-primary"
       />
     </div>
   );

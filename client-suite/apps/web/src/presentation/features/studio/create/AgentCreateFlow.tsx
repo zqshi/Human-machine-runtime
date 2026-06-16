@@ -47,7 +47,7 @@ export function AgentCreateFlow({ onBack }: Props) {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6 overflow-y-auto dcf-scrollbar">
+    <div className="flex-1 flex flex-col p-6 overflow-y-auto hmr-scrollbar">
       <BackButton onClick={step === 'info' ? onBack : () => setStep('info')} />
 
       {step === 'info' && (

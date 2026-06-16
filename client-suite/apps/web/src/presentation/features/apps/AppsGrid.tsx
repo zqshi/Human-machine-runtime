@@ -93,7 +93,7 @@ export function AppsGrid() {
   }
 
   return (
-    <div className="flex-1 overflow-auto dcf-scrollbar">
+    <div className="flex-1 overflow-auto hmr-scrollbar">
       <div className="p-6 space-y-4">
         {/* Header */}
         <AppsHeader

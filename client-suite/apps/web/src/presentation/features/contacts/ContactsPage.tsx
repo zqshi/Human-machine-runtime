@@ -76,7 +76,7 @@ function useContacts() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Step 1: Try DCF backend API
+      // Step 1: Try HMR backend API
       try {
         const rows = await employeeApi.list();
         if (!cancelled) {

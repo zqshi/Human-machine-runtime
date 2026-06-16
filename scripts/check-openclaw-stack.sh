@@ -22,4 +22,4 @@ curl -I -sS http://127.0.0.1:8081/ | sed -n '1,12p'
 
 echo
 echo "[openclaw gateway logs tail]"
-docker logs --tail 40 dcf-openclaw-gateway || true
+docker logs --tail 40 hmr-openclaw-gateway || true

@@ -580,7 +580,7 @@ const CHANNEL_MODE_OPTIONS: { value: ChannelMode; label: string; description: st
   { value: 'wps', label: 'WPS', description: '连接 claw-farm WPS IM 通道' },
 ];
 
-const WPS_BASE_URL_KEY = 'dcf_wps_base_url';
+const WPS_BASE_URL_KEY = 'hmr_wps_base_url';
 const DEFAULT_WPS_BASE_URL = import.meta.env.VITE_WPS_BASE_URL || 'http://localhost:3080';
 
 function ChannelModeSelector() {

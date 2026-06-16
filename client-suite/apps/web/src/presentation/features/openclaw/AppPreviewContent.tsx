@@ -84,7 +84,7 @@ export function AppPreviewContent({ data }: ContentProps) {
       {/* Main content */}
       <div className="flex-1 overflow-hidden relative">
         {showCode ? (
-          <div className="h-full overflow-auto dcf-scrollbar p-4">
+          <div className="h-full overflow-auto hmr-scrollbar p-4">
             <div className="space-y-3">
               {latestSnapshot?.html && (
                 <div>

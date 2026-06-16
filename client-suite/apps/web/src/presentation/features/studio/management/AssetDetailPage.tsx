@@ -110,7 +110,7 @@ export function AssetDetailPage({ assetId, onBack }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 dcf-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 hmr-scrollbar">
         {activeTab === 'overview' && (
           <div className="max-w-[520px] space-y-4">
             <div className="border border-white/[0.08] bg-white/[0.03] rounded-2xl p-4 space-y-3">

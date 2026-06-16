@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Subscription } from '../../domain/subscription/Subscription';
 import type { SubscriptionType } from '../../domain/subscription/Subscription';
 import type { FeedItem, SubscriptionSource } from '../../domain/subscription/FeedTypes';
-import { logsApi } from '../../infrastructure/api/dcfApiClient';
+import { logsApi } from '../../infrastructure/api/hmrApiClient';
 
 export type CategoryFilter = 'all' | SubscriptionType;
 export type SidebarTab = 'all' | 'sources' | 'alerts';

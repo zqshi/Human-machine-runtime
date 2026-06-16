@@ -87,7 +87,7 @@ export interface KnowledgeEntry {
   knowledgeBaseId: string;
   tenantId: string;
   wkKnowledgeId: string;
-  dcfDocumentId: string | null;
+  hmrDocumentId: string | null;
   title: string;
   sourceType: 'file' | 'url' | 'manual';
   parseStatus: ParseStatus;

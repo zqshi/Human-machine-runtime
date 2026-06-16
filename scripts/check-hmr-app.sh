@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APP_PORT="${DCF_APP_PORT:-3010}"
-APP_HOST="${DCF_APP_HOST:-127.0.0.1}"
-PID_FILE="$ROOT_DIR/runtime/dcf-app.pid"
-LOG_FILE="$ROOT_DIR/runtime/dcf-app.log"
+APP_PORT="${HMR_APP_PORT:-3010}"
+APP_HOST="${HMR_APP_HOST:-127.0.0.1}"
+PID_FILE="$ROOT_DIR/runtime/hmr-app.pid"
+LOG_FILE="$ROOT_DIR/runtime/hmr-app.log"
 
 PID=""
 if [ -f "$PID_FILE" ]; then
@@ -17,7 +17,7 @@ fi
 if [ -z "${PID:-}" ] || ! kill -0 "$PID" >/dev/null 2>&1; then
   FALLBACK_PID="$(lsof -ti:${APP_PORT} 2>/dev/null | head -n 1 || true)"
   if [ -z "${FALLBACK_PID:-}" ]; then
-    echo "[error] dcf app not running on ${APP_HOST}:${APP_PORT}"
+    echo "[error] hmr app not running on ${APP_HOST}:${APP_PORT}"
     [ -f "$LOG_FILE" ] && tail -n 80 "$LOG_FILE"
     exit 1
   fi

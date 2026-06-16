@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  # 通用镜像仓库占位，部署时替换为企业自有 registry（如 ghcr.io/your-org/dcf-server）
-  repository: ghcr.io/your-org/dcf-server
+  # 通用镜像仓库占位，部署时替换为企业自有 registry（如 ghcr.io/your-org/hmr-server）
+  repository: ghcr.io/your-org/hmr-server
   tag: ""
   pullPolicy: IfNotPresent
 

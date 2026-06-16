@@ -139,7 +139,7 @@ export function MarketplacePanel() {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto dcf-scrollbar">
+    <div className="flex-1 overflow-y-auto hmr-scrollbar">
       {/* Sub-tabs */}
       <div className="flex items-center gap-0 px-2 pt-2 pb-1">
         <button
