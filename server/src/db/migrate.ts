@@ -12,6 +12,7 @@ import { migratePlan } from './migrations/plan.js';
 import { migrateToolRegistry } from './migrations/tool-registry.js';
 import { migrateEvalBenchmark } from './migrations/eval-benchmark.js';
 import { migrateDepartment } from './migrations/department.js';
+import { migrateEmployeeMemory } from './migrations/employee-memory.js';
 import { migrateEmployeeMemoryScope } from './migrations/employee-memory-scope.js';
 import { migrateScheduledTasks } from './migrations/scheduled-tasks.js';
 
@@ -31,6 +32,7 @@ async function runMigrations() {
   await migrateToolRegistry(db);
   await migrateEvalBenchmark(db);
   await migrateDepartment(db);
+  await migrateEmployeeMemory(db);
   await migrateEmployeeMemoryScope(db);
   await migrateScheduledTasks(db);
 
