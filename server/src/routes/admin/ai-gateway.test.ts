@@ -143,6 +143,10 @@ function mockDeps() {
       upsert: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
     },
+    configRepo: {
+      getSystemConfig: vi.fn().mockResolvedValue(null),
+      setSystemConfig: vi.fn().mockResolvedValue(undefined),
+    },
     litellmClient: {
       isConfigured: vi.fn().mockReturnValue(false),
       listModels: vi.fn().mockResolvedValue([]),
@@ -471,9 +475,16 @@ describe('admin ai-gateway routes', () => {
 
   /* ──── Config ──── */
 
-  it('GET /config returns gateway config', async () => {
+  it('GET /config returns default when no persisted config', async () => {
     const deps = mockDeps();
-    const inner = createAdminAiGatewayRoutes(deps.repo as never, deps.opRepo as never);
+    const inner = createAdminAiGatewayRoutes(
+      deps.repo as never,
+      deps.opRepo as never,
+      undefined,
+      undefined,
+      undefined,
+      deps.configRepo as never
+    );
     const app = wrapWithAuth(inner);
 
     const res = await app.request('/config');
@@ -482,6 +493,81 @@ describe('admin ai-gateway routes', () => {
     const body = await res.json();
     expect(body.provider).toBe('multi');
     expect(body.timeout).toBe(30);
+    expect(deps.configRepo.getSystemConfig).toHaveBeenCalledWith('ai_gateway.config');
+  });
+
+  it('GET /config returns persisted config', async () => {
+    const deps = mockDeps();
+    deps.configRepo.getSystemConfig.mockResolvedValue({
+      key: 'ai_gateway.config',
+      value: JSON.stringify({ provider: 'single', timeout: 60 }),
+    });
+    const inner = createAdminAiGatewayRoutes(
+      deps.repo as never,
+      deps.opRepo as never,
+      undefined,
+      undefined,
+      undefined,
+      deps.configRepo as never
+    );
+    const app = wrapWithAuth(inner);
+
+    const res = await app.request('/config');
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.provider).toBe('single');
+    expect(body.timeout).toBe(60);
+  });
+
+  it('PUT /config persists validated config to system_configs', async () => {
+    const deps = mockDeps();
+    const inner = createAdminAiGatewayRoutes(
+      deps.repo as never,
+      deps.opRepo as never,
+      undefined,
+      undefined,
+      undefined,
+      deps.configRepo as never
+    );
+    const app = wrapWithAuth(inner);
+
+    const res = await app.request('/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'failover', timeout: 45 }),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.config).toEqual({ provider: 'failover', timeout: 45 });
+    expect(deps.configRepo.setSystemConfig).toHaveBeenCalledWith(
+      'ai_gateway.config',
+      JSON.stringify({ provider: 'failover', timeout: 45 }),
+      'AI Gateway 全局配置'
+    );
+  });
+
+  it('PUT /config rejects invalid body (non-integer timeout)', async () => {
+    const deps = mockDeps();
+    const inner = createAdminAiGatewayRoutes(
+      deps.repo as never,
+      deps.opRepo as never,
+      undefined,
+      undefined,
+      undefined,
+      deps.configRepo as never
+    );
+    const app = wrapWithAuth(inner);
+
+    const res = await app.request('/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'x', timeout: 1.5 }),
+    });
+    expect(res.status).toBe(400);
+    expect(deps.configRepo.setSystemConfig).not.toHaveBeenCalled();
   });
 
   /* ──── Costs ──── */

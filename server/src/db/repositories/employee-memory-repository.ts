@@ -75,10 +75,11 @@ export class EmployeeMemoryRepository {
       .select()
       .from(employeeMemoryFragments)
       .where(and(...conditions))
-      .orderBy(desc(employeeMemoryFragments.createdAt));
+      .orderBy(desc(employeeMemoryFragments.createdAt))
+      .$dynamic();
 
-    if (opts?.limit) query = query.limit(opts.limit) as any;
-    if (opts?.offset) query = query.offset(opts.offset) as any;
+    if (opts?.limit) query = query.limit(opts.limit);
+    if (opts?.offset) query = query.offset(opts.offset);
 
     const rows = await query;
     return rows.map(toFragmentModel);

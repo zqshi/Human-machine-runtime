@@ -64,7 +64,13 @@ export class AgentRoutingService {
     let bestMatchCount = 0;
 
     for (const { templateId, keywords } of INTENT_PATTERNS) {
-      const matches = text.match(new RegExp(keywords.source, 'g'));
+      let matches: string[] | null = null;
+      try {
+        matches = text.match(new RegExp(keywords.source, 'g'));
+      } catch {
+        // keywords.source 异常（非法转义等）时跳过该模板，避免整条路由因 SyntaxError 崩溃
+        continue;
+      }
       if (matches && matches.length > bestMatchCount) {
         bestMatchCount = matches.length;
         const confidence = Math.min(0.5 + bestMatchCount * 0.15, 0.95);

@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import { z } from 'zod';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
 import type { OperationalRepository } from '../../db/repositories/operational-repository.js';
+import type { ConfigRepository } from '../../db/repositories/config-repository.js';
 import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
 import type { LlmKeySyncService } from '../../contexts/gateway/llm-key-sync-service.js';
 import type { InstanceService } from '../../contexts/tenant-instance/instance-service.js';
@@ -59,12 +60,25 @@ const setModelGrantsSchema = z.object({
   instanceIds: z.array(z.string().min(1)).max(10000),
 });
 
+/** AI Gateway 全局配置 zod 校验：provider 字符串 + timeout 正整数（秒） */
+const gatewayConfigSchema = z.object({
+  provider: z.string().min(1),
+  timeout: z.number().int().positive(),
+});
+
+/** AI Gateway 配置在 system_configs 表中的 key */
+const GATEWAY_CONFIG_KEY = 'ai_gateway.config';
+
+/** 内存默认值：system_configs 无记录时返回，保证前端首次访问有合理默认 */
+const DEFAULT_GATEWAY_CONFIG = { provider: 'multi', timeout: 30 };
+
 export function createAdminAiGatewayRoutes(
   repo: AiGatewayRepository,
   opRepo: OperationalRepository,
   litellmClient?: LiteLLMClient,
   instanceService?: InstanceService,
-  keySyncService?: LlmKeySyncService
+  keySyncService?: LlmKeySyncService,
+  configRepo?: ConfigRepository
 ) {
   const app = new Hono();
 
@@ -512,14 +526,39 @@ export function createAdminAiGatewayRoutes(
 
   /* ──── Config ──── */
 
-  const gwConfig = { provider: 'multi', timeout: 30 };
+  /**
+   * 读取持久化的 gateway 配置。未注入 configRepo（单元测试/降级场景）或表内无记录时，
+   * 返回内存默认值，保证前端契约稳定。
+   */
+  async function readGatewayConfig() {
+    if (!configRepo) return { ...DEFAULT_GATEWAY_CONFIG };
+    const row = await configRepo.getSystemConfig(GATEWAY_CONFIG_KEY);
+    if (!row?.value) return { ...DEFAULT_GATEWAY_CONFIG };
+    try {
+      const parsed = JSON.parse(row.value) as { provider?: unknown; timeout?: unknown };
+      return {
+        provider: typeof parsed.provider === 'string' ? parsed.provider : DEFAULT_GATEWAY_CONFIG.provider,
+        timeout:
+          typeof parsed.timeout === 'number' && Number.isFinite(parsed.timeout)
+            ? parsed.timeout
+            : DEFAULT_GATEWAY_CONFIG.timeout,
+      };
+    } catch {
+      return { ...DEFAULT_GATEWAY_CONFIG };
+    }
+  }
 
-  app.get('/config', (c) => c.json(gwConfig));
+  app.get('/config', async (c) => c.json(await readGatewayConfig()));
 
   app.put('/config', async (c) => {
-    const body = await c.req.json();
-    Object.assign(gwConfig, body);
-    return c.json({ success: true });
+    const parsed = await parseBody(c, gatewayConfigSchema);
+    if ('error' in parsed) return badRequest(c, parsed.error);
+    const config = parsed.data;
+
+    if (configRepo) {
+      await configRepo.setSystemConfig(GATEWAY_CONFIG_KEY, JSON.stringify(config), 'AI Gateway 全局配置');
+    }
+    return c.json({ success: true, config });
   });
 
   /* ──── Costs ──── */
@@ -583,6 +622,10 @@ export function createAdminAiGatewayRoutes(
   /* ──── Mock Data Seed ──── */
 
   app.post('/seed-dist-traces', async (c) => {
+    // Mock 数据播种：仅开发/演示用，生产环境禁用（避免 mock 数据污染线上 trace）
+    if (process.env.NODE_ENV === 'production') {
+      return c.json({ error: 'seed endpoint disabled in production' }, 403);
+    }
     const now = new Date();
     const traces: string[] = [];
 

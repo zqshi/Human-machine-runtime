@@ -44,6 +44,8 @@ export interface Instance {
   createdAt: string;
   updatedAt: string;
   lastError: string | null;
+  /** 乐观锁版本号：每次 save 自增，CAS 防止并发覆写 */
+  version: number;
 }
 
 /* ---------- Resource config ---------- */
@@ -290,6 +292,7 @@ export function createInstance(input: CreateInstanceInput, cfg?: CreateInstanceC
     policy: {},
     approvalPolicy: {},
     requestId: input.requestId ?? null,
+    version: 0,
     createdAt: now,
     updatedAt: now,
     lastError: null,

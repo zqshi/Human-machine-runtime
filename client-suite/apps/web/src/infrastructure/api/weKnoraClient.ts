@@ -196,10 +196,13 @@ export const weKnoraApi = {
 
     try {
       while (true) {
-        const timeout = new Promise<{ done: true; value: undefined }>((_, reject) =>
-          setTimeout(() => reject(new Error('SSE read timeout')), readTimeoutMs)
-        );
+        let timerId: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<{ done: true; value: undefined }>((_, reject) => {
+          timerId = setTimeout(() => reject(new Error('SSE read timeout')), readTimeoutMs);
+        });
         const { done, value } = await Promise.race([reader.read(), timeout]);
+        // read 成功返回，清理本轮超时计时器，避免无谓的 pending timer 累积
+        if (timerId !== undefined) clearTimeout(timerId);
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });

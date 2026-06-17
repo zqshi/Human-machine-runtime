@@ -68,6 +68,8 @@ export interface IDocumentRepository {
     operatorId?: string;
     targetId?: string;
   }): Promise<Record<string, unknown>[]>;
+  /** 在数据库事务中执行（保证多表写入原子性，如 saveDocument + saveVersion） */
+  withTransaction<T>(fn: (tx: IDocumentRepository) => Promise<T>): Promise<T>;
 }
 
 interface IAudit {
@@ -203,8 +205,10 @@ export class DocumentService {
       updatedAt: now,
       version: 1,
     };
-    await this.repo.saveDocument(doc);
-    await this.saveVersionSnapshot(doc, 'auto');
+    await this.repo.withTransaction(async (tx) => {
+      await tx.saveDocument(doc);
+      await this.saveVersionSnapshot(doc, 'auto', tx);
+    });
     await this.audit('document.created', { documentId: doc.id, type });
     await this.knowledgeAudit('create', doc.ownerId, doc.createdBy, doc.id, doc.title);
     return doc;
@@ -251,8 +255,10 @@ export class DocumentService {
       updatedAt: new Date().toISOString(),
       version: existing.version + 1,
     };
-    await this.repo.saveDocument(updated);
-    await this.saveVersionSnapshot(updated, 'auto');
+    await this.repo.withTransaction(async (tx) => {
+      await tx.saveDocument(updated);
+      await this.saveVersionSnapshot(updated, 'auto', tx);
+    });
     await this.audit('document.updated', { documentId: id, version: updated.version });
     return updated;
   }
@@ -287,15 +293,17 @@ export class DocumentService {
     if (targetStatus === 'pending_review') {
       updated.submittedAt = new Date().toISOString();
     }
-    await this.repo.saveDocument(updated);
-    if (targetStatus === 'published') {
-      await this.saveVersionSnapshot(updated, 'published');
-      if (this.syncHook) {
-        try {
-          await this.syncHook.onPublished(updated);
-        } catch {
-          /* non-blocking */
-        }
+    await this.repo.withTransaction(async (tx) => {
+      await tx.saveDocument(updated);
+      if (targetStatus === 'published') {
+        await this.saveVersionSnapshot(updated, 'published', tx);
+      }
+    });
+    if (targetStatus === 'published' && this.syncHook) {
+      try {
+        await this.syncHook.onPublished(updated);
+      } catch {
+        /* non-blocking */
       }
     }
     await this.audit(`document.${targetStatus}`, { documentId: id });
@@ -333,14 +341,20 @@ export class DocumentService {
       updatedAt: new Date().toISOString(),
       version: doc.version + 1,
     };
-    await this.repo.saveDocument(restored);
-    await this.saveVersionSnapshot(restored, 'manual');
+    await this.repo.withTransaction(async (tx) => {
+      await tx.saveDocument(restored);
+      await this.saveVersionSnapshot(restored, 'manual', tx);
+    });
     return restored;
   }
 
-  private async saveVersionSnapshot(doc: Document, status: string) {
+  private async saveVersionSnapshot(
+    doc: Document,
+    status: string,
+    repo: IDocumentRepository = this.repo
+  ) {
     const htmlContent = (doc.content as Record<string, unknown>)?.html || '';
-    await this.repo.saveVersion({
+    await repo.saveVersion({
       id: randomUUID(),
       documentId: doc.id,
       versionNumber: doc.version,

@@ -270,14 +270,24 @@ export class ToolManagementService {
       };
     }
 
-    // ⚠️ STUB: 凭证解密链路（credential-vault 按 credentialId 查询 + 解密）未实装。
-    // CredentialService 当前仅有 encrypt/decrypt、无按 ID 查询能力；CredentialStore 无 db 实现。
-    // 接通前用 credentialId 占位 + 空密码，introspect 会因鉴权失败返回错误。
-    // 链路实装后应改为：const cred = await this.credentialSvc.getCredential(source.credentialId)
-    const credential: { username: string; password: string } = {
-      username: source.credentialId,
-      password: '',
-    };
+    // 凭证解密链路探测：CredentialService 当前仅 encrypt/decrypt、无按 credentialId 查询能力
+    // （CredentialStore 亦无 db 实现）。能力缺失时显式失败，避免用 credentialId 占位 + 空密码
+    // 静默连接产生误导。链路接通（CredentialService.getCredential 实装）后自动走真实凭证。
+    const getCredential = (
+      this.credentialSvc as {
+        getCredential?: (id: string) => Promise<{ username: string; password: string }>;
+      }
+    ).getCredential;
+    if (typeof getCredential !== 'function') {
+      return {
+        success: false,
+        toolsCreated: 0,
+        toolsUpdated: 0,
+        toolsRemoved: 0,
+        errors: ['数据库凭证解密链路未实装（credential-vault 查询/解密待接入），DB 工具同步暂不可用'],
+      };
+    }
+    const credential = await getCredential.call(this.credentialSvc, source.credentialId);
 
     const config = {
       type: (source.dbType || 'postgresql') as 'postgresql' | 'mysql',

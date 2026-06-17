@@ -1,3 +1,11 @@
+/**
+ * openclawInitializer —— bootstrap 拉取 + SSE 挂载 + 首次编排
+ *
+ * initializeOpenClaw：从后端并行拉取 runtimes/tasks/decisions/goals/workOrders/
+ * quickCommands/proactive*，一次性 set 进主 store；挂载 SSE handler；
+ * 调 switchConversation('primary') + rebuildAttentionItems() 完成 A 栏首屏。
+ * 失败写 initError，由 UI 层展示重试。
+ */
 import { AgentTask } from '../../domain/agent/AgentTask';
 import { DecisionRequest } from '../../domain/agent/DecisionRequest';
 import { UserGoal } from '../../domain/agent/UserGoal';

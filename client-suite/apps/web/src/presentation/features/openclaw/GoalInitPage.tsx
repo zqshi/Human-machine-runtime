@@ -438,11 +438,11 @@ export function GoalInitPage({ onOpenDrawer }: GoalInitPageProps) {
                 {(decomposeResult?.riskAnalysis ?? []).length > 0 && (
                   <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2">
                     <span className="text-[10px] text-slate-500">
-                      已识别 {decomposeResult!.riskAnalysis!.length} 个风险项
-                      {decomposeResult!.riskAnalysis!.some((r) => r.level === 'high') && (
+                      已识别 {(decomposeResult?.riskAnalysis ?? []).length} 个风险项
+                      {(decomposeResult?.riskAnalysis ?? []).some((r) => r.level === 'high') && (
                         <span className="text-red-400 ml-1">
                           (含{' '}
-                          {decomposeResult!.riskAnalysis!.filter((r) => r.level === 'high').length}{' '}
+                          {(decomposeResult?.riskAnalysis ?? []).filter((r) => r.level === 'high').length}{' '}
                           个高风险)
                         </span>
                       )}

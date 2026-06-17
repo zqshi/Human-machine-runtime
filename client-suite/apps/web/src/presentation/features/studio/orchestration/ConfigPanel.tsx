@@ -179,7 +179,7 @@ export function ConfigPanel() {
           <span className="text-[10px] text-slate-400">预设问题 ({presetQuestions.length}/5)</span>
         </div>
         {presetQuestions.map((q, i) => (
-          <div key={i} className="group flex items-center gap-1 py-0.5 text-[11px] text-slate-300">
+          <div key={`${i}-${q}`} className="group flex items-center gap-1 py-0.5 text-[11px] text-slate-300">
             <span className="w-3.5 h-3.5 rounded-full bg-white/[0.06] flex items-center justify-center text-[8px] text-slate-400 shrink-0">
               {i + 1}
             </span>
@@ -215,7 +215,7 @@ export function ConfigPanel() {
         <div className="flex flex-wrap gap-1">
           {shortcuts.map((s, i) => (
             <span
-              key={i}
+              key={`${i}-${s}`}
               className="group relative px-1.5 py-0.5 bg-white/[0.06] rounded-full text-[10px] text-slate-300"
             >
               {s}

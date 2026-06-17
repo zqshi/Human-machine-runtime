@@ -18,7 +18,7 @@ import { nowIso, AppError } from '../../shared/utils.js';
 export interface IInstanceRepository {
   findAll(tenantId?: string, resourceSource?: string): Promise<Instance[]>;
   findById(id: string): Promise<Instance | undefined>;
-  save(instance: Instance): Promise<void>;
+  save(instance: Instance): Promise<number>;
   delete(id: string): Promise<void>;
 }
 
@@ -86,7 +86,7 @@ export class InstanceService {
 
   async create(input: CreateInstanceInput): Promise<Instance> {
     const inst = createInstance(input);
-    await this.repo.save(inst);
+    inst.version = await this.repo.save(inst);
     this.emitAudit('instance.created', inst, input.creator);
     return inst;
   }
@@ -126,7 +126,7 @@ export class InstanceService {
     };
 
     const inst = createInstance(createInput, { defaultSource: 'matrix' });
-    await this.repo.save(inst);
+    inst.version = await this.repo.save(inst);
     this.emitAudit('instance.created', inst, input.creator);
     return inst;
   }
@@ -149,7 +149,7 @@ export class InstanceService {
     }
 
     let updated: Instance = { ...touch(inst), state: STATE.PROVISIONING, lastError: null };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
 
     if (this.provisioner) {
       try {
@@ -171,7 +171,7 @@ export class InstanceService {
       updated = { ...touch(updated), state: STATE.RUNNING };
     }
 
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.started', updated, 'system');
     return updated;
   }
@@ -200,7 +200,7 @@ export class InstanceService {
       state: STATE.STOPPED,
       runtime: {},
     };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.stopped', updated, 'system');
     return updated;
   }
@@ -227,7 +227,7 @@ export class InstanceService {
       lastError: null,
       runtime: {},
     };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
 
     if (this.provisioner) {
       try {
@@ -241,7 +241,7 @@ export class InstanceService {
       updated = { ...touch(updated), state: STATE.RUNNING };
     }
 
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.rebuilt', updated, 'system');
     return updated;
   }
@@ -278,7 +278,7 @@ export class InstanceService {
       jobTitle: (profile.jobTitle as string) || inst.jobTitle,
       email: (profile.email as string) ?? inst.email,
     };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.profile.updated', updated, actor);
     return updated;
   }
@@ -290,7 +290,7 @@ export class InstanceService {
   ): Promise<Instance> {
     const inst = await this.get(instanceId);
     const updated: Instance = { ...touch(inst), policy };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.policy.updated', updated, actor);
     return updated;
   }
@@ -302,7 +302,7 @@ export class InstanceService {
   ): Promise<Instance> {
     const inst = await this.get(instanceId);
     const updated: Instance = { ...touch(inst), approvalPolicy };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.approvalPolicy.updated', updated, actor);
     return updated;
   }
@@ -346,7 +346,7 @@ export class InstanceService {
       }
     }
 
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.resources.updated', updated, actor);
     return updated;
   }
@@ -358,7 +358,7 @@ export class InstanceService {
       quotas = await this.tenantQuotaLookup.getQuotas(inst.tenantId);
     }
     const updated = quotas ? resetResourceConfig(inst, quotas) : { ...touch(inst) };
-    await this.repo.save(updated);
+    updated.version = await this.repo.save(updated);
     this.emitAudit('instance.resources.reset', updated, actor);
     return updated;
   }

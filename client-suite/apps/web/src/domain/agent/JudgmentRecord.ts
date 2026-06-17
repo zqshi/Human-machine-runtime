@@ -1,6 +1,35 @@
 import { DecisionRequest, type DecisionResponseStatus } from './DecisionRequest';
 import type { DecisionSource } from './DecisionHub';
 
+/** DecisionSource 合法值集合（与 DecisionHub 定义保持同步） */
+const DECISION_SOURCES: readonly DecisionSource[] = [
+  'risk-rule-trigger',
+  'milestone-arrival',
+  'collaboration-node',
+  'agent-discovery',
+  'external-alarm',
+] as const;
+
+/** DecisionResponseStatus 合法值集合（与 DecisionRequest 定义保持同步） */
+const DECISION_RESPONSE_STATUSES: readonly DecisionResponseStatus[] = [
+  'pending',
+  'accepted',
+  'modified',
+  'declined',
+  'deferred',
+  'expired',
+] as const;
+
+function coerceEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
+}
+
 export interface JudgmentContextSnapshot {
   readonly title: string;
   readonly context: string;
@@ -50,10 +79,11 @@ export class JudgmentRecord {
     return new JudgmentRecord({
       id: String(plain.id),
       decisionId: String(plain.decisionId),
-      source: plain.source as DecisionSource,
-      action: plain.action as DecisionResponseStatus,
-      selectedOptionId: plain.selectedOptionId as string | undefined,
-      feedback: plain.feedback as string | undefined,
+      source: coerceEnum(plain.source, DECISION_SOURCES, 'agent-discovery'),
+      action: coerceEnum(plain.action, DECISION_RESPONSE_STATUSES, 'expired'),
+      selectedOptionId:
+        typeof plain.selectedOptionId === 'string' ? plain.selectedOptionId : undefined,
+      feedback: typeof plain.feedback === 'string' ? plain.feedback : undefined,
       respondedAt: Number(plain.respondedAt),
       createdAt: Number(plain.createdAt),
       contextSnapshot: plain.contextSnapshot as JudgmentContextSnapshot,

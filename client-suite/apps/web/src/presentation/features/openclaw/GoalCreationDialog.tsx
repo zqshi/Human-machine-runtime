@@ -332,7 +332,7 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                 <div className="flex flex-wrap gap-1 mb-2">
                   {authorization.autoExecute.map((a, i) => (
                     <span
-                      key={i}
+                      key={`${i}-${a}`}
                       className="text-[9px] px-2 py-1 rounded bg-green-400/10 text-green-300 border border-green-400/20 flex items-center gap-1"
                     >
                       {a}
@@ -372,7 +372,7 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                 <div className="flex flex-wrap gap-1 mb-2">
                   {authorization.requireOwner.map((a, i) => (
                     <span
-                      key={i}
+                      key={`${i}-${a}`}
                       className="text-[9px] px-2 py-1 rounded bg-orange-400/10 text-orange-300 border border-orange-400/20 flex items-center gap-1"
                     >
                       {a}

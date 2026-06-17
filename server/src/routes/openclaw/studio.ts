@@ -2,6 +2,9 @@
  * Studio Routes — /api/openclaw/studio/*
  *
  * 聚合查询用户 AI 资产（Agent + Skill + MCP），区分来源。
+ *
+ * ⚠️ STUB: 本路由文件当前全部返回模拟数据（未接入 DB 聚合查询）。前端 studio
+ * 流程拿到的是假数据，不应作为真实资产依据。实装前调用方需知晓此为占位实现。
  */
 import { Hono } from 'hono';
 import type { Context } from 'hono';

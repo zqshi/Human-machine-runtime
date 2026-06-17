@@ -1,3 +1,10 @@
+/**
+ * openclawConversationHelpers —— 讨论消息构造纯函数
+ *
+ * buildDeepDiscussionResponse：综合 notification + activeTasks + 通道标签，
+ * 生成首条 Agent 分析回复（含 CoT 推理链、blocks、风险评估）。无 store 依赖，
+ * 可独立单测。extractKeywords / escapeHtml 为公共工具。
+ */
 import type { AgentTask } from '../../domain/agent/AgentTask';
 import type { MessageBlock, SuggestedActionsBlock } from '../../domain/agent/MessageBlock';
 import type { Notification } from '../../domain/notification/Notification';

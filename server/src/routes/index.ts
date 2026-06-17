@@ -128,7 +128,8 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
       ctx.operationalRepo,
       ctx.litellmClient,
       ctx.instanceService,
-      ctx.llmKeySyncService
+      ctx.llmKeySyncService,
+      ctx.configRepo
     )
   );
   admin.route('/logs', createAdminLogRoutes(ctx.auditService));

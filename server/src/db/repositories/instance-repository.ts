@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { instances } from '../schema/instance.js';
 import type { IInstanceRepository } from '../../contexts/tenant-instance/instance-service.js';
@@ -7,6 +7,7 @@ import {
   type ResourceConfig,
   defaultResourceConfig,
 } from '../../contexts/tenant-instance/domain/instance.js';
+import { AppError } from '../../shared/utils.js';
 
 export class InstanceRepository implements IInstanceRepository {
   constructor(private db: Database) {}
@@ -29,12 +30,36 @@ export class InstanceRepository implements IInstanceRepository {
     return row ? toInstanceDomain(row) : undefined;
   }
 
-  async save(instance: Instance): Promise<void> {
+  async save(instance: Instance): Promise<number> {
     const values = toInstanceRow(instance);
-    await this.db
+
+    // CAS: 乐观更新，仅当 version 匹配时才递增
+    const updated = await this.db
+      .update(instances)
+      .set({ ...values, version: instance.version + 1 })
+      .where(and(eq(instances.id, instance.id), eq(instances.version, instance.version)))
+      .returning({ id: instances.id });
+
+    if (updated.length > 0) {
+      return instance.version + 1;
+    }
+
+    // 0 行：要么不存在(新建)，要么 version 冲突。用 onConflictDoNothing 区分两者
+    const inserted = await this.db
       .insert(instances)
-      .values(values)
-      .onConflictDoUpdate({ target: instances.id, set: values });
+      .values({ ...values, version: 0 })
+      .onConflictDoNothing({ target: instances.id })
+      .returning({ id: instances.id });
+
+    if (inserted.length > 0) {
+      return 0;
+    }
+    // INSERT 也无行返回 → 主键已存在且 version 不匹配 → 并发冲突
+    throw new AppError(
+      'instance version conflict (concurrent modification)',
+      409,
+      'VERSION_CONFLICT'
+    );
   }
 
   async findByFarmInstanceId(farmInstanceId: string): Promise<Instance | undefined> {
@@ -78,6 +103,7 @@ function toInstanceDomain(row: typeof instances.$inferSelect): Instance {
     policy: (row.policy ?? {}) as Record<string, unknown>,
     approvalPolicy: (row.approvalPolicy ?? {}) as Record<string, unknown>,
     requestId: row.requestId ?? null,
+    version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     lastError: row.lastError ?? null,

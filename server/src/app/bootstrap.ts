@@ -24,6 +24,7 @@ import { TenantService } from '../contexts/tenant-management/tenant-service.js';
 import { AuditService } from '../contexts/audit-observability/audit-service.js';
 import { SkillService } from '../contexts/shared-assets/skill-service.js';
 import { InstanceService } from '../contexts/tenant-instance/instance-service.js';
+import type { Instance } from '../contexts/tenant-instance/domain/instance.js';
 import { ModelGrantChecker } from '../contexts/gateway/model-grant-checker.js';
 import { LlmKeySyncService } from '../contexts/gateway/llm-key-sync-service.js';
 import { DocumentService } from '../contexts/document/document-service.js';
@@ -43,7 +44,13 @@ import { TokenUsageService } from '../contexts/observability/token-usage-service
 import { LocalProvisioner } from '../contexts/tenant-instance/provisioners/local-provisioner.js';
 import { ClawFarmProvisioner } from '../contexts/tenant-instance/provisioners/claw-farm-provisioner.js';
 import { CompositeProvisioner } from '../contexts/tenant-instance/provisioners/composite-provisioner.js';
+import type { IInstanceProvisioner } from '../contexts/tenant-instance/instance-service.js';
 import { MatrixBot } from '../integrations/matrix/matrix-bot.js';
+import type {
+  IInstanceService,
+  IDocumentService,
+  InstanceRow,
+} from '../integrations/matrix/matrix-bot-types.js';
 
 import { ClawFarmWsBridge } from '../contexts/gateway/clients/claw-farm-ws-bridge.js';
 
@@ -157,6 +164,7 @@ export interface AppContext {
   analyticsService: AnalyticsService;
   userManagementService: UserManagementService;
   systemConfigService: SystemConfigService;
+  configRepo: ConfigRepository;
   notificationService: NotificationService;
   toolManagementService: ToolManagementService;
   pushChannelService: PushChannelService;
@@ -308,9 +316,9 @@ export function createAppContext(db: Database): AppContext {
 
   /* ──── Provisioner: local + claw-farm composite ──── */
   const localProvisioner = new LocalProvisioner();
-  const provisioners = [localProvisioner];
+  const provisioners: IInstanceProvisioner[] = [localProvisioner];
   if (clawFarmClient.isConfigured()) {
-    provisioners.push(new ClawFarmProvisioner(clawFarmClient) as never);
+    provisioners.push(new ClawFarmProvisioner(clawFarmClient));
   }
   const provisioner =
     provisioners.length > 1 ? new CompositeProvisioner(provisioners) : localProvisioner;
@@ -589,6 +597,68 @@ export function createAppContext(db: Database): AppContext {
     error: (msg: string, meta?: Record<string, unknown>) =>
       logger.error(meta ?? {}, `[MatrixBot] ${msg}`),
   };
+
+  /*
+   * MatrixBot 期望的 IInstanceService / IDocumentService 是其自有窄契约
+   *（InstanceRow），与 domain InstanceService 的返回类型 Instance 存在结构性差异：
+   *   - Instance.matrixRoomId 为 `string | null`，InstanceRow.matrixRoomId 为 `string | undefined`
+   *   - Instance.runtime 为 `Record<string, unknown>`，InstanceRow.runtime 为 `{ endpoint?: string }`
+   * 此处用显式适配器把 domain service 适配为 MatrixBot 所需接口，消除原先 `as never`
+   * 的类型逃逸。运行时行为保持不变（原 `as never` 传入的也是同一 InstanceService 实例，
+   * MatrixBot 实际只读取 id / name / state / matrixRoomId / runtime.endpoint 字段）：
+   *   - list / get / start / stop → 委托 InstanceService，经 toInstanceRow 投影为 InstanceRow
+   *   - createFromMatrix / buildMatrixCard → 维持原 InstanceService 无对应实现的行为（抛错，
+   *     `!create_agent` / 自然语言创建路径本就会因签名错位失败）
+   *   - getProvisioningJob → 维持 undefined（commands.ts 已有守卫）
+   *   - document create / get → 委托 DocumentService，Document 是返回窄类型的超集
+   */
+  const toInstanceRow = (inst: Instance): InstanceRow => ({
+    id: inst.id,
+    name: inst.name,
+    state: inst.state,
+    matrixRoomId: inst.matrixRoomId ?? undefined,
+    runtime: { endpoint: typeof inst.runtime?.endpoint === 'string' ? inst.runtime.endpoint : undefined },
+  });
+  const matrixInstanceAdapter: IInstanceService = {
+    list: async (tenantId?: string, resourceSource?: string) =>
+      (await instanceService.list(tenantId, resourceSource)).map(toInstanceRow),
+    get: async (id: string) => toInstanceRow(await instanceService.get(id)),
+    start: async (id: string) => toInstanceRow(await instanceService.start(id)),
+    stop: async (id: string) => toInstanceRow(await instanceService.stop(id)),
+    async createFromMatrix() {
+      throw new Error(
+        'createFromMatrix via MatrixBot is not wired to InstanceService; use the control-plane HTTP endpoint instead'
+      );
+    },
+    buildMatrixCard() {
+      throw new Error(
+        'buildMatrixCard via MatrixBot is not wired to InstanceService; use the control-plane HTTP endpoint instead'
+      );
+    },
+  };
+
+  const matrixDocumentAdapter: IDocumentService = {
+    create: async (params) => {
+      const doc = await documentService.create({
+        title: params.title,
+        roomId: params.roomId,
+        type: params.type,
+        createdBy: params.createdBy,
+        content: params.content,
+      });
+      return { id: doc.id, title: doc.title };
+    },
+    get: async (id: string) => {
+      const doc = await documentService.get(id);
+      return {
+        id: doc.id,
+        title: doc.title,
+        type: doc.type,
+        content: doc.content,
+      };
+    },
+  };
+
   const matrixBot = new MatrixBot(
     {
       matrixAccessToken: config.matrix.botAccessToken,
@@ -596,14 +666,14 @@ export function createAppContext(db: Database): AppContext {
       matrixConversationMode: process.env.MATRIX_CONVERSATION_MODE,
     },
     matrixBotLogger,
-    instanceService as never,
+    matrixInstanceAdapter,
     {
       auditService: {
         log: async (type: string, payload?: Record<string, unknown>) => {
           await auditService.log(type, payload ?? {});
         },
       },
-      documentService: documentService as never,
+      documentService: matrixDocumentAdapter,
       weKnoraService: knowledgeService
         ? {
             query: async (q: string, tenantId?: string, kbIds?: string[]) => {
@@ -663,6 +733,7 @@ export function createAppContext(db: Database): AppContext {
     analyticsService,
     userManagementService,
     systemConfigService,
+    configRepo,
     notificationService,
     toolManagementService,
     pushChannelService,

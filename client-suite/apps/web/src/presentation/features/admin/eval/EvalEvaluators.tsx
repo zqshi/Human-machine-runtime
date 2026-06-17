@@ -278,7 +278,7 @@ function EvaluatorDrawer({ open, evaluator, onSaved, onClose }: {
           </div>
           <div className="space-y-2">
             {dimensions.map((dim, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={`${dim.key}-${i}`} className="flex items-center gap-2">
                 {isView ? (
                   <>
                     <span className="text-xs text-gray-600 w-20">{dim.label}</span>
@@ -326,7 +326,7 @@ function EvaluatorDrawer({ open, evaluator, onSaved, onClose }: {
             ) : !isView ? (
               <div className="space-y-2">
                 {rules.map((rule, i) => (
-                  <div key={i} className="space-y-1.5">
+                  <div key={`${rule.type}-${i}`} className="space-y-1.5">
                     <div className="flex items-center gap-2">
                       <select value={rule.type} onChange={(e) => {
                         const u = [...rules];

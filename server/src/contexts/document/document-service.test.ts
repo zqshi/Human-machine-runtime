@@ -24,7 +24,7 @@ function makeDoc(overrides: Partial<Document> = {}): Document {
 function makeRepo(docs: Document[] = []): IDocumentRepository {
   const store = new Map(docs.map((d) => [d.id, { ...d }]));
   const versions: any[] = [];
-  return {
+  const repo: IDocumentRepository = {
     listDocuments: vi.fn(async () => Array.from(store.values())),
     getDocument: vi.fn(async (id: string) => store.get(id) || null),
     saveDocument: vi.fn(async (doc: Document) => {
@@ -42,7 +42,9 @@ function makeRepo(docs: Document[] = []): IDocumentRepository {
     listDocumentPermissions: vi.fn(async () => []),
     saveDocumentPermissions: vi.fn(async () => {}),
     appendKnowledgeAudit: vi.fn(async () => {}),
+    withTransaction: vi.fn(async (fn: (tx: IDocumentRepository) => Promise<unknown>) => fn(repo)),
   };
+  return repo;
 }
 
 describe('DocumentService', () => {

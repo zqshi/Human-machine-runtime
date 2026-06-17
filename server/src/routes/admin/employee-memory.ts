@@ -1,11 +1,22 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import type { MemoryService } from '../../contexts/employee-memory/memory-service.js';
-import type { FragmentScope } from '../../contexts/employee-memory/domain/memory.js';
+import {
+  type FragmentScope,
+  FRAGMENT_SCOPE,
+  FRAGMENT_TYPE,
+  RULE_TYPE,
+} from '../../contexts/employee-memory/domain/memory.js';
 import type { Principal } from '../../middleware/auth.js';
 
-function getUser(c: any): Principal {
+function getUser(c: Context): Principal {
   return c.get('user') as Principal;
+}
+
+/** 将 query 字符串过滤为枚举合法值，非法/缺失返回 undefined */
+function queryEnum<T extends string>(c: Context, key: string, allowed: readonly T[]): T | undefined {
+  const raw = c.req.query(key);
+  return raw && (allowed as readonly string[]).includes(raw) ? (raw as T) : undefined;
 }
 
 const createStoreSchema = z.object({
@@ -175,9 +186,11 @@ export function createAdminMemoryRoutes(svc: MemoryService) {
   app.get('/stores/:storeId/fragments', async (c) => {
     const storeId = c.req.param('storeId');
     const userId = c.req.query('userId');
-    const type = c.req.query('type') as any;
+    const type = queryEnum(c, 'type', Object.values(FRAGMENT_TYPE));
     const keyword = c.req.query('keyword');
-    const scope = c.req.query('scope') as FragmentScope | undefined;
+    const scope = queryEnum(c, 'scope', Object.values(FRAGMENT_SCOPE)) as
+      | FragmentScope
+      | undefined;
     const departmentId = c.req.query('departmentId') || undefined;
     const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
     const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;
@@ -271,7 +284,7 @@ export function createAdminMemoryRoutes(svc: MemoryService) {
 
   app.get('/stores/:storeId/rules', async (c) => {
     const storeId = c.req.param('storeId');
-    const ruleType = c.req.query('ruleType') as any;
+    const ruleType = queryEnum(c, 'ruleType', Object.values(RULE_TYPE));
     const rules = await svc.listRules(storeId, { ruleType });
     return c.json(rules);
   });

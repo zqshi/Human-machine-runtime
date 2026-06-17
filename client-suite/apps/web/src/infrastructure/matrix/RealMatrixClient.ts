@@ -551,10 +551,16 @@ export class RealMatrixClient implements IMatrixClient {
     // Fetch profile (non-blocking — don't let it stall init)
     try {
       const profilePromise = this.client.getProfileInfo(userId);
-      const timeout = new Promise<never>((_, rej) =>
-        setTimeout(() => rej(new Error('timeout')), 5000)
-      );
-      const profile = await Promise.race([profilePromise, timeout]);
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, rej) => {
+        timerId = setTimeout(() => rej(new Error('timeout')), 5000);
+      });
+      let profile;
+      try {
+        profile = await Promise.race([profilePromise, timeout]);
+      } finally {
+        if (timerId) clearTimeout(timerId);
+      }
       if (this.user) {
         this.user = {
           ...this.user,

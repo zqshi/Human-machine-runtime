@@ -47,7 +47,7 @@ describe('InboundPipeline', () => {
     expect(received[0].content).toBe('test-content');
   });
 
-  it('continues processing if a handler throws', async () => {
+  it('aborts pipeline if a handler throws (prevents propagation on inconsistent state)', async () => {
     const pipeline = new InboundPipeline();
     const called = vi.fn();
 
@@ -56,8 +56,8 @@ describe('InboundPipeline', () => {
     });
     pipeline.use(called);
 
-    await pipeline.process(makeMsg());
-    expect(called).toHaveBeenCalledOnce();
+    await expect(pipeline.process(makeMsg())).rejects.toThrow('boom');
+    expect(called).not.toHaveBeenCalled();
   });
 
   it('works with zero handlers', async () => {

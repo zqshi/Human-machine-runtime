@@ -92,7 +92,13 @@ export class DedupEngine {
     const bodyHash = simpleHash(normalizedBody);
 
     const exactMatch = this.fingerprints.find(
-      (fp) => fp.bodyHash === bodyHash && fp.senderId === msg.sender.id && fp.messageId !== msg.id
+      (fp) =>
+        fp.bodyHash === bodyHash &&
+        fp.senderId === msg.sender.id &&
+        fp.messageId !== msg.id &&
+        // bodyHash 是 32 位整数哈希，碰撞概率高；额外比对归一化内容前缀，
+        // 避免不同内容因哈希碰撞被误判为重复而丢弃
+        normalizeForComparison(fp.bodySnippet) === normalizedBody.slice(0, 200)
     );
 
     if (exactMatch) {

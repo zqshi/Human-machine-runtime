@@ -6,6 +6,25 @@ import {
   type AgentRuntime,
 } from '../../../application/services/adminApi';
 import type { InstanceScope } from '../../../domain/shared/types';
+import {
+  SCOPE_BADGE,
+  SCOPE_LABEL,
+  STATUS_BADGE,
+  NODE_STATUS_BADGE,
+  NODE_STATUS_ICON,
+  VIEW_MODE_COLUMNS,
+  ACTION_LABELS,
+  formatDept,
+  formatRole,
+} from '../../../domain/employee/constants';
+import {
+  selectFilteredEmployees,
+  selectEmployeeStats,
+  selectAvailableNodes,
+  selectNodeHealthMap,
+  selectDeptOptions,
+  selectRoleOptions,
+} from '../../../domain/employee/selectEmployeeList';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { StatCard } from '../../components/ui/StatCard';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -15,107 +34,10 @@ import { EmployeeDetailDrawer } from './EmployeeDetailDrawer';
 import { EmployeeEditDrawer } from './EmployeeEditDrawer';
 import { EmployeeCreateWizard } from './EmployeeCreateWizard';
 
-const SCOPE_BADGE: Record<string, string> = {
-  personal: 'bg-purple-50 text-purple-700',
-  organization: 'bg-blue-50 text-blue-700',
-};
-const SCOPE_LABEL: Record<string, string> = {
-  personal: '个人',
-  organization: '组织',
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  active: 'bg-green-50 text-green-700',
-  running: 'bg-green-50 text-green-700',
-  paused: 'bg-yellow-50 text-yellow-700',
-  provisioning: 'bg-blue-50 text-blue-700',
-  pending: 'bg-yellow-50 text-yellow-700',
-  inactive: 'bg-gray-100 text-gray-500',
-  error: 'bg-red-50 text-red-700',
-  failed: 'bg-red-50 text-red-700',
-};
-
-const DEPT_LABELS: Record<string, string> = {
-  ops: '运营',
-  operation: '运营',
-  operations: '运营',
-  finance: '财务',
-  hr: '人力资源',
-  human_resources: '人力资源',
-  legal: '法务',
-  marketing: '市场',
-  sales: '销售',
-  product: '产品',
-  engineering: '研发',
-  tech: '技术',
-  it: '技术支持',
-  support: '客服',
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  operator: '操作员',
-  dispatcher: '调度员',
-  analyst: '分析师',
-  reviewer: '审核员',
-  manager: '经理',
-  admin: '管理员',
-  specialist: '专员',
-  engineer: '工程师',
-  assistant: '助理',
-};
-
 type DrawerMode = 'none' | 'detail' | 'edit';
 type ViewMode = 'ops' | 'biz';
 type AgentFilter = AgentRuntime | '';
 type ClusterType = '' | 'k8s' | 'cubesandbox';
-
-const NODE_STATUS_BADGE: Record<string, string> = {
-  healthy: 'text-green-600',
-  warning: 'text-yellow-600',
-  unhealthy: 'text-red-600',
-};
-const NODE_STATUS_ICON: Record<string, string> = {
-  healthy: 'check_circle',
-  warning: 'warning',
-  unhealthy: 'error',
-};
-
-const VIEW_MODE_COLUMNS: Record<string, readonly { key: string; label: string; width: string }[]> = {
-  ops: [
-    { key: 'name', label: '名称', width: '' },
-    { key: 'status', label: '状态', width: '' },
-    { key: 'podName', label: 'Pod', width: '' },
-    { key: 'nodeName', label: '节点', width: '' },
-    { key: 'restarts', label: '重启', width: '' },
-    { key: 'actions', label: '操作', width: '' },
-  ],
-  biz: [
-    { key: 'name', label: '名称', width: '' },
-    { key: 'status', label: '状态', width: '' },
-    { key: 'employeeNo', label: '工号', width: '' },
-    { key: 'department', label: '部门/岗位', width: '' },
-    { key: 'scope', label: '类型', width: '' },
-    { key: 'actions', label: '操作', width: '' },
-  ],
-  cubesandbox: [
-    { key: 'id', label: 'Instance ID', width: '' },
-    { key: 'agentId', label: 'Agent ID', width: '' },
-    { key: 'runMode', label: '状态模式', width: '' },
-    { key: 'heartbeat', label: '心跳', width: '' },
-    { key: 'healthStatus', label: '健康状态', width: '' },
-    { key: 'runtimeTemplate', label: 'Runtime Template', width: '' },
-    { key: 'agentRevision', label: 'Agent Revision', width: '' },
-  ],
-};
-
-function formatDept(v?: string): string {
-  if (!v) return '-';
-  return DEPT_LABELS[v.toLowerCase().trim()] || v;
-}
-function formatRole(v?: string): string {
-  if (!v) return '-';
-  return ROLE_LABELS[v.toLowerCase().trim()] || v;
-}
 
 export function EmployeesSection() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -169,71 +91,40 @@ export function EmployeesSection() {
     };
   }, [fetchEmployees]);
 
-  const filtered = employees.filter((e) => {
-    if (agentType && (e.agentRuntime || 'openclaw') !== agentType) return false;
-    if (clusterType) {
-      const cluster = (e.remote?.cluster || '').toLowerCase();
-      if (cluster !== clusterType) return false;
-    }
-    if (keyword) {
-      const kw = keyword.toLowerCase();
-      const match =
-        e.id.toLowerCase().includes(kw) ||
-        e.name.toLowerCase().includes(kw) ||
-        (e.displayName || '').toLowerCase().includes(kw) ||
-        (e.matrixRoomId || '').toLowerCase().includes(kw);
-      if (!match) return false;
-    }
-    if (
-      channelFilter &&
-      !(e.matrixRoomId || '').toLowerCase().includes(channelFilter.toLowerCase())
-    )
-      return false;
-    if (stateFilter && e.status !== stateFilter) return false;
-    if (deptFilter && e.department !== deptFilter) return false;
-    if (roleFilter && e.role !== roleFilter) return false;
-    if (scopeFilter && (e.scope || 'organization') !== scopeFilter) return false;
-    if (nodeFilter) {
-      const nn = (e.remote?.nodeName || '').toLowerCase();
-      if (!nn.includes(nodeFilter.toLowerCase())) return false;
-    }
-    if (podFilter) {
-      const pn = (e.remote?.podName || '').toLowerCase();
-      if (!pn.includes(podFilter.toLowerCase())) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return tb - ta;
-  });
+  // 过滤 / 排序 / 聚合逻辑已下沉至 domain/employee/selectEmployeeList。
+  const filtered = useMemo(
+    () =>
+      selectFilteredEmployees(employees, {
+        keyword,
+        channelFilter,
+        stateFilter,
+        deptFilter,
+        roleFilter,
+        scopeFilter,
+        agentType,
+        clusterType,
+        nodeFilter,
+        podFilter,
+      }),
+    [
+      employees,
+      keyword,
+      channelFilter,
+      stateFilter,
+      deptFilter,
+      roleFilter,
+      scopeFilter,
+      agentType,
+      clusterType,
+      nodeFilter,
+      podFilter,
+    ],
+  );
 
-  const availableNodes = useMemo(() => {
-    const nodeSet = new Set<string>();
-    for (const e of employees) {
-      if (e.remote?.nodeName) nodeSet.add(e.remote.nodeName);
-    }
-    return Array.from(nodeSet).sort();
-  }, [employees]);
-
-  const nodeHealthMap = useMemo(() => {
-    const map = new Map<string, { total: number; failed: number; status: string }>();
-    for (const e of employees) {
-      const nodeName = e.remote?.nodeName;
-      if (!nodeName) continue;
-      if (!map.has(nodeName)) map.set(nodeName, { total: 0, failed: 0, status: 'healthy' });
-      const node = map.get(nodeName)!;
-      node.total++;
-      if (e.status === 'error' || e.status === 'failed') node.failed++;
-      const ns = e.remote?.nodeStatus;
-      if (ns === 'unhealthy') node.status = 'unhealthy';
-      else if (ns === 'warning' && node.status !== 'unhealthy') node.status = 'warning';
-    }
-    return map;
-  }, [employees]);
-
-  const deptOptions = [...new Set(employees.map((e) => e.department).filter(Boolean))] as string[];
-  const roleOptions = [...new Set(employees.map((e) => e.role).filter(Boolean))] as string[];
+  const availableNodes = useMemo(() => selectAvailableNodes(employees), [employees]);
+  const nodeHealthMap = useMemo(() => selectNodeHealthMap(employees), [employees]);
+  const deptOptions = useMemo(() => selectDeptOptions(employees), [employees]);
+  const roleOptions = useMemo(() => selectRoleOptions(employees), [employees]);
 
   const openDetail = async (id: string) => {
     setSelectedId(id);
@@ -276,22 +167,7 @@ export function EmployeesSection() {
     closeDrawer();
   };
 
-  const departments = new Set(employees.map((e) => e.department).filter(Boolean));
-  const personalCount = employees.filter((e) => e.scope === 'personal').length;
-  const orgCount = employees.filter((e) => (e.scope || 'organization') === 'organization').length;
-  const stats = {
-    total: employees.length,
-    deptCount: departments.size,
-    personalCount,
-    orgCount,
-  };
-
-  const ACTION_LABELS: Record<string, string> = {
-    start: '启动',
-    stop: '停止',
-    rebuild: '容器重启',
-    delete: '删除',
-  };
+  const stats = useMemo(() => selectEmployeeStats(employees), [employees]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') loadEmployees();

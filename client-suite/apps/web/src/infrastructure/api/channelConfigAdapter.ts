@@ -2,24 +2,11 @@
  * channelConfigAdapter — 渠道配置 API 适配器
  *
  * 调用管理后台已有的 /api/admin/push-channels CRUD + test 端点。
+ * 底层 request 由统一 httpClient 工厂提供（含超时、JSON 安全解析）。
  */
 
+import { request } from './httpClient';
 import type { ChannelConfigProps } from '../../domain/agent/ChannelConfig';
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    credentials: 'include',
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => undefined);
-    throw new Error(
-      `API ${res.status}: ${(body as Record<string, unknown>)?.error ?? res.statusText}`
-    );
-  }
-  return res.json();
-}
 
 export const channelConfigAdapter = {
   async fetchAll(): Promise<ChannelConfigProps[]> {

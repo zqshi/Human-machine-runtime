@@ -296,12 +296,17 @@ export function useMatrixClient() {
 
     try {
       const mePromise = authApi.me();
-      const timeout = new Promise<never>((_, rej) =>
-        setTimeout(() => rej(new Error('timeout')), 3000)
-      );
-      const meRes = await Promise.race([mePromise, timeout]);
-      if (meRes.authenticated && meRes.user) {
-        setHmrUser(meRes.user);
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, rej) => {
+        timerId = setTimeout(() => rej(new Error('timeout')), 3000);
+      });
+      try {
+        const meRes = await Promise.race([mePromise, timeout]);
+        if (meRes.authenticated && meRes.user) {
+          setHmrUser(meRes.user);
+        }
+      } finally {
+        if (timerId) clearTimeout(timerId);
       }
     } catch {
       // Backend unreachable or slow — proceed with Matrix session
@@ -328,10 +333,15 @@ export function useMatrixClient() {
 
       // Timeout the session init — if server is unreachable, fail fast
       const initPromise = client.initFromSession(homeserverUrl, accessToken, userId, deviceId);
-      const timeout = new Promise<never>((_, rej) =>
-        setTimeout(() => rej(new Error('timeout')), 8000)
-      );
-      await Promise.race([initPromise, timeout]);
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, rej) => {
+        timerId = setTimeout(() => rej(new Error('timeout')), 8000);
+      });
+      try {
+        await Promise.race([initPromise, timeout]);
+      } finally {
+        if (timerId) clearTimeout(timerId);
+      }
 
       const profile = client.getUserProfile()!;
       setAuth(profile, accessToken, homeserverUrl, deviceId);

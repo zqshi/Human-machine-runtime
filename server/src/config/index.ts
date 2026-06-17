@@ -15,6 +15,7 @@ export const config = {
 
   db: {
     url: optional('DATABASE_URL', 'postgresql://hmr:hmr@localhost:5432/hmr'),
+    maxConnections: optionalInt('DB_MAX_CONNECTIONS', 20),
   },
 
   jwt: {
@@ -29,6 +30,13 @@ export const config = {
   rateLimit: {
     windowMs: optionalInt('RATE_LIMIT_WINDOW_MS', 60_000),
     max: optionalInt('RATE_LIMIT_MAX', 200),
+  },
+
+  // Redis：仅当显式配置 REDIS_URL 时启用（用于 rate-limit 等共享计数场景）。
+  // 未配置时各中间件 fallback 到进程内内存，单实例行为不变。
+  redis: {
+    url: optional('REDIS_URL', 'redis://localhost:6379'),
+    enabled: Boolean(env.REDIS_URL),
   },
 
   auth: {

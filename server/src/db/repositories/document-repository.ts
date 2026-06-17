@@ -68,6 +68,11 @@ export class DocumentRepository implements IDocumentRepository {
     });
   }
 
+  async withTransaction<T>(fn: (tx: IDocumentRepository) => Promise<T>): Promise<T> {
+    // Drizzle 的 transaction client (PgTransaction) 与顶层 Database TS 类型不同，但查询 API 兼容
+    return this.db.transaction(async (tx) => fn(new DocumentRepository(tx as unknown as Database)));
+  }
+
   async listDocumentPermissions(documentId: string): Promise<unknown[]> {
     const doc = await this.getDocument(documentId);
     return doc?.permissions ?? [];

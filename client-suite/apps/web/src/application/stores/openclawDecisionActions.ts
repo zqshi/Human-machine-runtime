@@ -1,3 +1,11 @@
+/**
+ * openclawDecisionActions —— 决策请求 CRUD + respondDecision 跨聚合事务
+ *
+ * respondDecision 在单次调用内同步：更新 decisionRequests → 调用
+ * CorrectionPropagator 计算纠偏影响（读取 tasks/goals/collaborationChains）
+ * → 回写 goals（linkDecision）→ 写 lastCorrectionPlan → 落 JudgmentRecord。
+ * 这是「单事务语义」，不可拆分到独立 store（详见 openclawStore.ts 头注释）。
+ */
 import { openclawApiAdapter } from '../../infrastructure/api/openclawApiAdapter';
 import { CorrectionPropagator } from '../../domain/agent/CorrectionPropagator';
 import { JudgmentRecord } from '../../domain/agent/JudgmentRecord';

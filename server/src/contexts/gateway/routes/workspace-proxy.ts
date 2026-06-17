@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { XspaceClient } from '../clients/xspace-client.js';
+import { logger } from '../../../app/logger.js';
 
 export function createWorkspaceProxyRoutes(client: XspaceClient) {
   const app = new Hono();
@@ -16,8 +17,12 @@ export function createWorkspaceProxyRoutes(client: XspaceClient) {
         type: type || undefined,
       });
       return c.json({ success: true, data });
-    } catch {
-      return c.json({ success: true, data: { workspaces: [] } });
+    } catch (err) {
+      logger.warn(
+        { service: 'xspace', err: err instanceof Error ? err.message : String(err) },
+        'workspace proxy degraded — upstream failed, returning empty workspaces'
+      );
+      return c.json({ success: true, degraded: true, data: { workspaces: [] } });
     }
   });
 
@@ -33,8 +38,12 @@ export function createWorkspaceProxyRoutes(client: XspaceClient) {
         type: type || undefined,
       });
       return c.json({ success: true, data });
-    } catch {
-      return c.json({ success: true, data: { workspaces: [] } });
+    } catch (err) {
+      logger.warn(
+        { service: 'xspace', err: err instanceof Error ? err.message : String(err) },
+        'workspace proxy degraded — upstream failed, returning empty workspaces'
+      );
+      return c.json({ success: true, degraded: true, data: { workspaces: [] } });
     }
   });
 
@@ -72,8 +81,12 @@ export function createWorkspaceProxyRoutes(client: XspaceClient) {
     try {
       const data = await client.listConversations(c.req.param('id'));
       return c.json({ success: true, data });
-    } catch {
-      return c.json({ success: true, data: { conversations: [] } });
+    } catch (err) {
+      logger.warn(
+        { service: 'xspace', err: err instanceof Error ? err.message : String(err) },
+        'workspace proxy degraded — upstream failed, returning empty conversations'
+      );
+      return c.json({ success: true, degraded: true, data: { conversations: [] } });
     }
   });
 
@@ -84,8 +97,12 @@ export function createWorkspaceProxyRoutes(client: XspaceClient) {
     try {
       const data = await client.listApps(c.req.param('id'));
       return c.json({ success: true, data });
-    } catch {
-      return c.json({ success: true, data: { apps: [] } });
+    } catch (err) {
+      logger.warn(
+        { service: 'xspace', err: err instanceof Error ? err.message : String(err) },
+        'workspace proxy degraded — upstream failed, returning empty apps'
+      );
+      return c.json({ success: true, degraded: true, data: { apps: [] } });
     }
   });
 

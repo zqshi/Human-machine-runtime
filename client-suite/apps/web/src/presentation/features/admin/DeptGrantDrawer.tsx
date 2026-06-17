@@ -229,7 +229,7 @@ export function DeptGrantDrawer({ modelId, modelName, onClose, onSaved }: Props)
             }`}
           >
             <Icon name="auto_awesome" size={9} />
-            {from!.name}
+            {from?.name ?? ''}
           </span>
         )}
         <span

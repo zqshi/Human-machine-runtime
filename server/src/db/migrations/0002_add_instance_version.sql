@@ -1,0 +1,1 @@
+ALTER TABLE "instances" ADD COLUMN IF NOT EXISTS "version" integer NOT NULL DEFAULT 0;

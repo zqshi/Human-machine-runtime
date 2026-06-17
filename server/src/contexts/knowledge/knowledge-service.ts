@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { logger as appLogger } from '../../app/logger.js';
 import { AppError, newId, nowIso } from '../../shared/utils.js';
 import type { WeKnoraClient, WkSearchResult } from '../gateway/clients/weknora-client.js';
 import type {
@@ -57,9 +58,9 @@ interface Logger {
 }
 
 const consoleLogger: Logger = {
-  info: (msg, data) => console.log(`[knowledge] ${msg}`, data || ''),
-  warn: (msg, data) => console.warn(`[knowledge] ${msg}`, data || ''),
-  error: (msg, data) => console.error(`[knowledge] ${msg}`, data || ''),
+  info: (msg, data) => appLogger.info(data ?? {}, `[knowledge] ${msg}`),
+  warn: (msg, data) => appLogger.warn(data ?? {}, `[knowledge] ${msg}`),
+  error: (msg, data) => appLogger.error(data ?? {}, `[knowledge] ${msg}`),
 };
 
 /* ---------- Service ---------- */
@@ -267,13 +268,9 @@ export class KnowledgeService {
     }
 
     const existing = await this.entryRepo.findByHmrDocumentId(doc.id);
-    if (existing) {
-      const apiKey = await this.resolveApiKey(tenantId);
-      await this.client.deleteKnowledge(apiKey, kb.wkKnowledgeBaseId, existing.wkKnowledgeId);
-      await this.entryRepo.delete(existing.id);
-    }
-
     const apiKey = await this.resolveApiKey(tenantId);
+
+    // 先上传新内容，成功后再删旧——避免上传失败时旧知识已被删、新知识未传造成数据丢失
     const wkKnowledge = await this.client.uploadManualKnowledge(apiKey, kb.wkKnowledgeBaseId, {
       title: doc.title,
       content: doc.content,
@@ -283,6 +280,11 @@ export class KnowledgeService {
         type: doc.type || 'doc',
       },
     });
+
+    if (existing) {
+      await this.client.deleteKnowledge(apiKey, kb.wkKnowledgeBaseId, existing.wkKnowledgeId);
+      await this.entryRepo.delete(existing.id);
+    }
 
     const entry: KnowledgeEntry = {
       id: newId('ke'),

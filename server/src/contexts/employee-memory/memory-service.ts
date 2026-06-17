@@ -259,9 +259,10 @@ export class MemoryService {
     await this.repo.deleteFragment(fragmentId);
 
     // Delete from Mem0 if it was synced
-    if (this.mem0?.isEnabled() && fragment.metadata?.mem0Id) {
+    const mem0Id = fragment.metadata?.mem0Id;
+    if (this.mem0?.isEnabled() && typeof mem0Id === 'string') {
       try {
-        await this.mem0.delete(fragment.metadata.mem0Id as string);
+        await this.mem0.delete(mem0Id);
       } catch (err) {
         logger.warn({ err: String(err) }, '[memory-service] Mem0 delete failed');
       }

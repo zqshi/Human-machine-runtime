@@ -11,16 +11,10 @@ export class CompositeProvisioner implements IInstanceProvisioner {
   async provision(instance: Instance): Promise<Record<string, unknown>> {
     const results: Record<string, unknown> = {};
     for (const p of this.provisioners) {
-      try {
-        const r = await p.provision(instance);
-        Object.assign(results, r);
-      } catch (err) {
-        results[`${(p as { constructor: { name: string } }).constructor.name}_error`] =
-          err instanceof Error ? err.message : String(err);
-      }
-    }
-    if (Object.keys(results).length === 0) {
-      throw new Error('all provisioners failed');
+      // 任一 provisioner 失败即整体失败——避免部分资源未就绪却将实例标记为 RUNNING。
+      // （teardown 保持尽力清理语义，见下方 errors 收集。）
+      const r = await p.provision(instance);
+      Object.assign(results, r);
     }
     return results;
   }

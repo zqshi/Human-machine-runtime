@@ -3,6 +3,11 @@ import { adminLogsApi } from '../../../application/services/adminApi';
 import { FilterBar } from '../../components/ui/FilterBar';
 import { StatCard } from '../../components/ui/StatCard';
 import { Icon } from '../../components/ui/Icon';
+import { buildTimeRange } from './logsFilters';
+import { MOCK_LOGS, mockFilterLogs } from './logsMock';
+
+// ⚠️ 临时 MOCK 开关：后端（:3002）未启动，用 mock 数据查看 UI；验证后改回 false 并删除 logsMock.ts
+const USE_MOCK = true;
 
 const ACTION_SUMMARIES: Record<string, string> = {
   'employee.create': '创建员工',
@@ -51,21 +56,7 @@ function summarizeAction(action: string): string {
 }
 
 function getFilterDefs() {
-  return [
-    { key: 'keyword', label: '关键词', type: 'text' as const, placeholder: '搜索...' },
-    {
-      key: 'level',
-      label: '级别',
-      type: 'select' as const,
-      options: [
-        { value: 'error', label: '错误' },
-        { value: 'warn', label: '警告' },
-        { value: 'info', label: '信息' },
-      ],
-    },
-    { key: 'actor', label: '操作者', type: 'text' as const, placeholder: '用户名' },
-    { key: 'operation', label: '操作', type: 'text' as const, placeholder: '事件类型' },
-  ];
+  return [{ key: 'actor', label: '操作人', type: 'text' as const, placeholder: '用户名' }];
 }
 
 function resolveWho(log: Record<string, unknown>): string {
@@ -188,14 +179,18 @@ export function LogsSection() {
   }
 
   const fetchLogs = useCallback(() => {
+    // ⚠️ 临时 MOCK：后端（:3002）未启动，用 mock 数据查看 UI；验证后改 USE_MOCK=false 并删除 logsMock.ts
+    if (USE_MOCK) {
+      setLogs(mockFilterLogs(MOCK_LOGS, filters));
+      setLoading(false);
+      return;
+    }
     adminLogsApi
       .list({
         scope: 'admin',
         limit: 200,
-        keyword: filters.keyword || undefined,
-        level: filters.level || undefined,
         actor: filters.actor || undefined,
-        operation: filters.operation || undefined,
+        timeRange: buildTimeRange(filters.dateFrom || '', filters.dateTo || ''),
       })
       .then((r) => setLogs(Array.isArray(r) ? r : []))
       .catch(() => setLogs([]))
@@ -255,13 +250,27 @@ export function LogsSection() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center px-1 text-xs font-medium text-gray-700">平台操作日志</div>
+        <div className="flex items-center gap-2 flex-wrap">
           <FilterBar
             filters={getFilterDefs()}
             values={filters}
             onChange={(k, v) => setFilters((p) => ({ ...p, [k]: v }))}
             onSearch={load}
+          />
+          <input
+            type="date"
+            value={filters.dateFrom || ''}
+            onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value }))}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] w-36"
+            title="开始日期"
+          />
+          <span className="text-xs text-gray-400">至</span>
+          <input
+            type="date"
+            value={filters.dateTo || ''}
+            onChange={(e) => setFilters((p) => ({ ...p, dateTo: e.target.value }))}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] w-36"
+            title="结束日期"
           />
         </div>
         <div className="flex items-center gap-2">

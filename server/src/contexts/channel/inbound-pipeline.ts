@@ -17,8 +17,9 @@ export class InboundPipeline {
       } catch (err) {
         logger.error(
           { channelType: msg.channelType, msgId: msg.id, err: String(err) },
-          'inbound handler error'
+          'inbound handler error — aborting pipeline to prevent propagation on inconsistent state'
         );
+        throw err;
       }
     }
   }

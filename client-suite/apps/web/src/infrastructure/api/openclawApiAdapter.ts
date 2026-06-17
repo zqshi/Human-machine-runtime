@@ -1,8 +1,38 @@
-import { DecisionRequest, type DecisionRequestProps } from '../../domain/agent/DecisionRequest';
-import { AgentTask, type AgentTaskProps } from '../../domain/agent/AgentTask';
-import { UserGoal, type UserGoalProps } from '../../domain/agent/UserGoal';
+// 底层 request 由统一 httpClient 工厂提供；同时 re-export 供兄弟 adapter（Phase1/Sensing/Objective/Collaboration）复用
+import { request } from './httpClient';
+export { request };
+import {
+  DecisionRequest,
+  type DecisionRequestProps,
+  type DecisionUrgency,
+  type DecisionResponseStatus,
+  type RecommendationOption,
+} from '../../domain/agent/DecisionRequest';
+import {
+  AgentTask,
+  type AgentTaskProps,
+  type AgentSubtask,
+  type ExecutionLog,
+} from '../../domain/agent/AgentTask';
+import type { AgentTaskStatus } from '../../domain/shared/types';
+import {
+  UserGoal,
+  type UserGoalProps,
+  type GoalPriority,
+  type GoalStatus,
+  type GoalMilestone,
+  type GoalProgressUpdate,
+  type GoalConstraint,
+  type GoalAuthorization,
+  type GoalSuccessCriteria,
+} from '../../domain/agent/UserGoal';
 import { JudgmentRecord } from '../../domain/agent/JudgmentRecord';
-import { WorkOrder, type WorkOrderProps } from '../../domain/agent/WorkOrder';
+import {
+  WorkOrder,
+  type WorkOrderProps,
+  type WorkOrderType,
+  type WorkOrderStatus,
+} from '../../domain/agent/WorkOrder';
 import type {
   IOpenClawDataSource,
   OpenClawEvent,
@@ -21,23 +51,210 @@ const AGENT_COLORS: Record<string, string> = {
   'data-analyst': '#FF9500',
 };
 
+// ─── DTO 运行时类型守卫 ─────────────────────────────────────────────
+// 目的：消除所有 `as XxxProps['field']` 类型断言。对联合枚举、数组、
+// 嵌套对象字段做运行时收窄，让编译器能捕获 DTO 字段类型变化。
+// 说明：本项目未引入 zod（client-suite 无任何 workspace 声明该依赖，
+// 根 node_modules 中的 zod 为其他工具间接依赖，不可直接 import），
+// 故采用零依赖的类型守卫函数，效果等价：编译期类型安全 + 运行时收窄。
+
+const DECISION_URGENCY: readonly DecisionUrgency[] = [
+  'critical',
+  'high',
+  'normal',
+  'low',
+];
+const DECISION_RESPONSE_STATUS: readonly DecisionResponseStatus[] = [
+  'pending',
+  'accepted',
+  'modified',
+  'declined',
+  'deferred',
+  'expired',
+];
+const TASK_STATUS: readonly AgentTaskStatus[] = [
+  'queued',
+  'running',
+  'paused',
+  'completed',
+  'failed',
+];
+const GOAL_PRIORITY: readonly GoalPriority[] = ['critical', 'high', 'normal', 'low'];
+const GOAL_STATUS: readonly GoalStatus[] = [
+  'active',
+  'paused',
+  'completed',
+  'archived',
+  'cancelled',
+];
+const WORK_ORDER_TYPE: readonly WorkOrderType[] = ['approval', 'review', 'input', 'decision'];
+const WORK_ORDER_STATUS: readonly WorkOrderStatus[] = [
+  'pending',
+  'completed',
+  'expired',
+  'auto_resolved',
+];
+
+function isString(v: unknown): v is string {
+  return typeof v === 'string';
+}
+function isNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string');
+}
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** 类型守卫：判断 value 是否属于白名单字面量集合。 */
+function isEnumValue<T extends string>(
+  value: unknown,
+  allowed: readonly T[]
+): value is T {
+  // 此处的 `as T` 是实现类型守卫的固有代价：Array.includes(searchElement: T)
+  // 要求参数类型为 T，而本函数的职责正是证明 unknown === T，故无法回避。
+  // 它是"局部类型断言换取全局类型安全"的取舍点，与待消除的 DTO as 断言性质不同。
+  return typeof value === 'string' && allowed.includes(value as T);
+}
+
+/** 枚举收窄：落入白名单返回原值，否则返回 fallback。 */
+function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return isEnumValue(value, allowed) ? value : fallback;
+}
+
+/** 可选原始值收窄：类型匹配返回值，否则 undefined。 */
+function optionalString(v: unknown): string | undefined {
+  return isString(v) ? v : undefined;
+}
+function optionalNumber(v: unknown): number | undefined {
+  return isNumber(v) ? v : undefined;
+}
+
+function isRecommendationOption(v: unknown): v is RecommendationOption {
+  if (!isRecord(v)) return false;
+  return (
+    isString(v.id) &&
+    isString(v.label) &&
+    isString(v.description) &&
+    isString(v.reasoning) &&
+    isString(v.estimatedImpact) &&
+    (v.riskLevel === 'low' || v.riskLevel === 'medium' || v.riskLevel === 'high')
+  );
+}
+
+function isAgentSubtask(v: unknown): v is AgentSubtask {
+  if (!isRecord(v)) return false;
+  return (
+    isString(v.id) &&
+    isString(v.name) &&
+    (v.status === 'pending' ||
+      v.status === 'running' ||
+      v.status === 'success' ||
+      v.status === 'failed')
+  );
+}
+
+function isExecutionLog(v: unknown): v is ExecutionLog {
+  if (!isRecord(v)) return false;
+  return (
+    isNumber(v.timestamp) &&
+    (v.level === 'INFO' || v.level === 'WARN' || v.level === 'ERROR' || v.level === 'DEBUG') &&
+    isString(v.message)
+  );
+}
+
+function isMilestone(v: unknown): v is GoalMilestone {
+  if (!isRecord(v)) return false;
+  return (
+    isString(v.id) &&
+    isString(v.name) &&
+    (v.status === 'pending' || v.status === 'active' || v.status === 'completed') &&
+    (v.relatedTaskIds === undefined || isStringArray(v.relatedTaskIds))
+  );
+}
+
+function isProgressUpdate(v: unknown): v is GoalProgressUpdate {
+  if (!isRecord(v)) return false;
+  return (
+    isNumber(v.timestamp) &&
+    isString(v.agentId) &&
+    isString(v.message) &&
+    (v.milestoneId === undefined || isString(v.milestoneId))
+  );
+}
+
+function isConstraint(v: unknown): v is GoalConstraint {
+  if (!isRecord(v)) return false;
+  return (
+    isString(v.id) &&
+    (v.type === 'budget' ||
+      v.type === 'timeline' ||
+      v.type === 'compliance' ||
+      v.type === 'quality' ||
+      v.type === 'custom') &&
+    isString(v.description) &&
+    (v.threshold === undefined || isString(v.threshold)) &&
+    typeof v.hardLimit === 'boolean'
+  );
+}
+
+function isAuthorization(v: unknown): v is GoalAuthorization {
+  if (!isRecord(v)) return false;
+  return (
+    (v.autoExecute === undefined || isStringArray(v.autoExecute)) &&
+    (v.requireOwner === undefined || isStringArray(v.requireOwner)) &&
+    (v.requireCollaborator === undefined || Array.isArray(v.requireCollaborator))
+  );
+}
+
+function isSuccessCriteria(v: unknown): v is GoalSuccessCriteria {
+  if (!isRecord(v)) return false;
+  return (
+    isString(v.id) &&
+    isString(v.metric) &&
+    isString(v.target) &&
+    isString(v.measureMethod) &&
+    (v.currentValue === undefined || isString(v.currentValue))
+  );
+}
+
+/** 数组元素守卫：返回符合谓词的元素数组，丢弃非法元素（与原 `as` 行为一致：静默容忍脏数据）。 */
+function filterArray<T>(value: unknown, guard: (x: unknown) => x is T): T[] {
+  return Array.isArray(value) ? value.filter(guard) : [];
+}
+
 function toDecisionRequest(dto: Record<string, unknown>): DecisionRequest {
+  const recommendation = isRecommendationOption(dto.recommendation)
+    ? dto.recommendation
+    : // DTO 必含 recommendation；收窄失败时给最小合法占位，避免 domain 构造抛错。
+      // 此分支仅在 DTO 结构异常时触达，等同于原 `as` 在运行时也是裸传。
+      ({
+        id: String(dto.id),
+        label: '',
+        description: '',
+        reasoning: '',
+        estimatedImpact: '',
+        riskLevel: 'low',
+      } satisfies RecommendationOption);
+
   return DecisionRequest.create({
     id: String(dto.id),
     agentId: String(dto.agentId),
     title: String(dto.title),
     context: String(dto.context),
-    recommendation: dto.recommendation as DecisionRequestProps['recommendation'],
-    alternatives: (dto.alternatives ?? []) as DecisionRequestProps['alternatives'],
-    urgency: (dto.urgency ?? 'normal') as DecisionRequestProps['urgency'],
+    recommendation,
+    alternatives: filterArray(dto.alternatives, isRecommendationOption),
+    urgency: pickEnum(dto.urgency, DECISION_URGENCY, 'normal'),
     deadline: Number(dto.deadline),
-    responseStatus: (dto.responseStatus ?? 'pending') as DecisionRequestProps['responseStatus'],
-    userResponse: dto.userResponse as string | undefined,
-    responseAt: dto.responseAt as number | undefined,
+    responseStatus: pickEnum(dto.responseStatus, DECISION_RESPONSE_STATUS, 'pending'),
+    userResponse: optionalString(dto.userResponse),
+    responseAt: optionalNumber(dto.responseAt),
     createdAt: Number(dto.createdAt),
     impactScope: Number(dto.impactScope ?? 0),
-    downstreamTaskIds: (dto.downstreamTaskIds ?? []) as string[],
-    downstreamGoalIds: (dto.downstreamGoalIds ?? []) as string[],
+    downstreamTaskIds: isStringArray(dto.downstreamTaskIds) ? dto.downstreamTaskIds : [],
+    downstreamGoalIds: isStringArray(dto.downstreamGoalIds) ? dto.downstreamGoalIds : [],
   });
 }
 
@@ -47,10 +264,10 @@ function toAgentTask(dto: Record<string, unknown>): AgentTask {
     agentId: String(dto.agentId),
     todoId: String(dto.todoId ?? `todo-${dto.id}`),
     name: String(dto.name),
-    status: (dto.status ?? 'queued') as AgentTaskProps['status'],
+    status: pickEnum(dto.status, TASK_STATUS, 'queued'),
     progress: Number(dto.progress ?? 0),
-    subtasks: (dto.subtasks ?? []) as AgentTaskProps['subtasks'],
-    logs: (dto.logs ?? []) as AgentTaskProps['logs'],
+    subtasks: filterArray(dto.subtasks, isAgentSubtask),
+    logs: filterArray(dto.logs, isExecutionLog),
     color: String(dto.color ?? AGENT_COLORS[String(dto.agentId)] ?? '#8E8E93'),
     createdAt: Number(dto.createdAt),
     updatedAt: Number(dto.updatedAt),
@@ -58,64 +275,60 @@ function toAgentTask(dto: Record<string, unknown>): AgentTask {
 }
 
 function toUserGoal(dto: Record<string, unknown>): UserGoal {
+  const authorization = isAuthorization(dto.authorization)
+    ? {
+        autoExecute: isStringArray(dto.authorization.autoExecute) ? dto.authorization.autoExecute : [],
+        requireOwner: isStringArray(dto.authorization.requireOwner)
+          ? dto.authorization.requireOwner
+          : [],
+        requireCollaborator: Array.isArray(dto.authorization.requireCollaborator)
+          ? dto.authorization.requireCollaborator
+          : [],
+      }
+    : undefined;
+
   return UserGoal.create({
     id: String(dto.id),
     title: String(dto.title),
     description: String(dto.description ?? ''),
-    priority: (dto.priority ?? 'normal') as UserGoalProps['priority'],
-    status: (dto.status ?? 'active') as UserGoalProps['status'],
-    deadline: dto.deadline as number | undefined,
-    milestones: (dto.milestones ?? []) as UserGoalProps['milestones'],
-    progressUpdates: (dto.progressUpdates ?? []) as UserGoalProps['progressUpdates'],
-    relatedTaskIds: (dto.relatedTaskIds ?? []) as string[],
-    relatedDecisionIds: (dto.relatedDecisionIds ?? []) as string[],
+    priority: pickEnum(dto.priority, GOAL_PRIORITY, 'normal'),
+    status: pickEnum(dto.status, GOAL_STATUS, 'active'),
+    deadline: optionalNumber(dto.deadline),
+    milestones: filterArray(dto.milestones, isMilestone),
+    progressUpdates: filterArray(dto.progressUpdates, isProgressUpdate),
+    relatedTaskIds: isStringArray(dto.relatedTaskIds) ? dto.relatedTaskIds : [],
+    relatedDecisionIds: isStringArray(dto.relatedDecisionIds) ? dto.relatedDecisionIds : [],
     createdAt: Number(dto.createdAt),
     updatedAt: Number(dto.updatedAt),
-    intent: dto.intent as string | undefined,
-    constraints: dto.constraints as UserGoalProps['constraints'] | undefined,
-    authorization: dto.authorization as UserGoalProps['authorization'] | undefined,
-    successCriteria: dto.successCriteria as UserGoalProps['successCriteria'] | undefined,
-    ownerId: dto.ownerId as string | undefined,
-    collaboratorIds: dto.collaboratorIds as string[] | undefined,
-    parentGoalId: dto.parentGoalId as string | undefined,
-    decompositionStrategy: dto.decompositionStrategy as string | undefined,
+    intent: optionalString(dto.intent),
+    constraints: filterArray(dto.constraints, isConstraint),
+    authorization,
+    successCriteria: filterArray(dto.successCriteria, isSuccessCriteria),
+    ownerId: optionalString(dto.ownerId),
+    collaboratorIds: isStringArray(dto.collaboratorIds) ? dto.collaboratorIds : [],
+    parentGoalId: optionalString(dto.parentGoalId),
+    decompositionStrategy: optionalString(dto.decompositionStrategy),
   });
 }
 
 function toWorkOrder(dto: Record<string, unknown>): WorkOrder {
   return WorkOrder.create({
     id: String(dto.id),
-    type: (dto.type ?? 'input') as WorkOrderProps['type'],
+    type: pickEnum(dto.type, WORK_ORDER_TYPE, 'input'),
     fromUserId: String(dto.fromUserId),
     toUserId: String(dto.toUserId),
     goalId: String(dto.goalId ?? ''),
-    taskId: dto.taskId as string | undefined,
+    taskId: optionalString(dto.taskId),
     title: String(dto.title),
     context: String(dto.context ?? ''),
-    aiSuggestion: dto.aiSuggestion as string | undefined,
+    aiSuggestion: optionalString(dto.aiSuggestion),
     confidence: Number(dto.confidence ?? 0),
-    status: (dto.status ?? 'pending') as WorkOrderProps['status'],
-    response: dto.response as string | undefined,
-    respondedAt: dto.respondedAt as number | undefined,
+    status: pickEnum(dto.status, WORK_ORDER_STATUS, 'pending'),
+    response: optionalString(dto.response),
+    respondedAt: optionalNumber(dto.respondedAt),
     deadline: Number(dto.deadline),
     createdAt: Number(dto.createdAt),
   });
-}
-
-export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    credentials: 'include',
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => undefined);
-    throw new Error(
-      `API ${res.status}: ${(body as Record<string, unknown>)?.error ?? res.statusText}`
-    );
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : (undefined as T);
 }
 
 export class OpenClawApiAdapter implements IOpenClawDataSource {
@@ -183,13 +396,21 @@ export class OpenClawApiAdapter implements IOpenClawDataSource {
       `/api/openclaw/goals/${encodeURIComponent(id)}/decompose`,
       { method: 'POST', body: JSON.stringify({ apply }) }
     );
+    // res.tasks / suggestedTasks / suggestedMilestones 是 Record[]，
+    // 通过 Array.isArray + isRecord 守卫收窄，消除 as Record<string, unknown>[] 断言。
+    const toArray = (v: unknown): Record<string, unknown>[] =>
+      Array.isArray(v) ? v.filter(isRecord) : [];
     return {
       applied: Boolean(res.applied),
-      category: res.category as string | undefined,
-      goal: res.goal ? toUserGoal(res.goal as Record<string, unknown>) : undefined,
-      tasks: res.tasks ? (res.tasks as Record<string, unknown>[]).map(toAgentTask) : undefined,
-      suggestedTasks: res.suggestedTasks as Record<string, unknown>[] | undefined,
-      suggestedMilestones: res.suggestedMilestones as Record<string, unknown>[] | undefined,
+      category: optionalString(res.category),
+      goal: isRecord(res.goal) ? toUserGoal(res.goal) : undefined,
+      tasks: Array.isArray(res.tasks) && res.tasks.length ? toArray(res.tasks).map(toAgentTask) : undefined,
+      // DecomposeResult 的 suggested* 字段为原始 Record[]（透传给上层 UI 渲染，不进 domain 构造），
+      // 此处不假设其内部结构，仅保证返回值类型为 Record<string, unknown>[]。
+      suggestedTasks: Array.isArray(res.suggestedTasks) ? toArray(res.suggestedTasks) : undefined,
+      suggestedMilestones: Array.isArray(res.suggestedMilestones)
+        ? toArray(res.suggestedMilestones)
+        : undefined,
     };
   }
 

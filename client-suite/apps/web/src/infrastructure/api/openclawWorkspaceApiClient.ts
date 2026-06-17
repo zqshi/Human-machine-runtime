@@ -2,45 +2,10 @@
  * OpenClaw Workspace API Client
  *
  * Wraps the /api/openclaw/workspace/* endpoints for the "造" (Build) feature.
+ * 底层 request 由统一 httpClient 工厂提供。
  */
 
-import { handleSessionExpired } from './sessionHandler';
-
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public statusText: string,
-    public body?: unknown
-  ) {
-    super(`API ${status}: ${statusText}`);
-    this.name = 'ApiError';
-  }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
-  try {
-    const res = await fetch(path, {
-      credentials: 'include',
-      signal: controller.signal,
-      ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
-    });
-    if (res.status === 401) {
-      handleSessionExpired();
-      throw new ApiError(401, 'Session expired');
-    }
-    if (!res.ok) {
-      const body = await res.json().catch(() => undefined);
-      throw new ApiError(res.status, res.statusText, body);
-    }
-    const text = await res.text();
-    return text ? JSON.parse(text) : (undefined as T);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
+import { request } from './httpClient';
 
 // ─── Types ─────────────────────────────────────────────────────────
 

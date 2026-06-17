@@ -156,8 +156,12 @@ export class DbIntrospector {
       // 组装数据
       const pkMap = new Map<string, Set<string>>();
       for (const row of pkResult.rows as { table_name: string; column_name: string }[]) {
-        if (!pkMap.has(row.table_name)) pkMap.set(row.table_name, new Set());
-        pkMap.get(row.table_name)!.add(row.column_name);
+        let pkCols = pkMap.get(row.table_name);
+        if (!pkCols) {
+          pkCols = new Set();
+          pkMap.set(row.table_name, pkCols);
+        }
+        pkCols.add(row.column_name);
       }
 
       const columnMap = new Map<string, DbColumnInfo[]>();
@@ -168,9 +172,13 @@ export class DbIntrospector {
         is_nullable: string;
         column_default: string | null;
       }[]) {
-        if (!columnMap.has(row.table_name)) columnMap.set(row.table_name, []);
+        let cols = columnMap.get(row.table_name);
+        if (!cols) {
+          cols = [];
+          columnMap.set(row.table_name, cols);
+        }
         const pks = pkMap.get(row.table_name);
-        columnMap.get(row.table_name)!.push({
+        cols.push({
           name: row.column_name,
           dataType: row.data_type,
           isNullable: row.is_nullable === 'YES',

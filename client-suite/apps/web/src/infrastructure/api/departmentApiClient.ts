@@ -3,36 +3,9 @@
  *
  * 部门实体 CRUD — 对接后端 /api/control/departments（v3.0 部门实体化）。
  * tenantId 从 auth session cookie 读取（与 weKnoraClient 同源），调用方无需显式传入。
+ * 底层 request 由统一 httpClient 工厂提供。
  */
-import { ApiError } from './hmrApiClient';
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (path.includes('/undefined') || path.includes('/null')) {
-    return Promise.reject(new Error(`invalid API path: ${path}`));
-  }
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
-  try {
-    const res = await fetch(path, {
-      credentials: 'include',
-      signal: controller.signal,
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...init?.headers,
-      },
-    });
-    if (!res.ok) {
-      let body: unknown;
-      try { body = await res.json(); } catch { /* ignore */ }
-      throw new ApiError(res.status, res.statusText, body);
-    }
-    const text = await res.text();
-    return text ? JSON.parse(text) : (undefined as T);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
+import { request } from './httpClient';
 
 export interface Department {
   id: string;

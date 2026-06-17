@@ -1,3 +1,12 @@
+/**
+ * openclawTypes —— OpenClaw 工作区 store 的类型契约
+ *
+ * OpenClawState 是单一聚合接口（含 goal/decision/task/workOrder/conversation
+ * /notification/drawer 等所有切片）。之所以不拆成多个独立接口，是因为多个
+ * action（respondDecision / dispatchGoalPlan / rebuildAttentionItems /
+ * setDiscussing*）在单次调用内跨切片读写，需要统一的 state 视图。
+ * 拆分约束与演进路线见 openclawStore.ts 头注释。
+ */
 import type { AgentRuntime } from '../../domain/agent/AgentRuntime';
 import type { AgentTask } from '../../domain/agent/AgentTask';
 import type { CoTMessage } from '../../domain/agent/CoTMessage';

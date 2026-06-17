@@ -1,3 +1,11 @@
+/**
+ * openclawDiscussionActions —— C 栏上下文切换处理器
+ *
+ * 4 个 handleSetDiscussingXxx 处理 notification/decision/task/goal 的「进入
+ * 讨论」：重置互斥选择状态机（discussing*Id / bColumn*Id / composerPrefill
+ * 三组互斥）、按需生成首条分析消息、切换 activeConversationId。这些处理器
+ * 共享同一套互斥状态，必须驻留同一 store（详见 openclawStore.ts 头注释）。
+ */
 import { CoTMessage } from '../../domain/agent/CoTMessage';
 import { useNotificationStore } from './notificationStore';
 import { buildDeepDiscussionResponse } from './openclawConversationHelpers';

@@ -66,11 +66,13 @@ export function GoalDetailPanel() {
   const priorityStyle = PRIORITY_STYLES[goal.priority];
 
   // Resolve related decisions and tasks
-  const relatedDecisions = goal.relatedDecisionIds
-    ? decisionRequests.filter((d) => goal.relatedDecisionIds!.includes(d.id))
+  const decisionIds = goal.relatedDecisionIds ?? [];
+  const taskIds = goal.relatedTaskIds ?? [];
+  const relatedDecisions = decisionIds.length
+    ? decisionRequests.filter((d) => decisionIds.includes(d.id))
     : [];
-  const relatedTasks = goal.relatedTaskIds
-    ? tasks.filter((t) => goal.relatedTaskIds!.includes(t.id))
+  const relatedTasks = taskIds.length
+    ? tasks.filter((t) => taskIds.includes(t.id))
     : [];
 
   return (

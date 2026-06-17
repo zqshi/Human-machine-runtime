@@ -233,7 +233,7 @@ export function SkillPolicyDrawer({ open, onClose }: Props) {
               ) : (
                 <div className="space-y-2.5">
                   {overrides.map((o, i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
+                    <div key={o.skillId || `ov-${i}`} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
                       <div className="flex items-center justify-between mb-2">
                         <select
                           value={o.skillId}

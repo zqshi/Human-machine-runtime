@@ -44,6 +44,8 @@ export class ReceiptManager {
   private receipts = new Map<string, ExecutionReceipt>();
   private channelService: ChannelService;
   private templates: ReceiptTemplate;
+  /** 终态 receipt 最大保留时长，超过后惰性清理，防止 Map 无限增长导致 OOM */
+  private readonly maxAgeMs = 24 * 60 * 60 * 1000;
 
   constructor(channelService: ChannelService, templates?: Partial<ReceiptTemplate>) {
     this.channelService = channelService;
@@ -51,6 +53,7 @@ export class ReceiptManager {
   }
 
   createReceipt(params: Omit<ExecutionReceipt, 'status' | 'createdAt'>): ExecutionReceipt {
+    this.evictExpired();
     const receipt: ExecutionReceipt = {
       ...params,
       status: 'pending',
@@ -58,6 +61,16 @@ export class ReceiptManager {
     };
     this.receipts.set(receipt.id, receipt);
     return receipt;
+  }
+
+  /** 移除超过 maxAge 的非 pending receipt（终态回收），防止长期运行内存单调增长 */
+  private evictExpired(): void {
+    const cutoff = Date.now() - this.maxAgeMs;
+    for (const [id, r] of this.receipts) {
+      if (r.status !== 'pending' && r.createdAt.getTime() < cutoff) {
+        this.receipts.delete(id);
+      }
+    }
   }
 
   async sendSuccessReceipt(receiptId: string, taskName: string, summary: string): Promise<void> {

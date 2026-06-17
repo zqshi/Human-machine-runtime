@@ -415,10 +415,11 @@ export class AnalyticsService {
       .from(aiTraces)
       .where(and(eq(aiTraces.status, 'error'), gte(aiTraces.createdAt, since)));
 
-    if ((recentErrors?.count ?? 0) > 50) {
+    const recentErrorCount = recentErrors?.count ?? 0;
+    if (recentErrorCount > 50) {
       alerts.push({
         level: 'warning',
-        message: `过去 24h 有 ${recentErrors!.count} 次 AI 调用错误`,
+        message: `过去 24h 有 ${recentErrorCount} 次 AI 调用错误`,
         timestamp: new Date().toISOString(),
       });
     }

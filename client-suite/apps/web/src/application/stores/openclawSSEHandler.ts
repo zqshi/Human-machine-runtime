@@ -1,3 +1,10 @@
+/**
+ * openclawSSEHandler —— 后端实时事件 → store 增量更新
+ *
+ * 将 SSE 推送的 OpenClawEvent（task 进度/decision 变更/goal 更新/notification
+ * 到达等）翻译为 store 增量写。单向写入主 store，不持有独立 state；随
+ * initialize() 挂载，返回 cleanup 由 store._cleanup 持有。
+ */
 import { DecisionRequest } from '../../domain/agent/DecisionRequest';
 import { UserGoal } from '../../domain/agent/UserGoal';
 import { WorkOrder } from '../../domain/agent/WorkOrder';

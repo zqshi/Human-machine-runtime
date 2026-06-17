@@ -291,8 +291,8 @@ export function CaseFormModal({ suiteId, suiteConfigType, suiteEvalType, caseDat
         }
       }
 
-      if (isEdit) {
-        await evalApi.updateCase(caseData!.id, payload);
+      if (isEdit && caseData) {
+        await evalApi.updateCase(caseData.id, payload);
       } else {
         await evalApi.createCase({ suiteId, caseKey: generatedKey, ...payload } as Parameters<typeof evalApi.createCase>[0]);
       }

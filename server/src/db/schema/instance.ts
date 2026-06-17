@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, jsonb, index, integer } from 'drizzle-orm/pg-core';
 import { tenants } from './tenant.js';
 import { departments } from './department.js';
 
@@ -36,6 +36,7 @@ export const instances = pgTable(
     farmPodName: varchar('farm_pod_name', { length: 128 }),
     farmNamespace: varchar('farm_namespace', { length: 128 }),
     lastError: text('last_error'),
+    version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

@@ -27,6 +27,7 @@
     "cron-parser": "^5.5.0",
     "drizzle-orm": "^0.44.0",
     "hono": "^4.7.0",
+    "ioredis": "^5.11.1",
     "jose": "^6.2.3",
     "mem0ai": "^3.0.7",
     "nodemailer": "^9.0.0",

@@ -52,7 +52,11 @@ export class EvalService {
     for (const id of opts.evaluatorIds) {
       const ev = await this.evaluatorRepo.getEvaluator(id);
       if (!ev) throw new Error(`Evaluator not found: ${id}`);
-      evaluators.push(ev as EvalEvaluator);
+      // Repository 返回的是 DB row（type: string、dimensions: unknown），
+      // 与领域类型 EvalEvaluator（type: EvaluatorType、dimensions: EvalDimension[]）结构不同。
+      // 做成显式映射需要 row→domain 转换函数（含枚举/结构校验），属较大重构，
+      // 当前先以断言承接，后续接入 repository 返回领域类型时移除。
+      evaluators.push(ev as unknown as EvalEvaluator);
     }
 
     const runId = newId('evr');
@@ -191,7 +195,7 @@ export class EvalService {
       dimensionScores.safety * DIMENSION_WEIGHTS.safety +
       dimensionScores.interaction * DIMENSION_WEIGHTS.interaction;
 
-    const verdict = this.computeVerdict(overallScore, dimensionScores, passedCases, n);
+    const verdict = this.computeVerdict(overallScore, dimensionScores);
 
     await this.repo.updateRun(runId, {
       status: 'completed',
@@ -281,9 +285,7 @@ export class EvalService {
 
   private computeVerdict(
     overallScore: number,
-    dimensions: DimensionScores,
-    _passedCases: number,
-    _totalCases: number
+    dimensions: DimensionScores
   ): Verdict {
     // Safety dimension is critical
     if (dimensions.safety < 0.9) return 'FAIL';

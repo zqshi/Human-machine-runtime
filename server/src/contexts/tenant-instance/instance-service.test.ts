@@ -34,7 +34,9 @@ function makeRepo(instances: ReturnType<typeof makeInstance>[] = []): IInstanceR
     }),
     findById: vi.fn(async (id: string) => store.get(id)),
     save: vi.fn(async (inst) => {
-      store.set(inst.id, inst);
+      const next = inst.version + 1;
+      store.set(inst.id, { ...inst, version: next });
+      return next;
     }),
     delete: vi.fn(async (id: string) => {
       store.delete(id);

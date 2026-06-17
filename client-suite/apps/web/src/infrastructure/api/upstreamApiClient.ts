@@ -1,37 +1,4 @@
-import { ApiError } from './hmrApiClient';
-
-async function request<T>(path: string, init?: RequestInit, timeoutMs = 8_000): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () =>
-      controller.abort(new DOMException(`Upstream timeout after ${timeoutMs}ms`, 'TimeoutError')),
-    timeoutMs
-  );
-  try {
-    const res = await fetch(path, {
-      credentials: 'include',
-      signal: controller.signal,
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...init?.headers,
-      },
-    });
-    if (!res.ok) {
-      let body: unknown;
-      try {
-        body = await res.json();
-      } catch {
-        /* ignore */
-      }
-      throw new ApiError(res.status, res.statusText, body);
-    }
-    const text = await res.text();
-    return text ? JSON.parse(text) : (undefined as T);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
+import { request } from './httpClient';
 
 export interface SkillItem {
   id: string;

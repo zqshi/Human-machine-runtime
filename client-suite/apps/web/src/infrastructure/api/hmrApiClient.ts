@@ -4,78 +4,15 @@
  * Wraps fetch() for the HMR backend REST API.
  * Uses cookie-based session auth (Set-Cookie: hmr_admin_session).
  * In dev mode, Vite proxy forwards /api → http://127.0.0.1:3000.
+ *
+ * 底层 request 与 ApiError 由统一 httpClient 工厂提供，此处 re-export 以保持
+ * 现有 `import { ApiError } from './hmrApiClient'` 的向后兼容。
  */
 
-import { handleSessionExpired } from './sessionHandler';
+import { request, ApiError } from './httpClient';
 import type { InstanceScope } from '../../domain/shared/types';
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public statusText: string,
-    public body?: unknown
-  ) {
-    super(`API ${status}: ${statusText}`);
-    this.name = 'ApiError';
-  }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? 'GET').toUpperCase();
-  const isIdempotent = method === 'GET' || method === 'HEAD';
-  let lastError: unknown;
-
-  const maxAttempts = isIdempotent ? 2 : 1;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
-    try {
-      const res = await fetch(path, {
-        credentials: 'include',
-        signal: controller.signal,
-        ...init,
-        headers: {
-          'Content-Type': 'application/json',
-          ...init?.headers,
-        },
-      });
-
-      if (res.status === 401) {
-        const body = await res.json().catch(() => undefined);
-        const isAuthEndpoint =
-          path.startsWith('/api/auth/login') || path.startsWith('/api/auth/sso/');
-        if (!isAuthEndpoint) {
-          handleSessionExpired();
-        }
-        const msg = (body as { error?: string })?.error || 'Unauthorized';
-        throw new ApiError(401, msg, body);
-      }
-
-      if (!res.ok) {
-        let body: unknown;
-        try {
-          body = await res.json();
-        } catch {
-          /* ignore */
-        }
-        throw new ApiError(res.status, res.statusText, body);
-      }
-      const text = await res.text();
-      return text ? JSON.parse(text) : (undefined as T);
-    } catch (err) {
-      lastError = err;
-      if (err instanceof ApiError) throw err;
-      if (attempt < maxAttempts - 1) continue;
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        throw new ApiError(0, '请求超时，请检查网络连接');
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-  throw lastError;
-}
+export { ApiError, request };
 
 // ─── Auth ────────────────────────────────────────────────────────────
 
@@ -177,82 +114,27 @@ export const authApi = {
 };
 
 // ─── Employees ───────────────────────────────────────────────────────
+// 类型定义已上移至 domain/employee/types.ts（DDD 分层：domain 不得被 infrastructure 引用，
+// 反向合法）。此处 re-export 以保持全项目 `import { Employee } from './hmrApiClient'` 向后兼容。
+import type {
+  EmployeeJobPolicy,
+  ApprovalLevelPolicy,
+  EmployeeApprovalPolicy,
+  EmployeeResourceConfig,
+  AgentRuntime,
+  EmployeeRemote,
+  Employee,
+} from '../../domain/employee/types';
 
-export interface EmployeeJobPolicy {
-  allow: string[];
-  deny: string[];
-  kpi: string[];
-  escalationRule: string;
-  shutdownRule: string;
-}
-
-export interface ApprovalLevelPolicy {
-  requiredApprovals: number;
-  requiredAnyRoles: string[];
-  distinctRoles: boolean;
-}
-
-export interface EmployeeApprovalPolicy {
-  byRisk: Record<string, ApprovalLevelPolicy>;
-}
-
-export interface EmployeeResourceConfig {
-  compute: { cpu: string; memory: string; gpu: { type: string; count: number } | null };
-  model: { primaryModel: string; fallbackModels: string[]; maxConcurrency: number };
-  budget: { monthlyLimitCny: number; dailyLimitCny: number | null; alertThresholdPct: number };
-  storage: { persistentVolumeSize: string; tempStorageSize: string };
-  source: 'tenant_default' | 'custom';
-  customizedAt: string | null;
-  customizedBy: string | null;
-}
-
-export type AgentRuntime = 'openclaw' | 'harness';
-
-export interface EmployeeRemote {
-  podName?: string;
-  nodeName?: string;
-  restarts?: number;
-  nodeStatus?: 'healthy' | 'warning' | 'unhealthy';
-  cluster?: string;
-  runtimeTemplate?: string;
-  agentRevision?: string;
-  runMode?: 'single' | 'persistent';
-  heartbeat?: string;
-  healthStatus?: 'healthy' | 'warning' | 'unhealthy';
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  displayName?: string;
-  employeeNo?: string;
-  email?: string;
-  tenantId?: string;
-  matrixRoomId?: string;
-  department?: string;
-  departmentId?: string;
-  role?: string;
-  jobTitle?: string;
-  riskLevel?: string;
-  status?: string;
-  matrixUserId?: string;
-  model?: string;
-  personality?: string;
-  createdAt?: string;
-  jobPolicy?: EmployeeJobPolicy;
-  approvalPolicy?: EmployeeApprovalPolicy;
-  resources?: EmployeeResourceConfig;
-  capabilities?: string[];
-  knowledge?: string[];
-  linkedSkillIds?: string[];
-  certifications?: string[];
-  careerPath?: string;
-  scope?: InstanceScope;
-  ownerId?: string;
-  agentRuntime?: AgentRuntime;
-  remote?: EmployeeRemote;
-  [key: string]: unknown;
-}
+export type {
+  EmployeeJobPolicy,
+  ApprovalLevelPolicy,
+  EmployeeApprovalPolicy,
+  EmployeeResourceConfig,
+  AgentRuntime,
+  EmployeeRemote,
+  Employee,
+};
 
 export const employeeApi = {
   list(): Promise<Employee[]> {
