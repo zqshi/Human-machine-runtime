@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- seed 脚本面向 CLI，console 输出为预期行为 */
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import bcrypt from 'bcryptjs';

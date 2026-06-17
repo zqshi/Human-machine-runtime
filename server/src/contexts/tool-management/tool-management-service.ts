@@ -513,10 +513,9 @@ export class ToolManagementService {
     const executor = getExecutor(definition.executionType as ExecutionType);
 
     // 解密凭证（如有）
-    let credential: DecryptedCredential | undefined;
-    // 后续实现：从 credential_vault 按 definition 关联的 credentialId 获取密文，解密后注入
-    // credentialSvc 已注入；待 credential-vault 提供 getCredential(id) 后，在 syncDatabase 中按
-    // source.credentialId 解密获取真实 DB 凭证（当前凭证链路未实装，见 syncDatabase STUB 注释）。
+    // 凭证链路未实装：待 credential-vault 提供 getCredential(id) 后，按 source.credentialId
+    // 解密获取真实 DB 凭证并注入（见 syncDatabase STUB 注释）。当前恒为 undefined。
+    const credential: DecryptedCredential | undefined = undefined;
 
     const result = await executor.execute(
       definition.executionConfig as Record<string, unknown>,

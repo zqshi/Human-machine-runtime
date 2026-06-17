@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { MemoryService } from '../../contexts/employee-memory/memory-service.js';
 import {
   type FragmentScope,
+  type RetrievalConfig,
   FRAGMENT_SCOPE,
   FRAGMENT_TYPE,
   RULE_TYPE,
@@ -127,7 +128,7 @@ export function createAdminMemoryRoutes(svc: MemoryService) {
         tenantId: user.tenantId || 'default',
         name: data.name,
         description: data.description,
-        retrievalConfig: data.retrievalConfig as any,
+        retrievalConfig: data.retrievalConfig as Partial<RetrievalConfig>,
       });
       return c.json(store, 201);
     } catch (err) {
@@ -149,7 +150,10 @@ export function createAdminMemoryRoutes(svc: MemoryService) {
       return c.json({ error: 'invalid config', details: parsed.error.flatten() }, 400);
     }
     try {
-      const store = await svc.updateStoreRetrievalConfig(c.req.param('storeId'), parsed.data as any);
+      const store = await svc.updateStoreRetrievalConfig(
+        c.req.param('storeId'),
+        parsed.data as Partial<RetrievalConfig>
+      );
       return c.json(store);
     } catch (err) {
       return c.json({ error: (err as Error).message }, 404);

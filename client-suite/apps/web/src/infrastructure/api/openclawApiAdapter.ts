@@ -3,7 +3,6 @@ import { request } from './httpClient';
 export { request };
 import {
   DecisionRequest,
-  type DecisionRequestProps,
   type DecisionUrgency,
   type DecisionResponseStatus,
   type RecommendationOption,
@@ -29,7 +28,6 @@ import {
 import { JudgmentRecord } from '../../domain/agent/JudgmentRecord';
 import {
   WorkOrder,
-  type WorkOrderProps,
   type WorkOrderType,
   type WorkOrderStatus,
 } from '../../domain/agent/WorkOrder';

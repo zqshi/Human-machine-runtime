@@ -113,7 +113,10 @@ export class EvalService {
     let completedCases = 0;
     let passedCases = 0;
     let totalTokens = 0;
-    let totalCost = 0;
+    // 评测系统为 Phase 1 STUB（见 evaluateCaseWithEvaluators：actualOutput 为模拟占位，未接入
+    // 真实 LLM）。CaseEvalResult 无 cost 字段、无成本数据来源，故 run 级 totalCost 恒为 0；
+    // 待 Phase 3 接入真实 Agent 执行后从 LLM usage 估算累加。const 以消 prefer-const。
+    const totalCost = 0;
     const allScores: number[] = [];
     const dimAccum: DimensionScores = { correctness: 0, efficiency: 0, safety: 0, interaction: 0 };
 

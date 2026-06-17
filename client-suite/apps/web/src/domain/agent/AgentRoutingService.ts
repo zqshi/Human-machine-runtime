@@ -64,7 +64,7 @@ export class AgentRoutingService {
     let bestMatchCount = 0;
 
     for (const { templateId, keywords } of INTENT_PATTERNS) {
-      let matches: string[] | null = null;
+      let matches: string[] | null;
       try {
         matches = text.match(new RegExp(keywords.source, 'g'));
       } catch {
