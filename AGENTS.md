@@ -206,7 +206,7 @@ test       → vitest run
 | 运行时 | Node.js 20+             | ESM，TypeScript strict                   |
 | 框架   | Hono                     | 路由薄层，中间件链式组合                 |
 | ORM    | Drizzle                  | TypeScript-first，PostgreSQL             |
-| 数据库 | PostgreSQL 16            | Docker Compose 本地（5432 端口），生产用托管实例 |
+| 数据库 | PostgreSQL 16            | Docker Compose 本地（5435 端口），生产用托管实例 |
 | IM     | Matrix (Conduit)         | 自有基础设施，Channel Bridge 可插拔      |
 | 认证   | JWT + SSO 预留           | bcrypt 密码，SSO 开关在 system_configs   |
 | 测试   | vitest                   | —                                        |

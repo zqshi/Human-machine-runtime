@@ -14,7 +14,7 @@ export const config = {
   port: optionalInt('PORT', 3002),
 
   db: {
-    url: optional('DATABASE_URL', 'postgresql://hmr:hmr@localhost:5432/hmr'),
+    url: optional('DATABASE_URL', 'postgresql://hmr:hmr@localhost:5435/hmr'),
     maxConnections: optionalInt('DB_MAX_CONNECTIONS', 20),
   },
 

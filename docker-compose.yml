@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     ports:
       # 标准端口映射；若本机 5432 已被占用，改为 "5433:5432" 等避免冲突
-      - "5432:5432"
+      - "5435:5432"
     environment:
       POSTGRES_USER: hmr
       POSTGRES_PASSWORD: hmr

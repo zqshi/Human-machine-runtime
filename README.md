@@ -73,7 +73,7 @@ graph TB
 ### 启动步骤
 
 ```bash
-# 1. 启动基础设施（PostgreSQL 16，端口 5432）
+# 1. 启动基础设施（PostgreSQL 16，端口 5435）
 docker compose up -d postgres
 
 # 2. 安装依赖
@@ -500,7 +500,7 @@ npx vitest run           # 测试（93 文件）
 ### Docker Compose
 
 ```bash
-docker compose up -d postgres            # PostgreSQL 16（端口 5432）
+docker compose up -d postgres            # PostgreSQL 16（端口 5435）
 docker compose up -d redis               # Redis 7（端口 6379）
 docker compose --profile weknora up -d   # WeKnora RAG 服务（端口 8088）
 docker compose --profile full up -d      # 全部服务（含 Matrix Conduit）
@@ -527,7 +527,7 @@ docker compose --profile full up -d      # 全部服务（含 Matrix Conduit）
 | 运行时 | Node.js 20+ | ESM，TypeScript strict |
 | 框架 | Hono | 路由薄层，中间件链式组合 |
 | ORM | Drizzle | TypeScript-first，PostgreSQL |
-| 数据库 | PostgreSQL 16 | 本地 5434 端口 |
+| 数据库 | PostgreSQL 16 | 本地 5435 端口 |
 | 认证 | JWT + SSO 预留 | bcrypt 密码 |
 | 测试 | vitest | 102 文件 |
 
@@ -539,8 +539,8 @@ docker compose --profile full up -d      # 全部服务（含 Matrix Conduit）
 |----|-----|
 | 数据库 | PostgreSQL 16 |
 | ORM | Drizzle |
-| 本地端口 | 5432 |
-| 连接串 | `postgresql://hmr:hmr@localhost:5432/hmr` |
+| 本地端口 | 5435 |
+| 连接串 | `postgresql://hmr:hmr@localhost:5435/hmr` |
 
 ```bash
 npm run db:setup                 # 迁移 + 种子数据（7 个默认账号）
