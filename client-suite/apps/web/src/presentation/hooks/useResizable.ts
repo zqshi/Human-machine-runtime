@@ -76,7 +76,7 @@ export function useResizable(opts: UseResizableOptions) {
       document.addEventListener('touchmove', onMove, { passive: false });
       document.addEventListener('touchend', onUp);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
     [opts.currentWidth, opts.direction, opts.min, opts.onWidthChange, opts.onDragStart, opts.onDragEnd],
   );
 

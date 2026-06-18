@@ -467,7 +467,7 @@ human-machine-runtime/
         application/                     # zustand stores + hooks + services
         presentation/                    # React 组件（25 feature 模块）
     packages/ui-tokens/                  # 设计 token
-  charts/hmr-server/                     # 生产 Helm Chart
+  deploy/helm/human-machine-runtime/     # 生产 Helm Chart
   deploy/                                # K8s manifests + Docker Compose + 可观测性
 ```
 
@@ -549,6 +549,8 @@ cd server && npm run db:studio   # Drizzle Studio 数据浏览
 
 ### 种子账号（Production profile）
 
+> 密码可通过 `HMR_SEED_*_PASSWORD` 环境变量注入；下表为未注入时的演示默认值（生产部署务必注入强密码）。
+
 | 用户名 | 角色 | 密码 | 说明 |
 |--------|------|------|------|
 | admin | platform_admin | admin123 | 平台域管理员 |
@@ -578,9 +580,9 @@ JWT `scope` 字段区分域（`platform` / `tenant`），`tenantId` 强制数据
 ### Helm（生产推荐）
 
 ```bash
-helm upgrade --install hmr-server charts/hmr-server \
+helm upgrade --install hmr-server deploy/helm/human-machine-runtime \
   --namespace hmr-system --create-namespace \
-  -f charts/hmr-server/values-prod.yaml
+  -f deploy/helm/human-machine-runtime/values-prod.yaml
 ```
 
 ### 可观测性

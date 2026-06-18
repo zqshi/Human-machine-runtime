@@ -67,6 +67,7 @@ src/
 - 新功能：**先写失败测试 → 实现至通过 → 重构**
 - 修 bug：**先写复现测试 → 修复至通过**
 - 禁止：测试中硬编码时间戳、随机数种子未固定、依赖执行顺序
+- 豁免：纯类型/常量文件（仅 `export type`/`interface`/`const`，无 `export function`/`class`）不强制单测；含可执行逻辑（函数/类/计算）的 domain 文件仍须 100% 覆盖。
 
 ### 2.3 质量门禁（提交前必须全过）
 
@@ -236,15 +237,32 @@ human-machine-runtime/
       routes/                         # Hono 路由注册
         platform/                     # L1 运管平台路由
         control/                      # L2 管理控制面路由
-      contexts/
+      contexts/                       # 28 个限界上下文（§1.3：内部按需划分 domain/application/adapters）
         identity-access/              # 认证鉴权 + RBAC
-        tenant-management/            # 租户生命周期
-        audit-observability/          # 审计日志
-        shared-assets/                # 技能/资产共享
+        tenant-management/            # 租户生命周期 + 套餐
         tenant-instance/              # 数字员工实例
-        document/                     # 文档/知识库
-        agent-core/domain/            # Agent 核心领域逻辑
-        gateway/                      # API 网关 → 外部服务（组件代号：clawhub/portal/xspace/claw-farm/LiteLLM，均可替换为企业自有同类系统）
+        audit-observability/          # 审计日志
+        observability/                # 可观测性（指标/追踪）
+        analytics/                    # 数据分析/统计
+        agent-core/                   # Agent 核心（执行器/模拟器/运行时领域）
+        runtime-engine/               # 运行时引擎
+        scheduler/                    # 定时任务调度
+        shared-agent/                 # 共享 Agent
+        shared-assets/                # 技能/资产共享
+        tool-management/              # 工具管理（MCP executor）
+        mcp-management/               # MCP 服务管理
+        credential-vault/             # 凭证保险库（加密存储）
+        employee-memory/              # 数字员工记忆（mem0）
+        knowledge/                    # 知识库管理
+        document/                     # 文档
+        department/                   # 部门组织
+        notification/                 # 通知（邮件等）
+        push-channel/                 # 推送通道
+        channel/                      # 通道抽象（IM/WebSocket）
+        quota-management/             # 配额管理
+        system-config/                # 系统配置
+        eval-benchmark/               # 评测基准
+        gateway/                      # API 网关 → 外部服务（clawhub/portal/xspace/claw-farm/LiteLLM，均可替换为企业自有同类系统）
           clients/                    # 各组件 HTTP 客户端
           routes/                     # 代理路由
         workspace/                    # Workspace 对接 AI 工作区（xspace）

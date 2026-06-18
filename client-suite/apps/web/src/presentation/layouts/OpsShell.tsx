@@ -181,7 +181,7 @@ export function OpsApp() {
           setRestoring(false);
         }
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
   }, []);
 
   if (ssoType === 'oidc') {

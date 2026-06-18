@@ -219,11 +219,6 @@ export function TenantEditor({
 
   const tabs: { key: EditorTab; label: string; icon: string }[] = [
     { key: 'info', label: '基础信息', icon: 'apartment' },
-    // 一期暂不需要以下 tab
-    // { key: 'capacity', label: '容量配额', icon: 'speed' },
-    // { key: 'resource', label: '实例资源', icon: 'memory' },
-    // { key: 'ai', label: 'AI 用量', icon: 'psychology' },
-    // { key: 'features', label: '功能开关', icon: 'toggle_on' },
   ];
 
   return (

@@ -1,21 +1,21 @@
 (function () {
-  var locale = window.__dcfLocale || {};
-  var DRAWER_ID = "dcfMatrixMessageDrawer";
-  var MASK_ID = "dcfMatrixMessageDrawerMask";
-  var BODY_OPEN_CLASS = "dcf-matrix-drawer-open";
-  var STYLE_ID = "dcfMatrixDrawerStyle";
-  var ADMIN_ENTRY_ITEM_CLASS = "dcf-admin-entry-item";
+  var locale = window.__hmrLocale || {};
+  var DRAWER_ID = "hmrMatrixMessageDrawer";
+  var MASK_ID = "hmrMatrixMessageDrawerMask";
+  var BODY_OPEN_CLASS = "hmr-matrix-drawer-open";
+  var STYLE_ID = "hmrMatrixDrawerStyle";
+  var ADMIN_ENTRY_ITEM_CLASS = "hmr-admin-entry-item";
   var adminEntryState = {
     checked: false,
     visible: false,
     adminUrl: "/admin/index.html"
   };
-  var DCF_E2EE_ENABLED = false;
-  var FACTORY_ROOM_ALIAS = "#dcf-factory:localhost";
-  var ROOM_PREVIEW_REDIRECT_GUARD = "dcf_room_preview_redirect_guard";
-  var ROOM_AFTER_LEAVE_REDIRECT_FLAG = "dcf_room_after_leave_redirect_flag";
-  var ENCRYPTED_BOT_REDIRECT_GUARD = "dcf_encrypted_bot_redirect_guard";
-  var FACTORY_PREVIEW_REDIRECT_GUARD = "dcf_factory_preview_redirect_guard";
+  var HMR_E2EE_ENABLED = false;
+  var FACTORY_ROOM_ALIAS = "#hmr-factory:localhost";
+  var ROOM_PREVIEW_REDIRECT_GUARD = "hmr_room_preview_redirect_guard";
+  var ROOM_AFTER_LEAVE_REDIRECT_FLAG = "hmr_room_after_leave_redirect_flag";
+  var ENCRYPTED_BOT_REDIRECT_GUARD = "hmr_encrypted_bot_redirect_guard";
+  var FACTORY_PREVIEW_REDIRECT_GUARD = "hmr_factory_preview_redirect_guard";
 
   function ready(fn) {
     if (document.readyState === "loading") {
@@ -41,7 +41,7 @@
   }
 
   function clearCryptoClientStorageIfDisabled() {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     try {
       var removeKeys = [];
       for (var i = 0; i < localStorage.length; i += 1) {
@@ -73,18 +73,18 @@
       "#" + MASK_ID + ".open { opacity: 1; pointer-events: auto; }",
       "#" + DRAWER_ID + " { position: fixed; top: 0; right: 0; height: 100vh; width: 420px; max-width: 92vw; background: #fff; border-left: 1px solid #e1e8f5; box-shadow: -16px 0 40px rgba(18, 38, 72, 0.2); z-index: 9999; transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column; }",
       "#" + DRAWER_ID + ".open { transform: translateX(0); }",
-      "#" + DRAWER_ID + " .dcf-hd { min-height: 56px; padding: 10px 14px; border-bottom: 1px solid #e6edf8; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(180deg,#f8fbff,#f4f8ff); }",
-      "#" + DRAWER_ID + " .dcf-hd strong { font-size: 15px; color: #14233b; }",
-      "#" + DRAWER_ID + " .dcf-close { border: 0; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; background: #edf3ff; color: #2f4b79; font-size: 16px; }",
-      "#" + DRAWER_ID + " .dcf-bd { padding: 14px; overflow: auto; display: grid; gap: 12px; }",
-      "#" + DRAWER_ID + " .dcf-meta { border: 1px solid #dfebff; border-radius: 12px; background: #f9fcff; padding: 10px 12px; display: grid; gap: 8px; }",
-      "#" + DRAWER_ID + " .dcf-meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }",
-      "#" + DRAWER_ID + " .dcf-meta-row span { color: #6280aa; }",
-      "#" + DRAWER_ID + " .dcf-meta-row strong { color: #1e385f; font-weight: 600; text-align: right; word-break: break-all; }",
-      "#" + DRAWER_ID + " .dcf-msg { border: 1px solid #d8e6ff; border-radius: 12px; background: #fff; padding: 10px 12px; color: #1c314f; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }",
-      "#" + DRAWER_ID + " .dcf-actions { display: flex; gap: 8px; flex-wrap: wrap; }",
-      "#" + DRAWER_ID + " .dcf-actions button { border: 1px solid #bed2f7; background: #f2f7ff; color: #24508e; border-radius: 10px; min-height: 34px; padding: 0 10px; cursor: pointer; font-size: 12px; }",
-      "#" + DRAWER_ID + " .dcf-actions button:hover { filter: brightness(1.03); }",
+      "#" + DRAWER_ID + " .hmr-hd { min-height: 56px; padding: 10px 14px; border-bottom: 1px solid #e6edf8; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(180deg,#f8fbff,#f4f8ff); }",
+      "#" + DRAWER_ID + " .hmr-hd strong { font-size: 15px; color: #14233b; }",
+      "#" + DRAWER_ID + " .hmr-close { border: 0; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; background: #edf3ff; color: #2f4b79; font-size: 16px; }",
+      "#" + DRAWER_ID + " .hmr-bd { padding: 14px; overflow: auto; display: grid; gap: 12px; }",
+      "#" + DRAWER_ID + " .hmr-meta { border: 1px solid #dfebff; border-radius: 12px; background: #f9fcff; padding: 10px 12px; display: grid; gap: 8px; }",
+      "#" + DRAWER_ID + " .hmr-meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }",
+      "#" + DRAWER_ID + " .hmr-meta-row span { color: #6280aa; }",
+      "#" + DRAWER_ID + " .hmr-meta-row strong { color: #1e385f; font-weight: 600; text-align: right; word-break: break-all; }",
+      "#" + DRAWER_ID + " .hmr-msg { border: 1px solid #d8e6ff; border-radius: 12px; background: #fff; padding: 10px 12px; color: #1c314f; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }",
+      "#" + DRAWER_ID + " .hmr-actions { display: flex; gap: 8px; flex-wrap: wrap; }",
+      "#" + DRAWER_ID + " .hmr-actions button { border: 1px solid #bed2f7; background: #f2f7ff; color: #24508e; border-radius: 10px; min-height: 34px; padding: 0 10px; cursor: pointer; font-size: 12px; }",
+      "#" + DRAWER_ID + " .hmr-actions button:hover { filter: brightness(1.03); }",
       "." + ADMIN_ENTRY_ITEM_CLASS + " { color: #1a4f98 !important; font-weight: 600 !important; }",
       ".mx_AuthFooter { display: none !important; }",
       ".mx_SetupEncryptionToast, .mx_ToastContainer .mx_SetupEncryptionToast, .mx_ToastContainer .mx_GenericToast.mx_SetupEncryptionToast { display: none !important; }",
@@ -108,15 +108,15 @@
       drawer.id = DRAWER_ID;
       drawer.setAttribute("aria-hidden", "true");
       drawer.innerHTML = [
-        '<div class="dcf-hd"><strong>会话详情</strong><button class="dcf-close" type="button" aria-label="关闭">×</button></div>',
-        '<div class="dcf-bd">',
-        '<div class="dcf-meta">',
-        '<div class="dcf-meta-row"><span>发送方</span><strong data-k="sender">-</strong></div>',
-        '<div class="dcf-meta-row"><span>时间</span><strong data-k="time">-</strong></div>',
-        '<div class="dcf-meta-row"><span>事件ID</span><strong data-k="eventId">-</strong></div>',
+        '<div class="hmr-hd"><strong>会话详情</strong><button class="hmr-close" type="button" aria-label="关闭">×</button></div>',
+        '<div class="hmr-bd">',
+        '<div class="hmr-meta">',
+        '<div class="hmr-meta-row"><span>发送方</span><strong data-k="sender">-</strong></div>',
+        '<div class="hmr-meta-row"><span>时间</span><strong data-k="time">-</strong></div>',
+        '<div class="hmr-meta-row"><span>事件ID</span><strong data-k="eventId">-</strong></div>',
         "</div>",
-        '<div class="dcf-msg" data-k="body">-</div>',
-        '<div class="dcf-actions">',
+        '<div class="hmr-msg" data-k="body">-</div>',
+        '<div class="hmr-actions">',
         '<button type="button" data-a="copy">复制消息</button>',
         '<button type="button" data-a="quote">@引用到输入框</button>',
         "</div>",
@@ -242,7 +242,7 @@
   }
 
   function suppressSessionVerificationCards(root) {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     var scope = root instanceof Element || root instanceof Document ? root : document;
     var containers = scope.querySelectorAll(
       ".mx_ContextualMenu, .mx_Popover, .mx_Toast, .mx_Dialog, .mx_Modal, " +
@@ -274,7 +274,7 @@
   }
 
   function forceSuppressSessionVerification(root) {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     var scope = root instanceof Element || root instanceof Document ? root : document;
     var buttons = scope.querySelectorAll("button, .mx_AccessibleButton, [role='button']");
     for (var i = 0; i < buttons.length; i += 1) {
@@ -338,7 +338,7 @@
   }
 
   function suppressRecoveryPrompts(root) {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     var scope = root instanceof Element || root instanceof Document ? root : document;
     var seedNodes = scope.querySelectorAll(
       ".mx_LeftPanel *, .mx_Toast *, .mx_Dialog *, .mx_Modal *, [role='dialog'] *, [aria-modal='true'] *"
@@ -551,12 +551,12 @@
         return res.json();
       })
       .then(function (cfg) {
-        var dcf = cfg && typeof cfg === "object" ? cfg.dcf : null;
-        if (dcf && typeof dcf === "object" && typeof dcf.e2ee_enabled === "boolean") {
-          DCF_E2EE_ENABLED = dcf.e2ee_enabled;
+        var hmr = cfg && typeof cfg === "object" ? cfg.hmr : null;
+        if (hmr && typeof hmr === "object" && typeof hmr.e2ee_enabled === "boolean") {
+          HMR_E2EE_ENABLED = hmr.e2ee_enabled;
         }
-        if (dcf && typeof dcf === "object" && typeof dcf.factory_room_alias === "string" && dcf.factory_room_alias.trim()) {
-          FACTORY_ROOM_ALIAS = dcf.factory_room_alias.trim();
+        if (hmr && typeof hmr === "object" && typeof hmr.factory_room_alias === "string" && hmr.factory_room_alias.trim()) {
+          FACTORY_ROOM_ALIAS = hmr.factory_room_alias.trim();
         }
       })
       .catch(function () {});
@@ -569,7 +569,7 @@
   }
 
   function redirectEncryptedFactoryDmToServiceRoom(root) {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     if (!isRoomView()) return;
     var guarded = String(sessionStorage.getItem(ENCRYPTED_BOT_REDIRECT_GUARD) || "") === "1";
     if (guarded) return;
@@ -588,7 +588,7 @@
   }
 
   function suppressEncryptionUiHints(root) {
-    if (DCF_E2EE_ENABLED === true) return;
+    if (HMR_E2EE_ENABLED === true) return;
     var scope = root instanceof Element || root instanceof Document ? root : document;
     var iconNodes = scope.querySelectorAll(
       ".mx_EventTile_e2eIcon, .mx_E2EIcon, [data-testid='e2e-icon'], " +
@@ -777,7 +777,7 @@
         // Don't block the event — let Element Web try the call
       }
 
-      if (target.closest("#" + MASK_ID) || target.closest("#" + DRAWER_ID + " .dcf-close")) {
+      if (target.closest("#" + MASK_ID) || target.closest("#" + DRAWER_ID + " .hmr-close")) {
         closeDrawer();
         return;
       }

@@ -39,6 +39,8 @@ jobs:
         run: npm ci
       - name: Install Client Suite Dependencies
         run: cd client-suite && npm ci
+      - name: Lint
+        run: cd client-suite/apps/web && npx eslint src/
       - name: TypeCheck
         run: cd client-suite/apps/web && npx tsc --noEmit
       - name: Unit Tests

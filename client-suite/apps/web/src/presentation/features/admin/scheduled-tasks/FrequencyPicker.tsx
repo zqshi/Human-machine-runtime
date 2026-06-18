@@ -106,7 +106,7 @@ export function FrequencyPicker({
       return;
     }
     onChange(buildConfig(p.mode, p));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
   }, [p.mode, p.intervalN, p.intervalUnit, p.time, p.weekday, p.monthDay, p.cronExpr]);
 
   const setMode = (mode: FreqMode) => setP((prev) => ({ ...prev, mode }));

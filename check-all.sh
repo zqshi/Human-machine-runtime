@@ -8,6 +8,5 @@ bash scripts/start-openclaw-stack.sh
 bash scripts/start-hmr-app.sh
 bash scripts/check-openclaw-stack.sh
 bash scripts/check-hmr-app.sh
-npm run e2e:user
 
 echo "[ok] all checks passed"

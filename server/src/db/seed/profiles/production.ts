@@ -1,10 +1,23 @@
 import type { SeedData, SeedProfile } from '../types.js';
 
+/**
+ * 解析 seed 账号密码：优先读环境变量，缺失时 fallback 到演示弱口令并打印警告。
+ * 生产部署必须通过 HMR_SEED_*_PASSWORD 注入真实密码（见 .env.example）。
+ */
+function resolveSeedPassword(envKey: string, fallback: string, label: string): string {
+  const fromEnv = process.env[envKey];
+  if (fromEnv) return fromEnv;
+  console.warn(
+    `[seed:production] ⚠️ ${label} 密码未通过 ${envKey} 注入，使用弱默认值——仅限演示，生产部署必须注入真实密码`
+  );
+  return fallback;
+}
+
 export const seedData: SeedData = {
   users: [
     {
       username: 'admin',
-      password: 'admin123',
+      password: resolveSeedPassword('HMR_SEED_ADMIN_PASSWORD', 'admin123', '平台管理员'),
       role: 'platform_admin',
       scope: 'platform',
       displayName: '平台管理员',
@@ -13,7 +26,7 @@ export const seedData: SeedData = {
     },
     {
       username: 'tenant_admin',
-      password: 'tenant123',
+      password: resolveSeedPassword('HMR_SEED_TENANT_ADMIN_PASSWORD', 'tenant123', '租户管理员'),
       role: 'tenant_admin',
       scope: 'tenant',
       displayName: '租户管理员',
@@ -22,7 +35,7 @@ export const seedData: SeedData = {
     },
     {
       username: 'ops',
-      password: 'ops123',
+      password: resolveSeedPassword('HMR_SEED_OPS_PASSWORD', 'ops123', '运维操作员'),
       role: 'tenant_ops',
       scope: 'tenant',
       displayName: '运维操作员',
@@ -31,7 +44,7 @@ export const seedData: SeedData = {
     },
     {
       username: 'auditor',
-      password: 'audit123',
+      password: resolveSeedPassword('HMR_SEED_AUDITOR_PASSWORD', 'audit123', '审计员'),
       role: 'tenant_auditor',
       scope: 'tenant',
       displayName: '审计员',

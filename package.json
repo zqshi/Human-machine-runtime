@@ -8,6 +8,7 @@
     "build": "cd server && npm run build",
     "start": "cd server && npm start",
     "test": "cd server && npm test",
+    "test:all": "npm test && cd client-suite && npx vitest run",
     "test:watch": "cd server && npm run test:watch",
     "lint": "cd server && npx eslint src/",
     "type-check": "cd server && npm run type-check",

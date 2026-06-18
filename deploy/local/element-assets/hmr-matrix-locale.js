@@ -1,8 +1,8 @@
 (function () {
   var PREFERRED_LANGUAGE = "zh-hans";
-  var LANGUAGE_RELOAD_FLAG = "dcf_lang_reloaded_once";
-  var DCF_E2EE_ENABLED = false;
-  var DRAWER_ID = "dcfMatrixMessageDrawer";
+  var LANGUAGE_RELOAD_FLAG = "hmr_lang_reloaded_once";
+  var HMR_E2EE_ENABLED = false;
+  var DRAWER_ID = "hmrMatrixMessageDrawer";
 
   // ── Eagerly set language in localStorage BEFORE Element Web's bundle parses it ──
   // This runs synchronously at <head> parse time, ensuring i18next picks up zh-hans
@@ -268,7 +268,7 @@
         changed = true;
         localStorage.setItem("mx_local_settings", JSON.stringify(settings));
       }
-      if (DCF_E2EE_ENABLED !== true) {
+      if (HMR_E2EE_ENABLED !== true) {
         settings.useE2eForGroupChats = false;
         settings.useE2eForDirectChats = false;
         settings.sendEncryptedMessagesInDms = false;
@@ -472,7 +472,7 @@
   }
 
   // Expose to drawer script
-  window.__dcfLocale = {
+  window.__hmrLocale = {
     PREFERRED_LANGUAGE: PREFERRED_LANGUAGE,
     UI_TEXT_MAP: UI_TEXT_MAP,
     RECOVERY_PROMPT_PATTERNS: RECOVERY_PROMPT_PATTERNS,

@@ -78,7 +78,7 @@ export function AgentKnowledgePage() {
   // 初始同步
   useEffect(() => {
     syncKbIds(kbs);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
 
   const createKb = () => {
     if (!newKbName.trim()) {

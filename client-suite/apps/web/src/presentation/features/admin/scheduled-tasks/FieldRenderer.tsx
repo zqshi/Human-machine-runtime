@@ -141,7 +141,7 @@ function JsonField({
     setRaw(value == null ? '' : JSON.stringify(value, null, 2));
     setError('');
     onInvalid?.(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
   }, [field.key]);
 
   const handle = (text: string) => {
