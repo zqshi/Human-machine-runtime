@@ -1,5 +1,10 @@
+set -e
+
 npx lint-staged
 
-cd client-suite/apps/web && npx tsc --noEmit && cd ../../..
+# 前端门禁：类型检查 + 单元测试（子 shell 隔离 cwd，避免污染后续命令）
+(cd client-suite/apps/web && npx tsc --noEmit)
+(cd client-suite && npx vitest run --reporter=dot)
 
-cd client-suite && npx vitest run --reporter=dot
+# 后端门禁：类型 + lint + 单测（补全：原 pre-commit 仅覆盖前端，曾导致后端测试红灯漏入 main）
+(cd server && npx tsc --noEmit && npx eslint src/ && npx vitest run --reporter=dot)

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { readHash, writeHash, onHashChange } from '../../infrastructure/browser/hash-location';
 
 export type AdminSection =
   | 'employees'
@@ -63,17 +64,12 @@ const HASHABLE_ADMIN_SECTIONS: readonly AdminSection[] = [
 
 /** 从 URL hash 读取 section（硬刷新后恢复当前页）；非法或缺失返回 'employees'。 */
 function readSectionFromHash(): AdminSection {
-  if (typeof window === 'undefined') return 'employees';
-  const h = window.location.hash.replace(/^#/, '');
+  const h = readHash();
   return HASHABLE_ADMIN_SECTIONS.includes(h as AdminSection) ? (h as AdminSection) : 'employees';
 }
 
 function writeSectionToHash(section: AdminSection): void {
-  if (typeof window === 'undefined') return;
-  const target = `#${section}`;
-  if (window.location.hash !== target) {
-    window.location.hash = target;
-  }
+  writeHash(section);
 }
 
 /** OpsShell 主 section 全部可持久化（无 detail 变体，刷新后均能直接恢复）。 */
@@ -90,19 +86,14 @@ const HASHABLE_PLATFORM_SECTIONS: readonly PlatformSection[] = [
 /** 从 URL hash 读取 OpsShell section（硬刷新后恢复当前页）；非法或缺失返回 'tenants'。
  *  admin 入口的 hash 不是合法 PlatformSection 时同样 fallback 'tenants'，无害。 */
 function readPlatformSectionFromHash(): PlatformSection {
-  if (typeof window === 'undefined') return 'tenants';
-  const h = window.location.hash.replace(/^#/, '');
+  const h = readHash();
   return HASHABLE_PLATFORM_SECTIONS.includes(h as PlatformSection)
     ? (h as PlatformSection)
     : 'tenants';
 }
 
 function writePlatformSectionToHash(section: PlatformSection): void {
-  if (typeof window === 'undefined') return;
-  const target = `#${section}`;
-  if (window.location.hash !== target) {
-    window.location.hash = target;
-  }
+  writeHash(section);
 }
 
 /** 本地日期 → YYYY-MM-DD（避免 toISOString 的 UTC 偏移导致日历日错位） */
@@ -217,20 +208,19 @@ export const useAdminStore = create<AdminState>((set) => ({
 
 // 浏览器后退/前进或手改 hash 时同步 currentSection + platformSection（与各自 setter 写 hash 形成双向闭环）。
 // admin.html / ops.html 是不同入口，各自加载本 store，hash 独立；非合法值 fallback 无害、互不干扰。
-if (typeof window !== 'undefined') {
-  window.addEventListener('hashchange', () => {
-    const nextSection = readSectionFromHash();
-    if (nextSection !== useAdminStore.getState().currentSection) {
-      useAdminStore.setState({
-        currentSection: nextSection,
-        selectedId: null,
-        drawerOpen: false,
-        searchQuery: '',
-      });
-    }
-    const nextPlatform = readPlatformSectionFromHash();
-    if (nextPlatform !== useAdminStore.getState().platformSection) {
-      useAdminStore.setState({ platformSection: nextPlatform, searchQuery: '' });
-    }
-  });
-}
+// window 访问下沉至 infrastructure/hash-location 适配器（onHashChange 内含 SSR 防护）。
+onHashChange(() => {
+  const nextSection = readSectionFromHash();
+  if (nextSection !== useAdminStore.getState().currentSection) {
+    useAdminStore.setState({
+      currentSection: nextSection,
+      selectedId: null,
+      drawerOpen: false,
+      searchQuery: '',
+    });
+  }
+  const nextPlatform = readPlatformSectionFromHash();
+  if (nextPlatform !== useAdminStore.getState().platformSection) {
+    useAdminStore.setState({ platformSection: nextPlatform, searchQuery: '' });
+  }
+});
