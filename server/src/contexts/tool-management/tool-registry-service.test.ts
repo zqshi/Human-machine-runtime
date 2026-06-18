@@ -3,6 +3,7 @@ import type { ToolManagementService } from './tool-management-service.js';
 import type { ToolSourceRepository } from '../../db/repositories/tool-registry-repository.js';
 import type { ToolDefinitionRow } from '../../db/repositories/tool-registry-repository.js';
 import type { CreateSourceInput, ExecutionContext } from './types.js';
+import type { McpClientPool } from './mcp-client.js';
 
 function makeDef(over: Partial<ToolDefinitionRow> = {}): ToolDefinitionRow {
   return {
@@ -43,7 +44,11 @@ function makeMgmt() {
 }
 
 function makeSourceRepo() {
-  return { findById: vi.fn() };
+  return {
+    findById: vi.fn(),
+    findAllAll: vi.fn().mockResolvedValue([]),
+    updateHealth: vi.fn(),
+  };
 }
 
 const ctx: ExecutionContext = { tenantId: 't1' };
@@ -233,13 +238,14 @@ describe('ToolRegistryService', () => {
       expect(h.consecutiveFailures).toBe(0);
     });
 
-    it('status=error 或有同步错误 → degraded', async () => {
+    it('读取 healthStatus 字段（degraded + 错误 + 失败计数）', async () => {
       const repo = makeSourceRepo();
       repo.findById.mockResolvedValue({
         id: 's1',
-        status: 'error',
-        lastSyncError: 'boom',
-        lastSyncedAt: null,
+        healthStatus: 'degraded',
+        lastHealthCheckAt: null,
+        lastHealthError: 'boom',
+        consecutiveFailures: 2,
       });
       const reg = new ToolRegistryService(
         makeMgmt() as unknown as ToolManagementService,
@@ -248,15 +254,17 @@ describe('ToolRegistryService', () => {
       const h = await reg.getHealth('s1');
       expect(h.status).toBe('degraded');
       expect(h.lastError).toBe('boom');
+      expect(h.consecutiveFailures).toBe(2);
     });
 
-    it('正常 source 未探活 → unknown', async () => {
+    it('healthStatus=unknown → unknown（兼容未探活/旧数据）', async () => {
       const repo = makeSourceRepo();
       repo.findById.mockResolvedValue({
         id: 's1',
-        status: 'active',
-        lastSyncError: null,
-        lastSyncedAt: null,
+        healthStatus: 'unknown',
+        lastHealthCheckAt: null,
+        lastHealthError: null,
+        consecutiveFailures: 0,
       });
       const reg = new ToolRegistryService(
         makeMgmt() as unknown as ToolManagementService,
@@ -266,11 +274,84 @@ describe('ToolRegistryService', () => {
     });
   });
 
-  it('healthCheckAll 当前为占位（P4 实装），不抛错', async () => {
+  it('healthCheckAll：空 source 列表不抛错', async () => {
+    const repo = makeSourceRepo();
     const reg = new ToolRegistryService(
       makeMgmt() as unknown as ToolManagementService,
-      makeSourceRepo() as unknown as ToolSourceRepository
+      repo as unknown as ToolSourceRepository
     );
     await expect(reg.healthCheckAll()).resolves.toBeUndefined();
+    expect(repo.findAllAll).toHaveBeenCalled();
+  });
+
+  it('healthCheckAll：MCP 探活成功 → healthy + 清零失败计数', async () => {
+    const repo = makeSourceRepo();
+    repo.findAllAll.mockResolvedValue([
+      {
+        id: 's1',
+        status: 'active',
+        sourceType: 'mcp_native',
+        mcpEndpoint: 'http://mcp',
+        healthStatus: 'unknown',
+        consecutiveFailures: 2,
+        tenantId: 't1',
+        name: 'mcp-src',
+      },
+    ]);
+    const mcpPool = {
+      get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(true) }),
+    };
+    const reg = new ToolRegistryService(
+      makeMgmt() as unknown as ToolManagementService,
+      repo as unknown as ToolSourceRepository,
+      mcpPool as unknown as McpClientPool
+    );
+    await reg.healthCheckAll();
+    expect(repo.updateHealth).toHaveBeenCalledWith(
+      's1',
+      expect.objectContaining({ healthStatus: 'healthy', consecutiveFailures: 0 })
+    );
+  });
+
+  it('healthCheckAll：探活失败 → 累计失败计数 + degraded', async () => {
+    const repo = makeSourceRepo();
+    repo.findAllAll.mockResolvedValue([
+      {
+        id: 's1',
+        status: 'active',
+        sourceType: 'mcp_native',
+        mcpEndpoint: 'http://mcp',
+        healthStatus: 'healthy',
+        consecutiveFailures: 0,
+        tenantId: 't1',
+        name: 'mcp-src',
+      },
+    ]);
+    const mcpPool = {
+      get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(false) }),
+    };
+    const reg = new ToolRegistryService(
+      makeMgmt() as unknown as ToolManagementService,
+      repo as unknown as ToolSourceRepository,
+      mcpPool as unknown as McpClientPool
+    );
+    await reg.healthCheckAll();
+    expect(repo.updateHealth).toHaveBeenCalledWith(
+      's1',
+      expect.objectContaining({ healthStatus: 'degraded', consecutiveFailures: 1 })
+    );
+  });
+
+  it('healthCheckAll：跳过 archived source', async () => {
+    const repo = makeSourceRepo();
+    repo.findAllAll.mockResolvedValue([
+      { id: 's1', status: 'archived', sourceType: 'mcp_native', mcpEndpoint: 'http://mcp' },
+    ]);
+    const reg = new ToolRegistryService(
+      makeMgmt() as unknown as ToolManagementService,
+      repo as unknown as ToolSourceRepository
+    );
+    await reg.healthCheckAll();
+    expect(repo.updateHealth).not.toHaveBeenCalled();
   });
 });

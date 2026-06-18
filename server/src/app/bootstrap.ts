@@ -466,6 +466,16 @@ export function createAppContext(db: Database): AppContext {
   );
   // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentRuntimeService 实例化的顺序问题）
   agentRuntimeService.setToolRegistry(toolRegistryService);
+  // P4: 定时工具健康检查（每 5 分钟探活各 source、维护 healthStatus、转 down 告警）。
+  // 生产多实例可迁移到 scheduler 持久化 system job + advisory lock 防并发。
+  setInterval(
+    () => {
+      void toolRegistryService.healthCheckAll().catch((err) => {
+        logger.warn({ err: String(err) }, 'tool health check failed');
+      });
+    },
+    5 * 60 * 1000
+  );
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
     instanceService,

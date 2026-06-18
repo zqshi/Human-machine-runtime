@@ -71,6 +71,27 @@ export class ToolSourceRepository {
       .set({ ...status, updatedAt: new Date() })
       .where(eq(toolSources.id, id));
   }
+
+  /** 更新健康检查结果（P4）。 */
+  async updateHealth(
+    id: string,
+    data: {
+      healthStatus: string;
+      lastHealthCheckAt: Date;
+      lastHealthError: string | null;
+      consecutiveFailures: number;
+    }
+  ): Promise<void> {
+    await this.db
+      .update(toolSources)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(toolSources.id, id));
+  }
+
+  /** 全量查询（不限租户，供 scheduler 全局健康检查）。 */
+  async findAllAll(): Promise<ToolSourceRow[]> {
+    return this.db.select().from(toolSources);
+  }
 }
 
 /* ──── Tool Definition Repository ──── */

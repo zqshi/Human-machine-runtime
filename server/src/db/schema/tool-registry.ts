@@ -44,6 +44,11 @@ export const toolSources = pgTable(
     lastSyncError: text('last_sync_error'),
     // Status
     status: varchar('status', { length: 32 }).notNull().default('active'),
+    // 健康检查状态（P4：scheduler 定时探活维护）
+    healthStatus: varchar('health_status', { length: 32 }).notNull().default('unknown'),
+    lastHealthCheckAt: timestamp('last_health_check_at', { withTimezone: true }),
+    lastHealthError: text('last_health_error'),
+    consecutiveFailures: integer('consecutive_failures').notNull().default(0),
     toolCount: integer('tool_count').notNull().default(0),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
     createdBy: varchar('created_by', { length: 128 }),

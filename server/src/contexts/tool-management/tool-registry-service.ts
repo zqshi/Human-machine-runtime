@@ -5,9 +5,10 @@
  * 注册、发现、健康、调用端口。消费方（管理页路由、Agent 运行时）只依赖 IToolRegistry。
  *
  * 设计：委托 ToolManagementService 复用其 createSource/sync/listDefinitions/executeTool，
- * 避免重复实现；invoke 在 executeTool 之上补齐租户隔离校验并返回 logId。
+ * 避免重复实现；invoke 在 executeTool 之上补齐租户隔离校验并返回 logId；
+ * healthCheckAll 由 scheduler 定时触发，探活各 source 并维护 healthStatus。
  */
-import { matchDiscoveryQuery } from './tool-registry.js';
+import { matchDiscoveryQuery, computeHealthStatus } from './tool-registry.js';
 import type {
   IToolRegistry,
   ToolEndpoint,
@@ -24,6 +25,8 @@ import type {
   ToolSourceRow,
   ToolDefinitionRow,
 } from '../../db/repositories/tool-registry-repository.js';
+import { McpClientPool } from './mcp-client.js';
+import { logger } from '../../app/logger.js';
 import type { CreateSourceInput, ExecutionType } from './types.js';
 
 function toEndpoint(def: ToolDefinitionRow): ToolEndpoint {
@@ -48,15 +51,21 @@ function toDescriptor(src: ToolSourceRow): ToolSourceDescriptor {
     name: src.name,
     status: src.status as ToolSourceDescriptor['status'],
     toolCount: src.toolCount,
-    // P4 接 healthStatus 字段后改为真实状态；当前未探活故 unknown。
-    health: 'unknown',
+    health: (src.healthStatus as ToolSourceDescriptor['health']) ?? 'unknown',
   };
+}
+
+function timeoutSignal(ms = 5000): AbortSignal {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
 }
 
 export class ToolRegistryService implements IToolRegistry {
   constructor(
     private mgmt: ToolManagementService,
-    private sourceRepo: ToolSourceRepository
+    private sourceRepo: ToolSourceRepository,
+    private mcpPool: McpClientPool = new McpClientPool()
   ) {}
 
   async registerSource(
@@ -114,20 +123,71 @@ export class ToolRegistryService implements IToolRegistry {
         consecutiveFailures: 0,
       };
     }
-    // P4 接 healthStatus/lastHealthCheckAt/consecutiveFailures 字段前的临时推断：
-    // source 状态 error 或有同步错误 → degraded；否则未探活 unknown。
-    const hasError = src.status === 'error' || Boolean(src.lastSyncError);
-    const status: ToolHealthStatus = hasError ? 'degraded' : 'unknown';
     return {
       sourceId,
-      status,
-      lastCheckAt: src.lastSyncedAt ? src.lastSyncedAt.getTime() : null,
-      lastError: src.lastSyncError ?? null,
-      consecutiveFailures: hasError ? 1 : 0,
+      status: (src.healthStatus as ToolHealthStatus) ?? 'unknown',
+      lastCheckAt: src.lastHealthCheckAt ? src.lastHealthCheckAt.getTime() : null,
+      lastError: src.lastHealthError ?? null,
+      consecutiveFailures: src.consecutiveFailures ?? 0,
     };
   }
 
   async healthCheckAll(_tenantId?: string): Promise<void> {
-    // P4 实装：scheduler 定时探活各 source、更新 healthStatus、状态变更触发 notification 告警。
+    const sources = await this.sourceRepo.findAllAll();
+    for (const src of sources) {
+      if (src.status === 'archived') continue;
+      await this.checkSource(src);
+    }
+  }
+
+  /** 探活单个 source：ping → 计算状态 → 更新 → 转 down 告警。 */
+  private async checkSource(src: ToolSourceRow): Promise<void> {
+    const result = await this.pingSource(src);
+    const prevFailures = src.consecutiveFailures ?? 0;
+    const failures = result.ok ? 0 : prevFailures + 1;
+    const next = computeHealthStatus(failures);
+    await this.sourceRepo.updateHealth(src.id, {
+      healthStatus: next,
+      lastHealthCheckAt: new Date(),
+      lastHealthError: result.error,
+      consecutiveFailures: failures,
+    });
+    const prevStatus = (src.healthStatus as ToolHealthStatus) ?? 'unknown';
+    if (prevStatus !== 'down' && next === 'down') {
+      logger.warn(
+        { sourceId: src.id, sourceName: src.name, tenantId: src.tenantId, error: result.error },
+        'tool-source health degraded to down'
+      );
+      // TODO: 接入 NotificationService 精细告警（邮件/站内）；当前 logger 兜底
+    }
+  }
+
+  private async pingSource(src: ToolSourceRow): Promise<{ ok: boolean; error: string | null }> {
+    try {
+      switch (src.sourceType) {
+        case 'mcp_native': {
+          if (!src.mcpEndpoint) return { ok: false, error: 'MCP endpoint 未配置' };
+          const ok = await this.mcpPool.get(src.mcpEndpoint).checkHealth();
+          return { ok, error: ok ? null : 'MCP server 不健康' };
+        }
+        case 'openapi': {
+          if (!src.specUrl) return { ok: false, error: 'specUrl 未配置' };
+          const res = await fetch(src.specUrl, { method: 'HEAD', signal: timeoutSignal() });
+          return { ok: res.ok, error: res.ok ? null : `HTTP ${res.status}` };
+        }
+        case 'gateway': {
+          if (!src.gatewayUrl) return { ok: false, error: 'gatewayUrl 未配置' };
+          const res = await fetch(src.gatewayUrl, { method: 'HEAD', signal: timeoutSignal() });
+          return { ok: res.ok, error: res.ok ? null : `HTTP ${res.status}` };
+        }
+        case 'database':
+          // DB 探活需凭证链路（service.ts:516 STUB），暂跳过，不误报
+          return { ok: true, error: null };
+        default:
+          return { ok: true, error: null };
+      }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 }

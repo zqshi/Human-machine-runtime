@@ -36,6 +36,15 @@ export async function migrateToolRegistry(db: MigrateDb): Promise<void> {
     )
   `);
 
+  // P4: 工具源健康检查字段（幂等，存量库可安全重跑）
+  await db.execute(sql`
+    ALTER TABLE tool_sources
+      ADD COLUMN IF NOT EXISTS health_status VARCHAR(32) NOT NULL DEFAULT 'unknown',
+      ADD COLUMN IF NOT EXISTS last_health_check_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS last_health_error TEXT,
+      ADD COLUMN IF NOT EXISTS consecutive_failures INTEGER NOT NULL DEFAULT 0
+  `);
+
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS tool_definitions (
       id VARCHAR(64) PRIMARY KEY,
