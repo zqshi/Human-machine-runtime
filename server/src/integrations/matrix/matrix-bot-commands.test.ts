@@ -34,9 +34,7 @@ function makeCtx(over: Partial<BotContext> = {}): BotContext {
       list: vi.fn(async () => [makeRow()]),
       get: vi.fn(async () => makeRow()),
       createFromMatrix: vi.fn(async () => makeRow({ id: 'inst_new' })),
-      buildMatrixCard: vi.fn(
-        (): MatrixCard => ({ instanceId: 'inst_new', matrixRoomId: ROOM })
-      ),
+      buildMatrixCard: vi.fn((): MatrixCard => ({ instanceId: 'inst_new', matrixRoomId: ROOM })),
       start: vi.fn(async () => makeRow({ state: 'running' })),
       stop: vi.fn(async () => makeRow({ state: 'stopped' })),
     },
@@ -46,9 +44,7 @@ function makeCtx(over: Partial<BotContext> = {}): BotContext {
     auditService: null,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     ragCooldowns: new Map(),
-    renderStatusMessage: vi.fn(
-      (i) => `[${i.action}:${i.phase}] ${i.message || ''}`.trim()
-    ),
+    renderStatusMessage: vi.fn((i) => `[${i.action}:${i.phase}] ${i.message || ''}`.trim()),
     renderCardMessage: vi.fn((card) => `CARD:${card.instanceId || '?'}`),
     audit: vi.fn(async () => {}),
     buildProvisionRequestId: vi.fn(() => 'req_1'),
@@ -68,39 +64,42 @@ describe('handleCreateAgent', () => {
     const res = await handleCreateAgent(ctx, ['!create_agent'], SENDER, ROOM, TRACE, {});
     expect(res.phase).toBe('failed');
     expect(res.reply).toContain('用法');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      command: '!create_agent',
-      phase: 'failed',
-      reason: 'invalid_args',
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        command: '!create_agent',
+        phase: 'failed',
+        reason: 'invalid_args',
+      })
+    );
     expect(ctx.instanceService.createFromMatrix).not.toHaveBeenCalled();
   });
 
   it('成功路径', async () => {
     const ctx = makeCtx();
-    const res = await handleCreateAgent(
-      ctx,
-      ['!create_agent', '小', '明'],
-      SENDER,
-      ROOM,
-      TRACE,
-      { eventId: 'ev_1' }
-    );
+    const res = await handleCreateAgent(ctx, ['!create_agent', '小', '明'], SENDER, ROOM, TRACE, {
+      eventId: 'ev_1',
+    });
     expect(res.phase).toBe('succeeded');
     expect(ctx.buildCreatorProfile).toHaveBeenCalledWith(SENDER, {});
-    expect(ctx.instanceService.createFromMatrix).toHaveBeenCalledWith(expect.objectContaining({
-      name: '小 明',
-      creator: SENDER,
-      matrixRoomId: ROOM,
-      requestId: 'req_1',
-    }));
+    expect(ctx.instanceService.createFromMatrix).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: '小 明',
+        creator: SENDER,
+        matrixRoomId: ROOM,
+        requestId: 'req_1',
+      })
+    );
     expect(res.reply).toContain('CARD:inst_new');
     expect(res.reply).toContain('requestId: req_1');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      command: '!create_agent',
-      phase: 'succeeded',
-      instanceId: 'inst_new',
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        command: '!create_agent',
+        phase: 'succeeded',
+        instanceId: 'inst_new',
+      })
+    );
   });
 
   it('createFromMatrix 抛错 -> failed + reason', async () => {
@@ -115,11 +114,14 @@ describe('handleCreateAgent', () => {
     const res = await handleCreateAgent(ctx, ['!create_agent', 'X'], SENDER, ROOM, TRACE, {});
     expect(res.phase).toBe('failed');
     expect(res.reply).toContain('boom');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      command: '!create_agent',
-      phase: 'failed',
-      reason: 'boom',
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        command: '!create_agent',
+        phase: 'failed',
+        reason: 'boom',
+      })
+    );
   });
 });
 
@@ -135,10 +137,13 @@ describe('handleListAgents', () => {
     expect(res.phase).toBe('succeeded');
     expect(res.reply).toContain('共 2 个数字员工');
     expect(res.reply).toContain('员工A');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      command: '!list_agents',
-      rows: 2,
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        command: '!list_agents',
+        rows: 2,
+      })
+    );
   });
 
   it('空列表 -> 暂无数字员工', async () => {
@@ -148,9 +153,12 @@ describe('handleListAgents', () => {
     const res = await handleListAgents(ctx, ROOM, TRACE);
     expect(res.phase).toBe('succeeded');
     expect(res.reply).toContain('暂无数字员工');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      rows: 0,
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        rows: 0,
+      })
+    );
   });
 });
 
@@ -187,9 +195,12 @@ describe('handleJobStatus', () => {
     const res = await handleJobStatus(ctx, ['!job_status', 'req_1'], ROOM, TRACE);
     expect(res.phase).toBe('failed');
     expect(res.reply).toContain('未启用');
-    expect(ctx.audit).toHaveBeenCalledWith('matrix.command.handled', expect.objectContaining({
-      reason: 'service_unavailable',
-    }));
+    expect(ctx.audit).toHaveBeenCalledWith(
+      'matrix.command.handled',
+      expect.objectContaining({
+        reason: 'service_unavailable',
+      })
+    );
   });
 
   it('成功 -> 含 phase/attempts', async () => {
@@ -209,9 +220,11 @@ describe('handleJobStatus', () => {
     expect(res.reply).toContain('phase=completed');
     expect(res.reply).toContain('attempts=2');
     // instanceId 作为 StatusInput 字段传入 renderStatusMessage
-    expect(ctx.renderStatusMessage).toHaveBeenCalledWith(expect.objectContaining({
-      instanceId: 'inst_1',
-    }));
+    expect(ctx.renderStatusMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instanceId: 'inst_1',
+      })
+    );
   });
 
   it('查询抛错 -> failed + reason', async () => {
@@ -291,11 +304,13 @@ describe('handleCreateDoc', () => {
       title: '标题',
       data: { docId: 'doc_1', html: '' },
     });
-    expect(ctx.documentService!.create).toHaveBeenCalledWith(expect.objectContaining({
-      title: '标题',
-      type: 'doc',
-      createdBy: SENDER,
-    }));
+    expect(ctx.documentService!.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '标题',
+        type: 'doc',
+        createdBy: SENDER,
+      })
+    );
   });
 
   it('create 抛错 -> failed + reason', async () => {
@@ -381,7 +396,10 @@ describe('handleAsk', () => {
 
   it('冷却期内 -> failed(操作太频繁) 且不调用 query', async () => {
     const ctx = makeCtx({
-      weKnoraService: { query: vi.fn(async () => ({ answer: 'a', sources: [] })), search: vi.fn(async () => []) },
+      weKnoraService: {
+        query: vi.fn(async () => ({ answer: 'a', sources: [] })),
+        search: vi.fn(async () => []),
+      },
       ragCooldowns: new Map([[SENDER, Date.now()]]),
     });
     const res = await handleAsk(ctx, ['!ask', '问题'], SENDER, ROOM, TRACE);

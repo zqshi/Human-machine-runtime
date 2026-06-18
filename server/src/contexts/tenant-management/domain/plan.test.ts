@@ -1,9 +1,4 @@
-import {
-  createPlan,
-  updatePlan,
-  validatePlanSlug,
-  PLAN_STATUS,
-} from './plan.js';
+import { createPlan, updatePlan, validatePlanSlug, PLAN_STATUS } from './plan.js';
 import { DEFAULT_QUOTAS } from './tenant.js';
 
 describe('validatePlanSlug', () => {
@@ -169,10 +164,10 @@ describe('createPlan', () => {
 
   it('throws on null/undefined name', () => {
     expect(() => createPlan({ name: null as unknown as string, slug: 'p' })).toThrow(
-      'plan name is required',
+      'plan name is required'
     );
     expect(() => createPlan({ name: undefined as unknown as string, slug: 'p' })).toThrow(
-      'plan name is required',
+      'plan name is required'
     );
   });
 
@@ -180,7 +175,7 @@ describe('createPlan', () => {
     expect(() => createPlan({ name: 'P', slug: '' })).toThrow('slug is required');
     expect(() => createPlan({ name: 'P', slug: 'A' })).toThrow('slug must be 2-48 chars');
     expect(() => createPlan({ name: 'P', slug: 'Bad_Slug' })).toThrow(
-      'slug must be lowercase alphanumeric with hyphens',
+      'slug must be lowercase alphanumeric with hyphens'
     );
   });
 });

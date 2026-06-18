@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  tenantApi,
-  platformConfigApi,
-} from '../../../application/services/adminApi';
+import { tenantApi, platformConfigApi } from '../../../application/services/adminApi';
 import { Drawer } from '../../components/ui/Drawer';
 import { Icon } from '../../components/ui/Icon';
 import { ToggleSwitch } from '../../components/ui/ToggleSwitch';
@@ -353,7 +350,9 @@ export function TenantEditor({
                     <input
                       type="checkbox"
                       checked={initialAdmin.autoGenerate}
-                      onChange={(e) => setInitialAdmin((a) => ({ ...a, autoGenerate: e.target.checked }))}
+                      onChange={(e) =>
+                        setInitialAdmin((a) => ({ ...a, autoGenerate: e.target.checked }))
+                      }
                       className="w-3.5 h-3.5 rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF]/20"
                     />
                     <span className="text-[10px] text-gray-400">自动生成密码</span>
@@ -366,7 +365,9 @@ export function TenantEditor({
                       <input
                         type="text"
                         value={initialAdmin.username}
-                        onChange={(e) => setInitialAdmin((a) => ({ ...a, username: e.target.value }))}
+                        onChange={(e) =>
+                          setInitialAdmin((a) => ({ ...a, username: e.target.value }))
+                        }
                         className={cls}
                         placeholder="设置登录用户名"
                       />
@@ -376,7 +377,9 @@ export function TenantEditor({
                       <input
                         type="password"
                         value={initialAdmin.password}
-                        onChange={(e) => setInitialAdmin((a) => ({ ...a, password: e.target.value }))}
+                        onChange={(e) =>
+                          setInitialAdmin((a) => ({ ...a, password: e.target.value }))
+                        }
                         className={cls}
                         placeholder="至少6个字符"
                       />

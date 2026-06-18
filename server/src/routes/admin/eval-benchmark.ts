@@ -19,15 +19,17 @@ const createSuiteSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   configType: z.enum(['ideal_output', 'workflow']).optional(),
-  evalType: z.enum([
-    'exact_match',
-    'structured_match',
-    'behavioral',
-    'safety_check',
-    'llm_judge',
-    'f1_score',
-    'trajectory',
-  ]).optional(),
+  evalType: z
+    .enum([
+      'exact_match',
+      'structured_match',
+      'behavioral',
+      'safety_check',
+      'llm_judge',
+      'f1_score',
+      'trajectory',
+    ])
+    .optional(),
   categoryWeights: z.record(z.number()).optional(),
 });
 
@@ -85,36 +87,54 @@ const createEvaluatorSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   type: z.enum(['rule_based', 'llm_judge', 'hybrid']),
-  dimensions: z.array(z.object({
-    key: z.string(),
-    label: z.string(),
-    weight: z.number(),
-    description: z.string().optional(),
-  })).min(1),
-  scoringRubric: z.array(z.object({
-    score: z.number(),
-    desc: z.string(),
-  })).optional(),
-  ruleConfig: z.array(z.object({
-    type: z.enum(['exact_match', 'contains', 'regex', 'json_path_match', 'script']),
-    field: z.string(),
-    value: z.string(),
-    weight: z.number(),
-    jsonPath: z.string().optional(),
-    language: z.enum(['python', 'javascript']).optional(),
-  })).optional(),
-  judgeConfig: z.object({
-    model: z.string(),
-    temperature: z.number(),
-    maxTokens: z.number(),
-    promptTemplate: z.string(),
-  }).optional(),
+  dimensions: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        weight: z.number(),
+        description: z.string().optional(),
+      })
+    )
+    .min(1),
+  scoringRubric: z
+    .array(
+      z.object({
+        score: z.number(),
+        desc: z.string(),
+      })
+    )
+    .optional(),
+  ruleConfig: z
+    .array(
+      z.object({
+        type: z.enum(['exact_match', 'contains', 'regex', 'json_path_match', 'script']),
+        field: z.string(),
+        value: z.string(),
+        weight: z.number(),
+        jsonPath: z.string().optional(),
+        language: z.enum(['python', 'javascript']).optional(),
+      })
+    )
+    .optional(),
+  judgeConfig: z
+    .object({
+      model: z.string(),
+      temperature: z.number(),
+      maxTokens: z.number(),
+      promptTemplate: z.string(),
+    })
+    .optional(),
   threshold: z.number().min(0).max(1).optional(),
 });
 
 import { EVALUATOR_TEMPLATES } from '../../contexts/eval-benchmark/evaluator-templates.js';
 
-export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService: EvalService, evaluatorRepo: EvalEvaluatorRepository) {
+export function createAdminEvalRoutes(
+  repo: EvalBenchmarkRepository,
+  evalService: EvalService,
+  evaluatorRepo: EvalEvaluatorRepository
+) {
   const app = new Hono();
 
   /* ──── Import Preset ──── */
@@ -203,9 +223,12 @@ export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService
     const suite = await repo.getSuite(parsed.data.suiteId);
     if (!suite) return c.json({ error: 'Suite not found' }, 404);
     if (suite.evalType && suite.evalType !== parsed.data.evalType) {
-      return c.json({
-        error: `此评测集已锁定评测类型为 ${suite.evalType}，不能创建 ${parsed.data.evalType} 类型的用例`,
-      }, 400);
+      return c.json(
+        {
+          error: `此评测集已锁定评测类型为 ${suite.evalType}，不能创建 ${parsed.data.evalType} 类型的用例`,
+        },
+        400
+      );
     }
 
     const evalCase = await repo.createCase({
@@ -228,11 +251,16 @@ export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService
       const suite = await repo.getSuite(suiteId);
       if (!suite) return c.json({ error: `Suite ${suiteId} not found` }, 404);
       if (suite.evalType) {
-        const mismatched = cases.filter((cs) => cs.suiteId === suiteId && cs.evalType !== suite.evalType);
+        const mismatched = cases.filter(
+          (cs) => cs.suiteId === suiteId && cs.evalType !== suite.evalType
+        );
         if (mismatched.length > 0) {
-          return c.json({
-            error: `评测集已锁定评测类型为 ${suite.evalType}，${mismatched.length} 条用例类型不匹配`,
-          }, 400);
+          return c.json(
+            {
+              error: `评测集已锁定评测类型为 ${suite.evalType}，${mismatched.length} 条用例类型不匹配`,
+            },
+            400
+          );
         }
       }
     }
@@ -503,11 +531,14 @@ export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService
       imported.push(tpl.name);
     }
 
-    return c.json({
-      imported,
-      skipped,
-      message: `已导入 ${imported.length} 个预设评估器${skipped.length > 0 ? `，跳过 ${skipped.length} 个已存在` : ''}`,
-    }, 201);
+    return c.json(
+      {
+        imported,
+        skipped,
+        message: `已导入 ${imported.length} 个预设评估器${skipped.length > 0 ? `，跳过 ${skipped.length} 个已存在` : ''}`,
+      },
+      201
+    );
   });
 
   return app;

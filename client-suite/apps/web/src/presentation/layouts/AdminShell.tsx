@@ -14,7 +14,13 @@ import { LogsSection } from '../features/admin/LogsSection';
 import { AuthSection } from '../features/admin/AuthSection';
 import { NotificationsSection } from '../features/admin/NotificationsSection';
 import { QuotaManagementSection } from '../features/admin/QuotaManagementSection';
-import { EvalSuites, EvalEvaluators, EvalExperiments, EvalExperimentDetail, EvalSuiteDetail } from '../features/admin/eval';
+import {
+  EvalSuites,
+  EvalEvaluators,
+  EvalExperiments,
+  EvalExperimentDetail,
+  EvalSuiteDetail,
+} from '../features/admin/eval';
 import { ScheduledTasksSection } from '../features/admin/scheduled-tasks/ScheduledTasksSection';
 import { OpenClawMonitorSection } from '../features/admin/OpenClawMonitorSection';
 import { OpenClawStatisticsSection } from '../features/admin/OpenClawStatisticsSection';

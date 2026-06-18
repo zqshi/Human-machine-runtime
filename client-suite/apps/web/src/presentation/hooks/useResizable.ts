@@ -23,11 +23,9 @@ interface UseResizableOptions {
 export function useResizable(opts: UseResizableOptions) {
   const dragRef = useRef<{ startX: number; startWidth: number; activated: boolean } | null>(null);
 
-  const resolveMax = () =>
-    typeof opts.max === 'function' ? opts.max() : opts.max;
+  const resolveMax = () => (typeof opts.max === 'function' ? opts.max() : opts.max);
 
-  const clamp = (v: number) =>
-    Math.max(opts.min, Math.min(resolveMax(), v));
+  const clamp = (v: number) => Math.max(opts.min, Math.min(resolveMax(), v));
 
   const handlePointerDown = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -77,7 +75,14 @@ export function useResizable(opts: UseResizableOptions) {
       document.addEventListener('touchend', onUp);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时执行一次（依赖稳定，有意省略）
-    [opts.currentWidth, opts.direction, opts.min, opts.onWidthChange, opts.onDragStart, opts.onDragEnd],
+    [
+      opts.currentWidth,
+      opts.direction,
+      opts.min,
+      opts.onWidthChange,
+      opts.onDragStart,
+      opts.onDragEnd,
+    ]
   );
 
   return { handlePointerDown };

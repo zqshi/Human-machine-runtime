@@ -182,8 +182,7 @@ export function OpenClawComposer({
 
     // Web Speech API — vendor-prefixed in some browsers, no stable TS typings
     const win = window as unknown as Record<string, unknown>;
-    const SpeechRecognitionCtor = (win.webkitSpeechRecognition ?? win.SpeechRecognition) as
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API
+    const SpeechRecognitionCtor = (win.webkitSpeechRecognition ?? win.SpeechRecognition) as  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Web Speech API
       | (new () => any)
       | undefined;
     if (!SpeechRecognitionCtor) {

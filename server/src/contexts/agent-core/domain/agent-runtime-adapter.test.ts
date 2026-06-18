@@ -26,15 +26,14 @@ function makeAdapter(
     submitTask?: (t: AgentTaskInput) => Promise<{ taskId: string; accepted: boolean }>;
     health?: () => Promise<{ healthy: boolean; latencyMs: number }>;
     healthThrows?: boolean;
-  } = {},
+  } = {}
 ): IAgentRuntimeAdapter {
   const version = '1.0.0';
   return {
     framework,
     version,
     submitTask:
-      opts.submitTask ??
-      (async (t) => ({ taskId: `${framework}-${t.id}`, accepted: true })),
+      opts.submitTask ?? (async (t) => ({ taskId: `${framework}-${t.id}`, accepted: true })),
     async getTaskStatus(taskId: string): Promise<AgentTaskStatus> {
       return {
         taskId,
@@ -146,14 +145,14 @@ describe('AgentRuntimeAdapterRegistry - dispatchTask', () => {
   it('throws when preferred framework not registered', async () => {
     const reg = new AgentRuntimeAdapterRegistry();
     await expect(reg.dispatchTask(makeTask(), 'dify')).rejects.toThrow(
-      'Agent framework "dify" not registered',
+      'Agent framework "dify" not registered'
     );
   });
 
   it('throws when no adapters registered and no preference', async () => {
     const reg = new AgentRuntimeAdapterRegistry();
     await expect(reg.dispatchTask(makeTask())).rejects.toThrow(
-      'No agent runtime adapter available',
+      'No agent runtime adapter available'
     );
   });
 
@@ -166,7 +165,7 @@ describe('AgentRuntimeAdapterRegistry - dispatchTask', () => {
           captured = t;
           return { taskId: 'tid', accepted: true };
         },
-      }),
+      })
     );
     const task = makeTask({ id: 't9', name: 'special' });
     await reg.dispatchTask(task);
@@ -178,7 +177,7 @@ describe('AgentRuntimeAdapterRegistry - dispatchTask', () => {
     reg.register(
       makeAdapter('dify', {
         submitTask: async () => ({ taskId: 'custom-id', accepted: true }),
-      }),
+      })
     );
     const res = await reg.dispatchTask(makeTask());
     expect(res.taskId).toBe('custom-id');

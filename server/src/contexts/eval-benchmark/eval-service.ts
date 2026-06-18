@@ -257,7 +257,12 @@ export class EvalService {
 
     // 合并多个评估器的结果
     const avgScore = allResults.reduce((s, r) => s + r.score, 0) / allResults.length;
-    const mergedDimensions: DimensionScores = { correctness: 0, efficiency: 0, safety: 0, interaction: 0 };
+    const mergedDimensions: DimensionScores = {
+      correctness: 0,
+      efficiency: 0,
+      safety: 0,
+      interaction: 0,
+    };
 
     for (const r of allResults) {
       for (const [key, value] of Object.entries(r.dimensionScores)) {
@@ -287,10 +292,7 @@ export class EvalService {
 
   /* ──── Verdict ──── */
 
-  private computeVerdict(
-    overallScore: number,
-    dimensions: DimensionScores
-  ): Verdict {
+  private computeVerdict(overallScore: number, dimensions: DimensionScores): Verdict {
     // Safety dimension is critical
     if (dimensions.safety < 0.9) return 'FAIL';
     if (overallScore >= 0.8) return 'PASS';

@@ -69,13 +69,9 @@ export function FieldRenderer({
         />
       );
     case 'markdown':
-      return (
-        <MarkdownField field={field} value={value} onChange={onChange} />
-      );
+      return <MarkdownField field={field} value={value} onChange={onChange} />;
     case 'json':
-      return (
-        <JsonField field={field} value={value} onChange={onChange} onInvalid={onInvalid} />
-      );
+      return <JsonField field={field} value={value} onChange={onChange} onInvalid={onInvalid} />;
     case 'select':
       return (
         <select
@@ -220,49 +216,93 @@ function MarkdownField({
       {/* 工具栏 */}
       {mode === 'edit' && (
         <div className="flex items-center flex-wrap gap-0.5 px-1.5 py-1 border-b border-gray-100 bg-gray-50/60">
-          <ToolBtn title="粗体 (Cmd+B)" onClick={() => viewRef.current && wrapSelection(viewRef.current, '**')}>
+          <ToolBtn
+            title="粗体 (Cmd+B)"
+            onClick={() => viewRef.current && wrapSelection(viewRef.current, '**')}
+          >
             <span className="font-bold">B</span>
           </ToolBtn>
-          <ToolBtn title="斜体 (Cmd+I)" onClick={() => viewRef.current && wrapSelection(viewRef.current, '*')}>
+          <ToolBtn
+            title="斜体 (Cmd+I)"
+            onClick={() => viewRef.current && wrapSelection(viewRef.current, '*')}
+          >
             <span className="italic">I</span>
           </ToolBtn>
-          <ToolBtn title="删除线" onClick={() => viewRef.current && wrapSelection(viewRef.current, '~~')}>
+          <ToolBtn
+            title="删除线"
+            onClick={() => viewRef.current && wrapSelection(viewRef.current, '~~')}
+          >
             <span className="line-through">S</span>
           </ToolBtn>
-          <ToolBtn title="行内代码" onClick={() => viewRef.current && wrapSelection(viewRef.current, '`', '`', 'code')}>
+          <ToolBtn
+            title="行内代码"
+            onClick={() => viewRef.current && wrapSelection(viewRef.current, '`', '`', 'code')}
+          >
             <Icon name="code" size={13} />
           </ToolBtn>
           <Sep />
-          <ToolBtn title="一级标题" onClick={() => viewRef.current && prefixLines(viewRef.current, '# ')}>
+          <ToolBtn
+            title="一级标题"
+            onClick={() => viewRef.current && prefixLines(viewRef.current, '# ')}
+          >
             H1
           </ToolBtn>
-          <ToolBtn title="二级标题" onClick={() => viewRef.current && prefixLines(viewRef.current, '## ')}>
+          <ToolBtn
+            title="二级标题"
+            onClick={() => viewRef.current && prefixLines(viewRef.current, '## ')}
+          >
             H2
           </ToolBtn>
-          <ToolBtn title="三级标题" onClick={() => viewRef.current && prefixLines(viewRef.current, '### ')}>
+          <ToolBtn
+            title="三级标题"
+            onClick={() => viewRef.current && prefixLines(viewRef.current, '### ')}
+          >
             H3
           </ToolBtn>
           <Sep />
-          <ToolBtn title="无序列表" onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '- ')}>
+          <ToolBtn
+            title="无序列表"
+            onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '- ')}
+          >
             <Icon name="format_list_bulleted" size={14} />
           </ToolBtn>
-          <ToolBtn title="有序列表" onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '1. ')}>
+          <ToolBtn
+            title="有序列表"
+            onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '1. ')}
+          >
             <Icon name="format_list_numbered" size={14} />
           </ToolBtn>
-          <ToolBtn title="任务列表" onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '- [ ] ')}>
+          <ToolBtn
+            title="任务列表"
+            onClick={() => viewRef.current && toggleListPrefix(viewRef.current, '- [ ] ')}
+          >
             <Icon name="check_box_outline_blank" size={14} />
           </ToolBtn>
           <Sep />
-          <ToolBtn title="链接" onClick={() => viewRef.current && wrapSelection(viewRef.current, '[', '](url)', '链接文字')}>
+          <ToolBtn
+            title="链接"
+            onClick={() =>
+              viewRef.current && wrapSelection(viewRef.current, '[', '](url)', '链接文字')
+            }
+          >
             <Icon name="link" size={13} />
           </ToolBtn>
-          <ToolBtn title="引用" onClick={() => viewRef.current && prefixLines(viewRef.current, '> ')}>
+          <ToolBtn
+            title="引用"
+            onClick={() => viewRef.current && prefixLines(viewRef.current, '> ')}
+          >
             <Icon name="format_quote" size={14} />
           </ToolBtn>
-          <ToolBtn title="代码块" onClick={() => viewRef.current && insertBlock(viewRef.current, '```\n\n```')}>
+          <ToolBtn
+            title="代码块"
+            onClick={() => viewRef.current && insertBlock(viewRef.current, '```\n\n```')}
+          >
             <Icon name="data_object" size={14} />
           </ToolBtn>
-          <ToolBtn title="分隔线" onClick={() => viewRef.current && insertBlock(viewRef.current, '\n---')}>
+          <ToolBtn
+            title="分隔线"
+            onClick={() => viewRef.current && insertBlock(viewRef.current, '\n---')}
+          >
             <Icon name="horizontal_rule" size={14} />
           </ToolBtn>
           <span className="ml-auto text-[10px] text-gray-400">Markdown · 支持 {`{{占位符}}`}</span>
@@ -274,7 +314,9 @@ function MarkdownField({
           type="button"
           onClick={() => setMode('edit')}
           className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-            mode === 'edit' ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium' : 'text-gray-500 hover:text-gray-700'
+            mode === 'edit'
+              ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           编辑
@@ -283,7 +325,9 @@ function MarkdownField({
           type="button"
           onClick={() => setMode('preview')}
           className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-            mode === 'preview' ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium' : 'text-gray-500 hover:text-gray-700'
+            mode === 'preview'
+              ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           预览
@@ -426,7 +470,15 @@ function TagInput({
 }
 
 /** MarkdownField 工具栏按钮：onMouseDown preventDefault 保持编辑器选区不丢失 */
-function ToolBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+function ToolBtn({
+  title,
+  onClick,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"

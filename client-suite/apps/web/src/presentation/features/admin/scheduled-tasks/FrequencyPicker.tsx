@@ -73,7 +73,8 @@ function buildConfig(mode: FreqMode, p: Parsed): FreqConfig {
   const [hh, mm] = p.time.split(':');
   if (mode === 'daily') return { scheduleType: 'cron', cronExpr: `${mm} ${hh} * * *` };
   if (mode === 'weekly') return { scheduleType: 'cron', cronExpr: `${mm} ${hh} * * ${p.weekday}` };
-  if (mode === 'monthly') return { scheduleType: 'cron', cronExpr: `${mm} ${hh} ${p.monthDay} * *` };
+  if (mode === 'monthly')
+    return { scheduleType: 'cron', cronExpr: `${mm} ${hh} ${p.monthDay} * *` };
   return { scheduleType: 'cron', cronExpr: p.cronExpr };
 }
 
@@ -87,9 +88,7 @@ export function FrequencyPicker({
   /** 限制可选频次（如周期报告只允许 weekly/monthly）；不填则全部可选 */
   allowedModes?: FreqMode[];
 }) {
-  const visibleModes = allowedModes
-    ? MODES.filter((m) => allowedModes.includes(m.value))
-    : MODES;
+  const visibleModes = allowedModes ? MODES.filter((m) => allowedModes.includes(m.value)) : MODES;
   const [p, setP] = useState<Parsed>(() => {
     const parsed = parseConfig(value);
     // 当前频次不在允许范围（如编辑旧任务）→ 回落到允许的第一个
@@ -174,7 +173,9 @@ export function FrequencyPicker({
                 max={31}
                 className={`${inputCls} w-16`}
                 value={p.monthDay}
-                onChange={(e) => setP({ ...p, monthDay: Math.min(31, Math.max(1, Number(e.target.value))) })}
+                onChange={(e) =>
+                  setP({ ...p, monthDay: Math.min(31, Math.max(1, Number(e.target.value))) })
+                }
               />
               <span className="text-xs text-gray-500">号</span>
             </>
@@ -190,15 +191,13 @@ export function FrequencyPicker({
       )}
 
       {p.mode === 'cron' && (
-        <CronInput
-          value={p.cronExpr}
-          onChange={(v) => setP({ ...p, cronExpr: v })}
-        />
+        <CronInput value={p.cronExpr} onChange={(v) => setP({ ...p, cronExpr: v })} />
       )}
 
       <div className="text-[11px] text-gray-400 font-mono">
         {buildConfig(p.mode, p).cronExpr && `cron: ${buildConfig(p.mode, p).cronExpr}`}
-        {buildConfig(p.mode, p).intervalSeconds && `间隔: ${buildConfig(p.mode, p).intervalSeconds}s`}
+        {buildConfig(p.mode, p).intervalSeconds &&
+          `间隔: ${buildConfig(p.mode, p).intervalSeconds}s`}
       </div>
     </div>
   );

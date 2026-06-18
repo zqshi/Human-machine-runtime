@@ -15,12 +15,23 @@ function parseCallbackParams() {
   const errorDesc = params.get('error_description') || error || '';
 
   if (error) return { status: 'error' as const, errorMessage: errorDesc, code: null, state: null };
-  if (!code || !state) return { status: 'error' as const, errorMessage: 'SSO 回调参数不完整', code: null, state: null };
+  if (!code || !state)
+    return {
+      status: 'error' as const,
+      errorMessage: 'SSO 回调参数不完整',
+      code: null,
+      state: null,
+    };
 
   const savedState = useAuthStore.getState().getSsoState();
   if (savedState && savedState !== state) {
     useAuthStore.getState().clearSsoState();
-    return { status: 'error' as const, errorMessage: 'SSO 状态校验失败，可能遭受 CSRF 攻击', code: null, state: null };
+    return {
+      status: 'error' as const,
+      errorMessage: 'SSO 状态校验失败，可能遭受 CSRF 攻击',
+      code: null,
+      state: null,
+    };
   }
 
   return { status: 'processing' as const, errorMessage: '', code, state };
