@@ -8,6 +8,7 @@
  */
 
 import { newId } from '../../../shared/utils.js';
+import type { IToolRegistry, ToolEndpoint } from '../../tool-management/tool-registry.js';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -148,10 +149,23 @@ export interface BoardArtifact {
 
 type Artifact = TaskArtifact | AppArtifact | DocArtifact | BoardArtifact;
 
+/** 工具调用产物（无 task/app/doc/board 意图时的兜底执行物）。 */
+export interface ToolCallArtifact {
+  id: string;
+  toolId: string;
+  toolName: string;
+  success: boolean;
+  result?: unknown;
+  error?: string;
+  logId: string;
+  createdAt: number;
+}
+
 export interface ExecuteResult {
   intent: ArtifactIntent | null;
   artifactId?: string;
   artifactType?: ArtifactIntent;
+  toolCall?: ToolCallArtifact;
 }
 
 // ── Pure helpers ─────────────────────────────────────────────────────
@@ -472,6 +486,7 @@ export class AgentExecutor {
   private readonly llmClient: ILLMClient | null;
   private readonly taskStore: IMapStore<TaskArtifact>;
   private readonly broadcast: BroadcastFn;
+  private registry: IToolRegistry | null = null;
   private _progressTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor(llmClient: ILLMClient | null, stores: AgentExecutorStores, broadcast: BroadcastFn) {
@@ -480,9 +495,24 @@ export class AgentExecutor {
     this.broadcast = broadcast;
   }
 
-  async execute(userText: string, responseText: string, sessionId: string): Promise<ExecuteResult> {
+  /** 注入工具注册中心（bootstrap 在 toolRegistry 实例化后调用，解决实例化顺序）。 */
+  setToolRegistry(registry: IToolRegistry): void {
+    this.registry = registry;
+  }
+
+  async execute(
+    userText: string,
+    responseText: string,
+    sessionId: string,
+    tenantId?: string
+  ): Promise<ExecuteResult> {
     const intentResult = await this._classifyIntent(userText, responseText);
     if (!intentResult || !intentResult.intent) {
+      // 无 task/app/doc/board 意图时的工具调用兜底（需 registry + tenantId；可选，零回归）
+      if (this.registry && tenantId) {
+        const toolCall = await this._tryToolCall(userText, tenantId, sessionId);
+        if (toolCall) return { intent: null, toolCall };
+      }
       return { intent: null };
     }
 
@@ -507,6 +537,52 @@ export class AgentExecutor {
       artifactId: artifact.id,
       artifactType: intentResult.intent,
     };
+  }
+
+  /**
+   * 工具调用兜底：在无 task/app/doc/board 意图时，按用户消息匹配已注册工具并调用。
+   * 匹配规则（简化）：用户消息包含工具 name（大小写不敏感）。LLM 精确匹配留待后续。
+   * 任一步失败均返回 null（不影响主流程）。
+   */
+  private async _tryToolCall(
+    userText: string,
+    tenantId: string,
+    sessionId: string
+  ): Promise<ToolCallArtifact | null> {
+    if (!this.registry) return null;
+    try {
+      const endpoints: ToolEndpoint[] = await this.registry.discover({
+        tenantId,
+        enabledOnly: true,
+      });
+      const lower = userText.toLowerCase();
+      const matched = endpoints.find((ep) => lower.includes(ep.name.toLowerCase()));
+      if (!matched) return null;
+      const result = await this.registry.invoke({
+        toolId: matched.definitionId,
+        params: {},
+        context: { tenantId },
+      });
+      const artifact: ToolCallArtifact = {
+        id: newId('tcall'),
+        toolId: matched.definitionId,
+        toolName: matched.name,
+        success: result.success,
+        result: result.data,
+        error: result.error,
+        logId: result.logId,
+        createdAt: Date.now(),
+      };
+      this.broadcast('artifact:created', {
+        type: 'tool',
+        id: artifact.id,
+        sessionId,
+        data: artifact,
+      });
+      return artifact;
+    } catch {
+      return null;
+    }
   }
 
   private async _classifyIntent(userText: string, responseText: string): Promise<IntentResult> {

@@ -464,6 +464,8 @@ export function createAppContext(db: Database): AppContext {
     toolManagementService,
     new ToolSourceRepository(db)
   );
+  // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentRuntimeService 实例化的顺序问题）
+  agentRuntimeService.setToolRegistry(toolRegistryService);
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
     instanceService,

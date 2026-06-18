@@ -12,6 +12,7 @@ import {
   type ILLMClient,
   type TaskArtifact,
 } from './domain/agent-executor.js';
+import type { IToolRegistry } from '../tool-management/tool-registry.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { Database } from '../../db/client.js';
 import { DbMapStore } from '../../db/repositories/agent-runtime-repository.js';
@@ -85,8 +86,13 @@ export class AgentRuntimeService {
     this.started = false;
   }
 
-  async execute(userText: string, responseText: string, sessionId: string) {
-    return this.executor.execute(userText, responseText, sessionId);
+  async execute(userText: string, responseText: string, sessionId: string, tenantId?: string) {
+    return this.executor.execute(userText, responseText, sessionId, tenantId);
+  }
+
+  /** 注入工具注册中心，激活 Agent 工具调用兜底（bootstrap 在 toolRegistry 实例化后调用）。 */
+  setToolRegistry(registry: IToolRegistry): void {
+    this.executor.setToolRegistry(registry);
   }
 
   isRunning(): boolean {
