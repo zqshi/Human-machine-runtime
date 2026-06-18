@@ -25,6 +25,24 @@ const STATUS_BADGE: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-500',
 };
 
+const HEALTH_BADGE: Record<string, { dot: string; label: string; text: string }> = {
+  healthy: { dot: 'bg-green-500', label: '健康', text: 'text-green-700' },
+  degraded: { dot: 'bg-yellow-500', label: '降级', text: 'text-yellow-700' },
+  down: { dot: 'bg-red-500', label: '不可用', text: 'text-red-700' },
+  unknown: { dot: 'bg-gray-300', label: '未探活', text: 'text-gray-400' },
+};
+
+/** 工具源健康徽章（P4 scheduler 探活维护的 healthStatus 前端可视化）。 */
+function HealthBadge({ status }: { status?: string }) {
+  const m = HEALTH_BADGE[status || 'unknown'] || HEALTH_BADGE.unknown;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs ${m.text}`} title={`健康：${m.label}`}>
+      <span className={`inline-block w-1.5 h-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
+}
+
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   openapi: 'OpenAPI',
   database: '数据库',
@@ -245,11 +263,14 @@ export function ToolsSection() {
                     {src.lastSyncedAt ? src.lastSyncedAt.slice(0, 16).replace('T', ' ') : '未同步'}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex px-2 py-0.5 text-xs rounded-full ${STATUS_BADGE[src.status] || 'bg-gray-100 text-gray-500'}`}
-                    >
-                      {src.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex px-2 py-0.5 text-xs rounded-full ${STATUS_BADGE[src.status] || 'bg-gray-100 text-gray-500'}`}
+                      >
+                        {src.status}
+                      </span>
+                      <HealthBadge status={src.healthStatus} />
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">

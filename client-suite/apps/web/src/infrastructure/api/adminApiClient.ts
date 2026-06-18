@@ -137,6 +137,7 @@ export interface ToolSource {
   name: string;
   description?: string;
   status: string;
+  healthStatus?: 'healthy' | 'degraded' | 'down' | 'unknown';
   toolCount: number;
   specUrl?: string;
   specVersion?: string;
