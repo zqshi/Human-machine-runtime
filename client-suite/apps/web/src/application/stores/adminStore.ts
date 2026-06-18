@@ -36,6 +36,46 @@ export type PlatformSection =
 
 export type AIGatewayTab = 'models' | 'risk-rules' | 'costs';
 
+/** 可持久化到 URL hash 的主 section（排除 *-detail：detail 关联 runId/suiteId/taskId，
+ *  刷新后无 id 会回退到对应列表，避免出现空详情页）。 */
+const HASHABLE_ADMIN_SECTIONS: readonly AdminSection[] = [
+  'employees',
+  'skills',
+  'tools',
+  'shared-agents',
+  'ai-gateway',
+  'ai-traces',
+  'logs',
+  'auth',
+  'notifications',
+  'data-overview',
+  'user-analysis',
+  'ops-weekly',
+  'realtime-monitor',
+  'quota-management',
+  'eval-suites',
+  'eval-evaluators',
+  'eval-experiments',
+  'channel-admin',
+  'employee-memory',
+  'scheduled-tasks',
+];
+
+/** 从 URL hash 读取 section（硬刷新后恢复当前页）；非法或缺失返回 'employees'。 */
+function readSectionFromHash(): AdminSection {
+  if (typeof window === 'undefined') return 'employees';
+  const h = window.location.hash.replace(/^#/, '');
+  return HASHABLE_ADMIN_SECTIONS.includes(h as AdminSection) ? (h as AdminSection) : 'employees';
+}
+
+function writeSectionToHash(section: AdminSection): void {
+  if (typeof window === 'undefined') return;
+  const target = `#${section}`;
+  if (window.location.hash !== target) {
+    window.location.hash = target;
+  }
+}
+
 /** 本地日期 → YYYY-MM-DD（避免 toISOString 的 UTC 偏移导致日历日错位） */
 function formatDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -102,7 +142,7 @@ interface AdminState {
 }
 
 export const useAdminStore = create<AdminState>((set) => ({
-  currentSection: 'employees',
+  currentSection: readSectionFromHash(),
   platformSection: 'tenants',
   aiGatewayTab: 'models',
   aiGatewayDateFrom: initialAiGatewayWeek.from,
@@ -114,13 +154,14 @@ export const useAdminStore = create<AdminState>((set) => ({
   selectedSuiteId: null,
   drawerOpen: false,
 
-  setSection: (section) =>
-    set({ currentSection: section, selectedId: null, drawerOpen: false, searchQuery: '' }),
+  setSection: (section) => {
+    writeSectionToHash(section);
+    set({ currentSection: section, selectedId: null, drawerOpen: false, searchQuery: '' });
+  },
   setPlatformSection: (section) => set({ platformSection: section, searchQuery: '' }),
   setAIGatewayTab: (tab) => set({ aiGatewayTab: tab }),
   toggleAIGatewayDemoMode: () => set((s) => ({ aiGatewayDemoMode: !s.aiGatewayDemoMode })),
-  setAIGatewayDateRange: (from, to) =>
-    set({ aiGatewayDateFrom: from, aiGatewayDateTo: to }),
+  setAIGatewayDateRange: (from, to) => set({ aiGatewayDateFrom: from, aiGatewayDateTo: to }),
   setAIGatewayDateThisWeek: () => {
     const { from, to } = computeThisWeekRange();
     set({ aiGatewayDateFrom: from, aiGatewayDateTo: to });
@@ -136,10 +177,23 @@ export const useAdminStore = create<AdminState>((set) => ({
   closeDrawer: () => set({ drawerOpen: false, selectedId: null }),
   navigateToRunDetail: (runId) =>
     set({ currentSection: 'eval-experiment-detail', selectedRunId: runId }),
-  exitRunDetail: () =>
-    set({ currentSection: 'eval-experiments', selectedRunId: null }),
+  exitRunDetail: () => set({ currentSection: 'eval-experiments', selectedRunId: null }),
   navigateToSuiteDetail: (suiteId) =>
     set({ currentSection: 'eval-suite-detail', selectedSuiteId: suiteId }),
-  exitSuiteDetail: () =>
-    set({ currentSection: 'eval-suites', selectedSuiteId: null }),
+  exitSuiteDetail: () => set({ currentSection: 'eval-suites', selectedSuiteId: null }),
 }));
+
+// 浏览器后退/前进或手改 hash 时同步 currentSection（与 setSection 写 hash 形成双向闭环）
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => {
+    const next = readSectionFromHash();
+    if (next !== useAdminStore.getState().currentSection) {
+      useAdminStore.setState({
+        currentSection: next,
+        selectedId: null,
+        drawerOpen: false,
+        searchQuery: '',
+      });
+    }
+  });
+}
