@@ -23,7 +23,6 @@ import type {
   CreateSourceInput,
   SyncResult,
   ExecutionContext,
-  ExecutionResult,
   ExecutionType,
   DecryptedCredential,
   TestConnectionResult,
@@ -33,6 +32,7 @@ import { OpenApiParser } from './parsers/openapi-parser.js';
 import { DbIntrospector } from './parsers/db-introspector.js';
 import { GatewayDiscoverer } from './parsers/gateway-discoverer.js';
 import { getExecutor } from './executors/executor-factory.js';
+import type { ToolInvocationResult } from './tool-registry.js';
 
 export class ToolManagementService {
   private openapiParser: OpenApiParser;
@@ -284,7 +284,9 @@ export class ToolManagementService {
         toolsCreated: 0,
         toolsUpdated: 0,
         toolsRemoved: 0,
-        errors: ['数据库凭证解密链路未实装（credential-vault 查询/解密待接入），DB 工具同步暂不可用'],
+        errors: [
+          '数据库凭证解密链路未实装（credential-vault 查询/解密待接入），DB 工具同步暂不可用',
+        ],
       };
     }
     const credential = await getCredential.call(this.credentialSvc, source.credentialId);
@@ -500,14 +502,14 @@ export class ToolManagementService {
     definitionId: string,
     params: Record<string, unknown>,
     context: ExecutionContext
-  ): Promise<ExecutionResult> {
+  ): Promise<ToolInvocationResult> {
     const definition = await this.definitionRepo.findById(definitionId);
     if (!definition) {
-      return { success: false, error: 'tool definition not found', durationMs: 0 };
+      return { success: false, error: 'tool definition not found', durationMs: 0, logId: '' };
     }
 
     if (!definition.enabled) {
-      return { success: false, error: 'tool is disabled', durationMs: 0 };
+      return { success: false, error: 'tool is disabled', durationMs: 0, logId: '' };
     }
 
     const executor = getExecutor(definition.executionType as ExecutionType);
@@ -523,9 +525,10 @@ export class ToolManagementService {
       credential
     );
 
-    // 记录调用日志
+    // 记录调用日志（logId 回传给调用方，便于全链路追踪）
+    const logId = newId('tclog');
     await this.callLogRepo.create({
-      id: newId('tclog'),
+      id: logId,
       definitionId,
       instanceId: context.instanceId ?? null,
       tenantId: context.tenantId,
@@ -540,7 +543,7 @@ export class ToolManagementService {
     // 更新调用计数
     await this.definitionRepo.incrementCallCount(definitionId);
 
-    return result;
+    return { ...result, logId };
   }
 
   /* ──── Stats ──── */

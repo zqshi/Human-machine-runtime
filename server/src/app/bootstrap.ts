@@ -82,6 +82,7 @@ import { UserManagementService } from '../contexts/identity-access/user-manageme
 import { SystemConfigService } from '../contexts/system-config/system-config-service.js';
 import { NotificationService } from '../contexts/notification/notification-service.js';
 import { ToolManagementService } from '../contexts/tool-management/tool-management-service.js';
+import { ToolRegistryService } from '../contexts/tool-management/tool-registry-service.js';
 import {
   ToolSourceRepository,
   ToolDefinitionRepository,
@@ -110,7 +111,10 @@ import { SchedulerService } from '../contexts/scheduler/scheduler-service.js';
 import { JobHandlerRegistry } from '../contexts/scheduler/job-handler-registry.js';
 import { CronExpressionCalculator } from '../contexts/scheduler/cron-calculator.js';
 import { PgAdvisoryLockProvider } from '../contexts/scheduler/pg-advisory-lock.js';
-import { SystemJobHandler, registerTraceCleanup } from '../contexts/scheduler/handlers/system-handler.js';
+import {
+  SystemJobHandler,
+  registerTraceCleanup,
+} from '../contexts/scheduler/handlers/system-handler.js';
 import { AgentJobHandler } from '../contexts/scheduler/handlers/agent-handler.js';
 import { LlmAgentInvoker } from '../contexts/scheduler/handlers/llm-agent-invoker.js';
 import { registerEmployeeCleanup } from '../contexts/scheduler/handlers/employee-cleanup.js';
@@ -167,6 +171,7 @@ export interface AppContext {
   configRepo: ConfigRepository;
   notificationService: NotificationService;
   toolManagementService: ToolManagementService;
+  toolRegistryService: ToolRegistryService;
   pushChannelService: PushChannelService;
   sharedAgentService: SharedAgentService;
   gatewayHealth: GatewayHealth;
@@ -455,6 +460,10 @@ export function createAppContext(db: Database): AppContext {
     new ToolCallLogRepository(db),
     credentialService
   );
+  const toolRegistryService = new ToolRegistryService(
+    toolManagementService,
+    new ToolSourceRepository(db)
+  );
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
     instanceService,
@@ -617,7 +626,9 @@ export function createAppContext(db: Database): AppContext {
     name: inst.name,
     state: inst.state,
     matrixRoomId: inst.matrixRoomId ?? undefined,
-    runtime: { endpoint: typeof inst.runtime?.endpoint === 'string' ? inst.runtime.endpoint : undefined },
+    runtime: {
+      endpoint: typeof inst.runtime?.endpoint === 'string' ? inst.runtime.endpoint : undefined,
+    },
   });
   const matrixInstanceAdapter: IInstanceService = {
     list: async (tenantId?: string, resourceSource?: string) =>
@@ -736,6 +747,7 @@ export function createAppContext(db: Database): AppContext {
     configRepo,
     notificationService,
     toolManagementService,
+    toolRegistryService,
     pushChannelService,
     sharedAgentService,
     quotaService,
