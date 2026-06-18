@@ -12,11 +12,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { Drawer } from '../../../components/ui/Drawer';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { ToolSourceCreateWizard } from './ToolSourceCreateWizard';
-import type {
-  ToolSource,
-  ToolDefinition,
-  ToolStats,
-} from '../../../../infrastructure/api/adminApiClient';
+import type { ToolSource, ToolDefinition, ToolStats } from '../../../../domain/tool/types';
 
 const STATUS_BADGE: Record<string, string> = {
   active: 'bg-green-50 text-green-700',

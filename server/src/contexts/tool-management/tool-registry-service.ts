@@ -28,6 +28,11 @@ import type {
 import { McpClientPool } from './mcp-client.js';
 import { logger } from '../../app/logger.js';
 import type { CreateSourceInput, ExecutionType } from './types.js';
+import type { NotificationService } from '../notification/notification-service.js';
+import type { LockProvider } from '../scheduler/domain/lock.js';
+
+/** advisory lock key：多实例部署下保证同一时刻只有一个实例跑健康检查全量探活 */
+const HEALTH_CHECK_LOCK_KEY = 'tool-health-check';
 
 function toEndpoint(def: ToolDefinitionRow): ToolEndpoint {
   return {
@@ -65,7 +70,11 @@ export class ToolRegistryService implements IToolRegistry {
   constructor(
     private mgmt: ToolManagementService,
     private sourceRepo: ToolSourceRepository,
-    private mcpPool: McpClientPool = new McpClientPool()
+    private mcpPool: McpClientPool = new McpClientPool(),
+    /** 可选：转 down 时发站内告警。不注入则仅 logger（向后兼容） */
+    private notifier?: NotificationService,
+    /** 可选：advisory lock 防多实例并发探活。不注入则无锁（单实例/测试场景） */
+    private lock?: LockProvider
   ) {}
 
   async registerSource(
@@ -133,6 +142,38 @@ export class ToolRegistryService implements IToolRegistry {
   }
 
   async healthCheckAll(_tenantId?: string): Promise<void> {
+    // 多实例部署并发保护：advisory lock 保证同一时刻只有一个实例实际探活，
+    // 避免重复 updateHealth / 重复告警。未注入 lock（测试/单实例）则直通。
+    if (this.lock) {
+      let acquired = false;
+      try {
+        acquired = await this.lock.tryLock(HEALTH_CHECK_LOCK_KEY);
+        if (!acquired) {
+          logger.debug(
+            { key: HEALTH_CHECK_LOCK_KEY },
+            'tool health check skipped: lock held by another instance'
+          );
+          return;
+        }
+        await this.runHealthChecks();
+      } finally {
+        if (acquired) {
+          try {
+            await this.lock.unlock(HEALTH_CHECK_LOCK_KEY);
+          } catch (e) {
+            logger.warn(
+              { err: String(e), key: HEALTH_CHECK_LOCK_KEY },
+              'tool health check lock release failed'
+            );
+          }
+        }
+      }
+      return;
+    }
+    await this.runHealthChecks();
+  }
+
+  private async runHealthChecks(): Promise<void> {
     const sources = await this.sourceRepo.findAllAll();
     for (const src of sources) {
       if (src.status === 'archived') continue;
@@ -158,7 +199,26 @@ export class ToolRegistryService implements IToolRegistry {
         { sourceId: src.id, sourceName: src.name, tenantId: src.tenantId, error: result.error },
         'tool-source health degraded to down'
       );
-      // TODO: 接入 NotificationService 精细告警（邮件/站内）；当前 logger 兜底
+      // 接入 NotificationService 站内告警（首次转 down 触发，避免重复刷屏）。
+      // 告警失败不阻断健康检查主流程（仅 warn）。
+      if (this.notifier) {
+        try {
+          await this.notifier.createAlert(src.tenantId, {
+            type: 'tool_health_alert',
+            severity: 'critical',
+            resourceType: 'tool_source',
+            title: `工具源「${src.name}」健康检查失败`,
+            message: result.error ?? 'unknown error',
+            sourceId: src.id,
+            sourceName: src.name,
+          });
+        } catch (e) {
+          logger.warn(
+            { err: String(e), sourceId: src.id },
+            'tool health alert notification failed (non-fatal)'
+          );
+        }
+      }
     }
   }
 

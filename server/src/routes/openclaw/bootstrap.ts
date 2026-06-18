@@ -88,14 +88,17 @@ export function createOpenclawBootstrapRoutes(
   });
 
   app.post('/agent/execute', async (c) => {
-    const { userText, responseText, sessionId } = await c.req.json<{
+    const { userText, responseText, sessionId, tenantId } = await c.req.json<{
       userText: string;
       responseText: string;
       sessionId: string;
+      tenantId?: string;
     }>();
 
     if (agentRuntimeService) {
-      const result = await agentRuntimeService.execute(userText, responseText, sessionId);
+      // 传入 tenantId 激活 AgentExecutor 工具调用兜底（P3）：无 task/app/doc/board 意图时
+      // 按消息匹配已注册工具并调用（registry.invoke 含租户隔离校验）。
+      const result = await agentRuntimeService.execute(userText, responseText, sessionId, tenantId);
       return c.json(result);
     }
 

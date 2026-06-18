@@ -26,11 +26,7 @@ import {
   type GoalSuccessCriteria,
 } from '../../domain/agent/UserGoal';
 import { JudgmentRecord } from '../../domain/agent/JudgmentRecord';
-import {
-  WorkOrder,
-  type WorkOrderType,
-  type WorkOrderStatus,
-} from '../../domain/agent/WorkOrder';
+import { WorkOrder, type WorkOrderType, type WorkOrderStatus } from '../../domain/agent/WorkOrder';
 import type {
   IOpenClawDataSource,
   OpenClawEvent,
@@ -56,12 +52,7 @@ const AGENT_COLORS: Record<string, string> = {
 // 根 node_modules 中的 zod 为其他工具间接依赖，不可直接 import），
 // 故采用零依赖的类型守卫函数，效果等价：编译期类型安全 + 运行时收窄。
 
-const DECISION_URGENCY: readonly DecisionUrgency[] = [
-  'critical',
-  'high',
-  'normal',
-  'low',
-];
+const DECISION_URGENCY: readonly DecisionUrgency[] = ['critical', 'high', 'normal', 'low'];
 const DECISION_RESPONSE_STATUS: readonly DecisionResponseStatus[] = [
   'pending',
   'accepted',
@@ -107,10 +98,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 /** 类型守卫：判断 value 是否属于白名单字面量集合。 */
-function isEnumValue<T extends string>(
-  value: unknown,
-  allowed: readonly T[]
-): value is T {
+function isEnumValue<T extends string>(value: unknown, allowed: readonly T[]): value is T {
   // 此处的 `as T` 是实现类型守卫的固有代价：Array.includes(searchElement: T)
   // 要求参数类型为 T，而本函数的职责正是证明 unknown === T，故无法回避。
   // 它是"局部类型断言换取全局类型安全"的取舍点，与待消除的 DTO as 断言性质不同。
@@ -275,7 +263,9 @@ function toAgentTask(dto: Record<string, unknown>): AgentTask {
 function toUserGoal(dto: Record<string, unknown>): UserGoal {
   const authorization = isAuthorization(dto.authorization)
     ? {
-        autoExecute: isStringArray(dto.authorization.autoExecute) ? dto.authorization.autoExecute : [],
+        autoExecute: isStringArray(dto.authorization.autoExecute)
+          ? dto.authorization.autoExecute
+          : [],
         requireOwner: isStringArray(dto.authorization.requireOwner)
           ? dto.authorization.requireOwner
           : [],
@@ -402,7 +392,10 @@ export class OpenClawApiAdapter implements IOpenClawDataSource {
       applied: Boolean(res.applied),
       category: optionalString(res.category),
       goal: isRecord(res.goal) ? toUserGoal(res.goal) : undefined,
-      tasks: Array.isArray(res.tasks) && res.tasks.length ? toArray(res.tasks).map(toAgentTask) : undefined,
+      tasks:
+        Array.isArray(res.tasks) && res.tasks.length
+          ? toArray(res.tasks).map(toAgentTask)
+          : undefined,
       // DecomposeResult 的 suggested* 字段为原始 Record[]（透传给上层 UI 渲染，不进 domain 构造），
       // 此处不假设其内部结构，仅保证返回值类型为 Record<string, unknown>[]。
       suggestedTasks: Array.isArray(res.suggestedTasks) ? toArray(res.suggestedTasks) : undefined,
@@ -572,11 +565,13 @@ export class OpenClawApiAdapter implements IOpenClawDataSource {
   async executeAgent(
     userText: string,
     responseText: string,
-    sessionId: string
+    sessionId: string,
+    tenantId?: string
   ): Promise<{ intent: string | null; artifactId?: string; artifactType?: string }> {
+    // tenantId 透传给后端激活 Agent 工具调用兜底（P3）；前端待 authStore 接入 tenantId 后传入。
     return request('/api/openclaw/agent/execute', {
       method: 'POST',
-      body: JSON.stringify({ userText, responseText, sessionId }),
+      body: JSON.stringify({ userText, responseText, sessionId, tenantId }),
     });
   }
 }

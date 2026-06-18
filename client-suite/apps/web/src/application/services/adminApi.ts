@@ -26,10 +26,11 @@ export type {
   QuotaAlertRule,
   QuotaAlertEvent,
   TenantDefaultConfig,
-  ToolDefinition,
   ChannelConfig,
   GrantInstanceDTO,
 } from '../../infrastructure/api/adminApiClient';
+
+export type { ToolDefinition } from '../../domain/tool/types';
 
 export {
   tenantApi,

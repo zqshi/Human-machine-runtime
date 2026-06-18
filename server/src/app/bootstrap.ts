@@ -83,6 +83,7 @@ import { SystemConfigService } from '../contexts/system-config/system-config-ser
 import { NotificationService } from '../contexts/notification/notification-service.js';
 import { ToolManagementService } from '../contexts/tool-management/tool-management-service.js';
 import { ToolRegistryService } from '../contexts/tool-management/tool-registry-service.js';
+import { McpClientPool } from '../contexts/tool-management/mcp-client.js';
 import {
   ToolSourceRepository,
   ToolDefinitionRepository,
@@ -462,12 +463,16 @@ export function createAppContext(db: Database): AppContext {
   );
   const toolRegistryService = new ToolRegistryService(
     toolManagementService,
-    new ToolSourceRepository(db)
+    new ToolSourceRepository(db),
+    new McpClientPool(),
+    notificationService,
+    new PgAdvisoryLockProvider(pool)
   );
   // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentRuntimeService 实例化的顺序问题）
   agentRuntimeService.setToolRegistry(toolRegistryService);
   // P4: 定时工具健康检查（每 5 分钟探活各 source、维护 healthStatus、转 down 告警）。
-  // 生产多实例可迁移到 scheduler 持久化 system job + advisory lock 防并发。
+  // 多实例并发已由 advisory lock（PgAdvisoryLockProvider, key=tool-health-check）兜底：
+  // 同一时刻只有一个实例实际探活，其余跳过。
   setInterval(
     () => {
       void toolRegistryService.healthCheckAll().catch((err) => {

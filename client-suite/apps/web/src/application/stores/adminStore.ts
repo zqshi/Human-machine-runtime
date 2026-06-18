@@ -76,6 +76,35 @@ function writeSectionToHash(section: AdminSection): void {
   }
 }
 
+/** OpsShell 主 section 全部可持久化（无 detail 变体，刷新后均能直接恢复）。 */
+const HASHABLE_PLATFORM_SECTIONS: readonly PlatformSection[] = [
+  'tenants',
+  'plans',
+  'users',
+  'roles',
+  'config',
+  'monitoring',
+  'audit',
+];
+
+/** 从 URL hash 读取 OpsShell section（硬刷新后恢复当前页）；非法或缺失返回 'tenants'。
+ *  admin 入口的 hash 不是合法 PlatformSection 时同样 fallback 'tenants'，无害。 */
+function readPlatformSectionFromHash(): PlatformSection {
+  if (typeof window === 'undefined') return 'tenants';
+  const h = window.location.hash.replace(/^#/, '');
+  return HASHABLE_PLATFORM_SECTIONS.includes(h as PlatformSection)
+    ? (h as PlatformSection)
+    : 'tenants';
+}
+
+function writePlatformSectionToHash(section: PlatformSection): void {
+  if (typeof window === 'undefined') return;
+  const target = `#${section}`;
+  if (window.location.hash !== target) {
+    window.location.hash = target;
+  }
+}
+
 /** 本地日期 → YYYY-MM-DD（避免 toISOString 的 UTC 偏移导致日历日错位） */
 function formatDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -143,7 +172,7 @@ interface AdminState {
 
 export const useAdminStore = create<AdminState>((set) => ({
   currentSection: readSectionFromHash(),
-  platformSection: 'tenants',
+  platformSection: readPlatformSectionFromHash(),
   aiGatewayTab: 'models',
   aiGatewayDateFrom: initialAiGatewayWeek.from,
   aiGatewayDateTo: initialAiGatewayWeek.to,
@@ -158,7 +187,10 @@ export const useAdminStore = create<AdminState>((set) => ({
     writeSectionToHash(section);
     set({ currentSection: section, selectedId: null, drawerOpen: false, searchQuery: '' });
   },
-  setPlatformSection: (section) => set({ platformSection: section, searchQuery: '' }),
+  setPlatformSection: (section) => {
+    writePlatformSectionToHash(section);
+    set({ platformSection: section, searchQuery: '' });
+  },
   setAIGatewayTab: (tab) => set({ aiGatewayTab: tab }),
   toggleAIGatewayDemoMode: () => set((s) => ({ aiGatewayDemoMode: !s.aiGatewayDemoMode })),
   setAIGatewayDateRange: (from, to) => set({ aiGatewayDateFrom: from, aiGatewayDateTo: to }),
@@ -183,17 +215,22 @@ export const useAdminStore = create<AdminState>((set) => ({
   exitSuiteDetail: () => set({ currentSection: 'eval-suites', selectedSuiteId: null }),
 }));
 
-// 浏览器后退/前进或手改 hash 时同步 currentSection（与 setSection 写 hash 形成双向闭环）
+// 浏览器后退/前进或手改 hash 时同步 currentSection + platformSection（与各自 setter 写 hash 形成双向闭环）。
+// admin.html / ops.html 是不同入口，各自加载本 store，hash 独立；非合法值 fallback 无害、互不干扰。
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
-    const next = readSectionFromHash();
-    if (next !== useAdminStore.getState().currentSection) {
+    const nextSection = readSectionFromHash();
+    if (nextSection !== useAdminStore.getState().currentSection) {
       useAdminStore.setState({
-        currentSection: next,
+        currentSection: nextSection,
         selectedId: null,
         drawerOpen: false,
         searchQuery: '',
       });
+    }
+    const nextPlatform = readPlatformSectionFromHash();
+    if (nextPlatform !== useAdminStore.getState().platformSection) {
+      useAdminStore.setState({ platformSection: nextPlatform, searchQuery: '' });
     }
   });
 }

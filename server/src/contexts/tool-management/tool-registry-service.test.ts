@@ -4,6 +4,8 @@ import type { ToolSourceRepository } from '../../db/repositories/tool-registry-r
 import type { ToolDefinitionRow } from '../../db/repositories/tool-registry-repository.js';
 import type { CreateSourceInput, ExecutionContext } from './types.js';
 import type { McpClientPool } from './mcp-client.js';
+import type { NotificationService } from '../notification/notification-service.js';
+import type { LockProvider } from '../scheduler/domain/lock.js';
 
 function makeDef(over: Partial<ToolDefinitionRow> = {}): ToolDefinitionRow {
   return {
@@ -353,5 +355,233 @@ describe('ToolRegistryService', () => {
     );
     await reg.healthCheckAll();
     expect(repo.updateHealth).not.toHaveBeenCalled();
+  });
+
+  describe('告警接入（NotificationService）', () => {
+    function makeNotifier() {
+      return { createAlert: vi.fn().mockResolvedValue('ntf1') };
+    }
+
+    it('首次转 down（healthy→down）→ 调 createAlert，含 sourceId/error/tenantId', async () => {
+      const repo = makeSourceRepo();
+      // consecutiveFailures=2 → 再失败一次 = 3 → computeHealthStatus(3) = down
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'healthy',
+          consecutiveFailures: 2,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(false) }),
+      };
+      const notifier = makeNotifier();
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        notifier as unknown as NotificationService
+      );
+      await reg.healthCheckAll();
+      expect(notifier.createAlert).toHaveBeenCalledWith(
+        't1',
+        expect.objectContaining({
+          type: 'tool_health_alert',
+          severity: 'critical',
+          sourceId: 's1',
+          sourceName: 'mcp-src',
+        })
+      );
+    });
+
+    it('已是 down（重复失败）→ 不重复告警', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'down',
+          consecutiveFailures: 5,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(false) }),
+      };
+      const notifier = makeNotifier();
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        notifier as unknown as NotificationService
+      );
+      await reg.healthCheckAll();
+      expect(notifier.createAlert).not.toHaveBeenCalled();
+    });
+
+    it('告警抛错不阻断健康检查（updateHealth 仍执行）', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'healthy',
+          consecutiveFailures: 2,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(false) }),
+      };
+      const notifier = {
+        createAlert: vi.fn().mockRejectedValue(new Error('notif down')),
+      };
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        notifier as unknown as NotificationService
+      );
+      await expect(reg.healthCheckAll()).resolves.toBeUndefined();
+      expect(repo.updateHealth).toHaveBeenCalled();
+    });
+  });
+
+  describe('advisory lock 防多实例并发', () => {
+    function makeLock() {
+      return { tryLock: vi.fn(), unlock: vi.fn() };
+    }
+
+    it('lock 未注入 → 直通探活（单实例/默认行为）', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'unknown',
+          consecutiveFailures: 0,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(true) }),
+      };
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool
+      );
+      await reg.healthCheckAll();
+      expect(repo.updateHealth).toHaveBeenCalled();
+    });
+
+    it('lock 获取成功 → 探活后释放', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'unknown',
+          consecutiveFailures: 0,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(true) }),
+      };
+      const lock = makeLock();
+      lock.tryLock.mockResolvedValue(true);
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        undefined,
+        lock as unknown as LockProvider
+      );
+      await reg.healthCheckAll();
+      expect(lock.tryLock).toHaveBeenCalledWith('tool-health-check');
+      expect(repo.updateHealth).toHaveBeenCalled();
+      expect(lock.unlock).toHaveBeenCalledWith('tool-health-check');
+    });
+
+    it('lock 被持有（其他实例正在跑）→ 跳过探活，不调 updateHealth', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'unknown',
+          consecutiveFailures: 0,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(true) }),
+      };
+      const lock = makeLock();
+      lock.tryLock.mockResolvedValue(false);
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        undefined,
+        lock as unknown as LockProvider
+      );
+      await reg.healthCheckAll();
+      expect(repo.updateHealth).not.toHaveBeenCalled();
+      // 获取失败不应调 unlock
+      expect(lock.unlock).not.toHaveBeenCalled();
+    });
+
+    it('探活期间 lock.unlock 抛错 → 不影响已完成的结果（finally 内吞掉）', async () => {
+      const repo = makeSourceRepo();
+      repo.findAllAll.mockResolvedValue([
+        {
+          id: 's1',
+          status: 'active',
+          sourceType: 'mcp_native',
+          mcpEndpoint: 'http://mcp',
+          healthStatus: 'unknown',
+          consecutiveFailures: 0,
+          tenantId: 't1',
+          name: 'mcp-src',
+        },
+      ]);
+      const mcpPool = {
+        get: vi.fn().mockReturnValue({ checkHealth: vi.fn().mockResolvedValue(true) }),
+      };
+      const lock = makeLock();
+      lock.tryLock.mockResolvedValue(true);
+      lock.unlock.mockRejectedValue(new Error('unlock failed'));
+      const reg = new ToolRegistryService(
+        makeMgmt() as unknown as ToolManagementService,
+        repo as unknown as ToolSourceRepository,
+        mcpPool as unknown as McpClientPool,
+        undefined,
+        lock as unknown as LockProvider
+      );
+      await expect(reg.healthCheckAll()).resolves.toBeUndefined();
+      expect(repo.updateHealth).toHaveBeenCalled();
+    });
   });
 });

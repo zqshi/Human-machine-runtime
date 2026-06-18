@@ -329,6 +329,18 @@ function handleArtifactCreated(
     get().updateLastMessageIn(targetConvId, updater);
   };
   switch (data.type) {
+    case 'tool': {
+      // P3 AgentExecutor 工具调用兜底产物（无 task/app/doc/board 意图时触发）
+      const toolName = String(artifactData.toolName || '工具');
+      const ok = artifactData.success !== false;
+      useToastStore
+        .getState()
+        .addToast(
+          ok ? `工具调用成功：${toolName}` : `工具调用失败：${toolName}`,
+          ok ? 'success' : 'error'
+        );
+      break;
+    }
     case 'task': {
       if (get().tasks.some((t) => t.id === String(artifactData.id))) break;
       const task = AgentTask.create({
