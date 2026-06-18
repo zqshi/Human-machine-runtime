@@ -2,6 +2,7 @@ import type { EvalBenchmarkRepository } from '../../db/repositories/eval-benchma
 import type { EvalEvaluatorRepository } from '../../db/repositories/eval-evaluator-repository.js';
 import type { LiteLLMClient } from '../gateway/clients/litellm-client.js';
 import { newId } from '../../shared/utils.js';
+import { PRESET_SUITES } from './eval-preset-data.js';
 import { logger } from '../../app/logger.js';
 import {
   DIMENSION_WEIGHTS,
@@ -383,6 +384,62 @@ export class EvalService {
       improvements,
       recommendations,
       generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /* ──── Preset Import ──── */
+
+  /** 导入预设评测集（幂等：按 name 去重，已存在的跳过）。 */
+  async importPresets(tenantId: string | undefined) {
+    const existing = await this.repo.listSuites(tenantId);
+    const imported: Array<{ suiteId: string; name: string; caseCount: number }> = [];
+    const skipped: string[] = [];
+
+    for (const preset of PRESET_SUITES) {
+      const alreadyExists = existing.find((s) => s.name === preset.name);
+      if (alreadyExists) {
+        skipped.push(preset.name);
+        continue;
+      }
+
+      const suiteId = newId('evs');
+      await this.repo.createSuite({
+        id: suiteId,
+        name: preset.name,
+        description: preset.description,
+        configType: preset.configType,
+        evalType: preset.evalType,
+        categoryWeights: preset.categoryWeights,
+        tenantId,
+      });
+
+      const cases = await this.repo.batchCreateCases(
+        preset.cases.map((pc) => ({
+          id: newId('evc'),
+          suiteId,
+          caseKey: pc.caseKey,
+          category: pc.category,
+          subcategory: pc.subcategory,
+          difficulty: pc.difficulty,
+          taskDescription: pc.taskDescription,
+          evalType: pc.evalType,
+          expectedBehavior: pc.expectedBehavior,
+          expectedOutput: pc.expectedOutput,
+          expectedTools: pc.expectedTools,
+          expectedTrajectory: pc.expectedTrajectory,
+          tags: pc.tags,
+        }))
+      );
+
+      imported.push({ suiteId, name: preset.name, caseCount: cases.length });
+    }
+
+    const totalCases = imported.reduce((s, i) => s + i.caseCount, 0);
+    return {
+      imported,
+      skipped,
+      totalCases,
+      message: `已导入 ${imported.length} 个预设评测集（${totalCases} 用例）${skipped.length > 0 ? `，跳过 ${skipped.length} 个已存在` : ''}`,
     };
   }
 }

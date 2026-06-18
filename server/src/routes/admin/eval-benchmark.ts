@@ -112,7 +112,6 @@ const createEvaluatorSchema = z.object({
   threshold: z.number().min(0).max(1).optional(),
 });
 
-import { PRESET_SUITES } from '../../contexts/eval-benchmark/eval-preset-data.js';
 import { EVALUATOR_TEMPLATES } from '../../contexts/eval-benchmark/evaluator-templates.js';
 
 export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService: EvalService, evaluatorRepo: EvalEvaluatorRepository) {
@@ -122,59 +121,8 @@ export function createAdminEvalRoutes(repo: EvalBenchmarkRepository, evalService
 
   app.post('/import-preset', async (c) => {
     const user = getUser(c);
-    const existing = await repo.listSuites(toUndef(user.tenantId));
-    const imported: Array<{ suiteId: string; name: string; caseCount: number }> = [];
-    const skipped: string[] = [];
-
-    for (const preset of PRESET_SUITES) {
-      const alreadyExists = existing.find((s) => s.name === preset.name);
-      if (alreadyExists) {
-        skipped.push(preset.name);
-        continue;
-      }
-
-      const suiteId = newId('evs');
-      await repo.createSuite({
-        id: suiteId,
-        name: preset.name,
-        description: preset.description,
-        configType: preset.configType,
-        evalType: preset.evalType,
-        categoryWeights: preset.categoryWeights,
-        tenantId: toUndef(user.tenantId),
-      });
-
-      const cases = await repo.batchCreateCases(
-        preset.cases.map((pc) => ({
-          id: newId('evc'),
-          suiteId,
-          caseKey: pc.caseKey,
-          category: pc.category,
-          subcategory: pc.subcategory,
-          difficulty: pc.difficulty,
-          taskDescription: pc.taskDescription,
-          evalType: pc.evalType,
-          expectedBehavior: pc.expectedBehavior,
-          expectedOutput: pc.expectedOutput,
-          expectedTools: pc.expectedTools,
-          expectedTrajectory: pc.expectedTrajectory,
-          tags: pc.tags,
-        }))
-      );
-
-      imported.push({ suiteId, name: preset.name, caseCount: cases.length });
-    }
-
-    const totalCases = imported.reduce((s, i) => s + i.caseCount, 0);
-    return c.json(
-      {
-        imported,
-        skipped,
-        totalCases,
-        message: `已导入 ${imported.length} 个预设评测集（${totalCases} 用例）${skipped.length > 0 ? `，跳过 ${skipped.length} 个已存在` : ''}`,
-      },
-      201
-    );
+    const result = await evalService.importPresets(toUndef(user.tenantId));
+    return c.json(result, 201);
   });
 
   /* ──── Suites ──── */
