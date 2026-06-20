@@ -42,7 +42,7 @@ import { McpService } from '../contexts/mcp-management/mcp-service.js';
 import { TokenUsageService } from '../contexts/observability/token-usage-service.js';
 
 import { LocalProvisioner } from '../contexts/tenant-instance/provisioners/local-provisioner.js';
-import { ClawFarmProvisioner } from '../contexts/tenant-instance/provisioners/claw-farm-provisioner.js';
+import { ContainerOrchestratorProvisioner } from '../contexts/tenant-instance/provisioners/container-orchestrator-provisioner.js';
 import { CompositeProvisioner } from '../contexts/tenant-instance/provisioners/composite-provisioner.js';
 import type { IInstanceProvisioner } from '../contexts/tenant-instance/instance-service.js';
 import { MatrixBot } from '../integrations/matrix/matrix-bot.js';
@@ -52,7 +52,7 @@ import type {
   InstanceRow,
 } from '../integrations/matrix/matrix-bot-types.js';
 
-import { ClawFarmWsBridge } from '../contexts/gateway/clients/claw-farm-ws-bridge.js';
+import { ContainerOrchestratorWsBridge } from '../contexts/gateway/clients/container-orchestrator-ws-bridge.js';
 
 import { WeKnoraClient } from '../contexts/gateway/clients/weknora-client.js';
 import { WkMappingRepository } from '../db/repositories/weknora-mapping-repository.js';
@@ -60,13 +60,12 @@ import { KnowledgeBaseRepository } from '../db/repositories/knowledge-base-repos
 import { KnowledgeEntryRepository } from '../db/repositories/knowledge-entry-repository.js';
 import { KnowledgeService } from '../contexts/knowledge/knowledge-service.js';
 
-import { ClawHubClient } from '../contexts/gateway/clients/clawhub-client.js';
-import { PortalClient } from '../contexts/gateway/clients/portal-client.js';
-import { XspaceClient } from '../contexts/gateway/clients/xspace-client.js';
-import { ClawFarmClient } from '../contexts/gateway/clients/claw-farm-client.js';
-import { ClawManagerClient } from '../contexts/gateway/clients/claw-manager-client.js';
+import { MarketplaceClient } from '../contexts/gateway/clients/marketplace-client.js';
+import { ProfileServiceClient } from '../contexts/gateway/clients/profile-service-client.js';
+import { WorkspaceBackendClient } from '../contexts/gateway/clients/workspace-backend-client.js';
+import { ContainerOrchestratorClient } from '../contexts/gateway/clients/container-orchestrator-client.js';
+import { ClusterInstanceClient } from '../contexts/gateway/clients/cluster-instance-client.js';
 import { LiteLLMClient } from '../contexts/gateway/clients/litellm-client.js';
-import { PlatformBeClient } from '../contexts/gateway/clients/platform-be-client.js';
 
 import { MarketplaceService } from '../contexts/marketplace/marketplace-service.js';
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
@@ -77,6 +76,8 @@ import { WorkspaceRepository } from '../db/repositories/workspace-repository.js'
 import { AgentProfileRepository } from '../db/repositories/agent-profile-repository.js';
 import { TokenUsageRepository } from '../db/repositories/token-usage-repository.js';
 import { AgentRuntimeService } from '../contexts/agent-core/agent-runtime-service.js';
+import { LiteLlmClientAdapter } from '../contexts/agent-core/adapters/litellm-llm-client.js';
+import { projectDecision } from '../contexts/runtime-engine/decision-projector.js';
 import { AnalyticsService } from '../contexts/analytics/analytics-service.js';
 import { UserManagementService } from '../contexts/identity-access/user-management-service.js';
 import { SystemConfigService } from '../contexts/system-config/system-config-service.js';
@@ -154,15 +155,14 @@ export interface AppContext {
   modelGrantChecker: ModelGrantChecker;
   llmKeySyncService: LlmKeySyncService;
   operationalRepo: OperationalRepository;
-  clawHubClient: ClawHubClient;
-  portalClient: PortalClient;
-  xspaceClient: XspaceClient;
-  clawFarmClient: ClawFarmClient;
-  clawManagerClient: ClawManagerClient;
+  marketplaceClient: MarketplaceClient;
+  profileServiceClient: ProfileServiceClient;
+  workspaceBackendClient: WorkspaceBackendClient;
+  containerOrchestratorClient: ContainerOrchestratorClient;
+  clusterInstanceClient: ClusterInstanceClient;
   litellmClient: LiteLLMClient;
-  platformBeClient: PlatformBeClient;
   matrixBot: MatrixBot | null;
-  clawFarmWsBridge: ClawFarmWsBridge | null;
+  containerOrchestratorWsBridge: ContainerOrchestratorWsBridge | null;
   weKnoraClient: WeKnoraClient | null;
   knowledgeService: KnowledgeService | null;
   agentRuntimeService: AgentRuntimeService;
@@ -240,13 +240,13 @@ function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegist
 }
 
 function buildChannelService(
-  clawFarmClient: ClawFarmClient,
+  containerOrchestratorClient: ContainerOrchestratorClient,
   pipeline?: InboundPipeline
 ): ChannelService {
   const channelService = new ChannelService();
   if (pipeline) channelService.setInboundPipeline(pipeline);
   channelService.registerAdapter(new MatrixChannelAdapter());
-  channelService.registerAdapter(new WpsChannelAdapter(clawFarmClient));
+  channelService.registerAdapter(new WpsChannelAdapter(containerOrchestratorClient));
   channelService.registerAdapter(new WebSocketChannelAdapter());
   return channelService;
 }
@@ -282,49 +282,66 @@ export function createAppContext(db: Database): AppContext {
   const credentialService = new CredentialService(config.credential.encryptionKey);
   const leaseService = new LeaseService(config.credential.leaseDefaultTtlSec);
 
-  const clawHubClient = new ClawHubClient('clawhub', config.gateway.clawhubUrl, {
-    headers: config.gateway.clawhubApiKey
-      ? { Authorization: `Bearer ${config.gateway.clawhubApiKey}` }
+  const marketplaceClient = new MarketplaceClient('marketplace', config.gateway.marketplaceUrl, {
+    headers: config.gateway.marketplaceApiKey
+      ? { Authorization: `Bearer ${config.gateway.marketplaceApiKey}` }
       : undefined,
   });
-  const portalClient = new PortalClient('portal', config.gateway.portalUrl, {
-    headers: config.gateway.portalApiToken
-      ? { Authorization: `Bearer ${config.gateway.portalApiToken}` }
-      : undefined,
-  });
-  const xspaceClient = new XspaceClient('xspace', config.gateway.xspaceUrl, {
-    headers: config.gateway.xspaceAppId ? { 'X-App-Id': config.gateway.xspaceAppId } : undefined,
-  });
-  if (config.gateway.xspaceSupabaseUrl && config.gateway.xspaceSupabaseEmail) {
-    xspaceClient.setSupabaseAuth({
-      url: config.gateway.xspaceSupabaseUrl,
-      anonKey: config.gateway.xspaceSupabaseAnonKey,
-      email: config.gateway.xspaceSupabaseEmail,
-      password: config.gateway.xspaceSupabasePassword,
+  const profileServiceClient = new ProfileServiceClient(
+    'profile-service',
+    config.gateway.profileServiceUrl,
+    {
+      headers: config.gateway.profileServiceApiToken
+        ? { Authorization: `Bearer ${config.gateway.profileServiceApiToken}` }
+        : undefined,
+    }
+  );
+  const workspaceBackendClient = new WorkspaceBackendClient(
+    'workspace-backend',
+    config.gateway.workspaceBackendUrl,
+    {
+      headers: config.gateway.workspaceBackendAppId
+        ? { 'X-App-Id': config.gateway.workspaceBackendAppId }
+        : undefined,
+    }
+  );
+  if (config.gateway.workspaceBackendSupabaseUrl && config.gateway.workspaceBackendSupabaseEmail) {
+    workspaceBackendClient.setSupabaseAuth({
+      url: config.gateway.workspaceBackendSupabaseUrl,
+      anonKey: config.gateway.workspaceBackendSupabaseAnonKey,
+      email: config.gateway.workspaceBackendSupabaseEmail,
+      password: config.gateway.workspaceBackendSupabasePassword,
     });
   }
-  const clawFarmClient = new ClawFarmClient('claw-farm', config.gateway.clawFarmUrl, {
-    headers: config.gateway.clawFarmApiToken
-      ? { Authorization: `Bearer ${config.gateway.clawFarmApiToken}` }
-      : undefined,
-  });
+  const containerOrchestratorClient = new ContainerOrchestratorClient(
+    'container-orchestrator',
+    config.gateway.containerOrchestratorUrl,
+    {
+      headers: config.gateway.containerOrchestratorApiToken
+        ? { Authorization: `Bearer ${config.gateway.containerOrchestratorApiToken}` }
+        : undefined,
+    }
+  );
   const litellmClient = new LiteLLMClient('litellm', config.litellm.baseUrl, {
     headers: config.litellm.apiKey
       ? { Authorization: `Bearer ${config.litellm.apiKey}` }
       : undefined,
   });
-  const platformBeClient = new PlatformBeClient('platform-be', config.gateway.platformBeUrl);
-  const clawManagerClient = new ClawManagerClient('claw-manager', config.gateway.clawManagerUrl, {
-    headers: config.gateway.clawManagerAuthToken
-      ? { Authorization: `Bearer ${config.gateway.clawManagerAuthToken}` }
-      : undefined,
-  });
+  const clusterInstanceClient = new ClusterInstanceClient(
+    'cluster-instance',
+    config.gateway.clusterInstanceUrl,
+    {
+      headers: config.gateway.clusterInstanceAuthToken
+        ? { Authorization: `Bearer ${config.gateway.clusterInstanceAuthToken}` }
+        : undefined,
+    }
+  );
 
-  /* ──── Provisioner: local + claw-farm composite ──── */
+  /* ──── Provisioner: local + container-orchestrator composite ──── */
   const localProvisioner = new LocalProvisioner();
   const provisioners: IInstanceProvisioner[] = [localProvisioner];
-  if (clawFarmClient.isConfigured()) {
-    provisioners.push(new ClawFarmProvisioner(clawFarmClient));
+  if (containerOrchestratorClient.isConfigured()) {
+    provisioners.push(new ContainerOrchestratorProvisioner(containerOrchestratorClient));
   }
   const provisioner =
     provisioners.length > 1 ? new CompositeProvisioner(provisioners) : localProvisioner;
@@ -382,15 +399,24 @@ export function createAppContext(db: Database): AppContext {
         messageId: normalized.id,
         recommendations: recResult.recommendations,
       });
+      // 把首选推荐投影为待确认 Decision 落库（消息→决策运行时闭环）
+      const primary = recResult.recommendations[0];
+      if (primary) {
+        const decision = projectDecision(
+          { message: normalized, recommendation: primary },
+          Date.now()
+        );
+        agentRuntimeService.recordDecision(decision);
+      }
     }
   });
 
-  const channelService = buildChannelService(clawFarmClient, inboundPipeline);
+  const channelService = buildChannelService(containerOrchestratorClient, inboundPipeline);
   const receiptManager = new ReceiptManager(channelService);
 
   /* ──── AgentRuntimeAdapter Registry ──── */
   const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
-  const openClawAdapter = new OpenClawAdapter(clawManagerClient);
+  const openClawAdapter = new OpenClawAdapter(clusterInstanceClient);
   agentAdapterRegistry.register(openClawAdapter);
 
   openClawAdapter.onTaskComplete((result) => {
@@ -420,25 +446,31 @@ export function createAppContext(db: Database): AppContext {
   const channelRoutingRepo = new ChannelRoutingRepository(db);
   const channelRouter = new ChannelRouter(channelService, channelRoutingRepo);
   const decisionConsole = new DecisionConsole(channelService, channelRouter);
-  const mcpService = new McpService(clawHubClient);
-  const tokenUsageService = new TokenUsageService(portalClient, litellmClient, tokenUsageRepo);
+  const mcpService = new McpService(marketplaceClient);
+  const tokenUsageService = new TokenUsageService(
+    profileServiceClient,
+    litellmClient,
+    tokenUsageRepo
+  );
 
   const marketplaceAudit = {
     log(type: string, payload: Record<string, unknown>) {
       auditService.log(type, payload);
     },
   };
-  const marketplaceService = new MarketplaceService(clawHubClient, marketplaceAudit);
+  const marketplaceService = new MarketplaceService(marketplaceClient, marketplaceAudit);
   const workspaceRepo = new WorkspaceRepository(db);
   const workspaceService = new WorkspaceService(
     workspaceRepo,
-    xspaceClient,
-    clawHubClient,
-    clawManagerClient
+    workspaceBackendClient,
+    marketplaceClient,
+    clusterInstanceClient
   );
-  const agentProfileService = new AgentProfileService(portalClient);
+  const agentProfileService = new AgentProfileService(profileServiceClient);
 
-  const agentRuntimeService = new AgentRuntimeService(null, db, {
+  // 注入真实 LLM（经 LiteLLM 路由）。llmModel 留空时 adapter.isAvailable=false，AgentExecutor 自动降级到关键词匹配。
+  const agentLlmClient = new LiteLlmClientAdapter(litellmClient, config.agent.llmModel);
+  const agentRuntimeService = new AgentRuntimeService(agentLlmClient, db, {
     simulatorEnabled: config.agent.simulatorEnabled,
   });
 
@@ -485,7 +517,7 @@ export function createAppContext(db: Database): AppContext {
   const sharedAgentService = new SharedAgentService(
     instanceService,
     operationalRepo,
-    clawHubClient
+    marketplaceClient
   );
 
   /* ──── WeKnora Knowledge Service (条件启用) ──── */
@@ -580,7 +612,7 @@ export function createAppContext(db: Database): AppContext {
   const scheduledTaskLock = new PgAdvisoryLockProvider(pool);
   const systemHandler = new SystemJobHandler();
   registerTraceCleanup(systemHandler, aiGatewayRepo);
-  registerEmployeeCleanup(systemHandler, clawManagerClient, instanceService);
+  registerEmployeeCleanup(systemHandler, clusterInstanceClient, instanceService);
   registerWeeklyReport(systemHandler, analyticsService);
   const jobHandlerRegistry = new JobHandlerRegistry();
   const agentInvoker = new LlmAgentInvoker(litellmClient, {});
@@ -740,17 +772,16 @@ export function createAppContext(db: Database): AppContext {
     llmKeySyncService,
     operationalRepo,
     openclawRepo,
-    clawHubClient,
-    portalClient,
-    xspaceClient,
-    clawFarmClient,
-    clawManagerClient,
+    marketplaceClient,
+    profileServiceClient,
+    workspaceBackendClient,
+    containerOrchestratorClient,
+    clusterInstanceClient,
     litellmClient,
-    platformBeClient,
     matrixBot: config.matrix.botAccessToken ? matrixBot : null,
-    clawFarmWsBridge: clawFarmClient.isConfigured()
+    containerOrchestratorWsBridge: containerOrchestratorClient.isConfigured()
       ? (() => {
-          const bridge = new ClawFarmWsBridge(clawFarmClient);
+          const bridge = new ContainerOrchestratorWsBridge(containerOrchestratorClient);
           bridge.start();
           return bridge;
         })()
@@ -786,13 +817,12 @@ export function createAppContext(db: Database): AppContext {
     receiptManager,
     agentAdapterRegistry,
     gatewayHealth: new GatewayHealth([
-      clawHubClient,
-      portalClient,
-      xspaceClient,
-      clawFarmClient,
-      clawManagerClient,
+      marketplaceClient,
+      profileServiceClient,
+      workspaceBackendClient,
+      containerOrchestratorClient,
+      clusterInstanceClient,
       litellmClient,
-      platformBeClient,
     ]),
   };
 }

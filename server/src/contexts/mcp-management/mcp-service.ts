@@ -1,4 +1,4 @@
-import type { ClawHubClient } from '../gateway/clients/clawhub-client.js';
+import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
 
 export interface McpGroupInfo {
   id: string;
@@ -35,23 +35,23 @@ export interface IMcpUsageStore {
 }
 
 export class McpService {
-  private clawHubClient: ClawHubClient;
+  private marketplaceClient: MarketplaceClient;
   private policyStore: IMcpPolicyStore | null;
   private usageStore: IMcpUsageStore | null;
 
   constructor(
-    clawHubClient: ClawHubClient,
+    marketplaceClient: MarketplaceClient,
     policyStore?: IMcpPolicyStore,
     usageStore?: IMcpUsageStore
   ) {
-    this.clawHubClient = clawHubClient;
+    this.marketplaceClient = marketplaceClient;
     this.policyStore = policyStore ?? null;
     this.usageStore = usageStore ?? null;
   }
 
   async listMcpGroups(tenantId: string, authToken?: string): Promise<McpGroupInfo[]> {
-    if (!this.clawHubClient.isConfigured()) return [];
-    const result = await this.clawHubClient.listMcpGroups(authToken);
+    if (!this.marketplaceClient.isConfigured()) return [];
+    const result = await this.marketplaceClient.listMcpGroups(authToken);
     const groups = (result?.groups ?? []) as McpGroupInfo[];
     if (!this.policyStore) return groups;
 
@@ -148,13 +148,13 @@ export class McpService {
   }
 
   async listTools(groupId: string, authToken?: string) {
-    if (!this.clawHubClient.isConfigured()) return [];
-    const result = await this.clawHubClient.listMcpTools(groupId, authToken);
+    if (!this.marketplaceClient.isConfigured()) return [];
+    const result = await this.marketplaceClient.listMcpTools(groupId, authToken);
     return result?.tools ?? [];
   }
 
   async syncTools(groupId: string, authToken?: string): Promise<unknown> {
-    if (!this.clawHubClient.isConfigured()) return null;
-    return this.clawHubClient.syncMcpTools(groupId, authToken);
+    if (!this.marketplaceClient.isConfigured()) return null;
+    return this.marketplaceClient.syncMcpTools(groupId, authToken);
   }
 }

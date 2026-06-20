@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClawManagerClient } from './claw-manager-client.js';
+import { ClusterInstanceClient } from './cluster-instance-client.js';
 
-describe('ClawManagerClient', () => {
-  let client: ClawManagerClient;
+describe('ClusterInstanceClient', () => {
+  let client: ClusterInstanceClient;
 
   beforeEach(() => {
-    client = new ClawManagerClient('claw-manager', 'http://localhost:18090');
+    client = new ClusterInstanceClient('cluster-instance', 'http://localhost:18090');
   });
 
   it('isConfigured returns true when baseUrl set', () => {
@@ -13,7 +13,7 @@ describe('ClawManagerClient', () => {
   });
 
   it('isConfigured returns false when baseUrl empty', () => {
-    const empty = new ClawManagerClient('claw-manager', '');
+    const empty = new ClusterInstanceClient('cluster-instance', '');
     expect(empty.isConfigured()).toBe(false);
   });
 
@@ -53,7 +53,7 @@ describe('ClawManagerClient', () => {
   });
 
   it('healthCheck returns false when not configured', async () => {
-    const empty = new ClawManagerClient('claw-manager', '');
+    const empty = new ClusterInstanceClient('cluster-instance', '');
     const result = await empty.healthCheck();
     expect(result).toBe(false);
   });

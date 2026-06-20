@@ -36,7 +36,7 @@ function mockAnalytics() {
   };
 }
 
-function mockClawManagerClient() {
+function mockClusterInstanceClient() {
   return {
     isConfigured: vi.fn().mockReturnValue(true),
     listInstances: vi.fn().mockResolvedValue({
@@ -96,7 +96,7 @@ describe('admin ai-assistant routes', () => {
   it('POST /chat returns reply from LiteLLM', async () => {
     const litellm = mockLitellm();
     const analytics = mockAnalytics();
-    const clawMgr = mockClawManagerClient();
+    const clawMgr = mockClusterInstanceClient();
     const aiRepo = mockAiRepo();
     const routes = createAdminAssistantRoutes(
       litellm as never,
@@ -119,7 +119,7 @@ describe('admin ai-assistant routes', () => {
 
   it('POST /chat returns fallback when no LiteLLM configured', async () => {
     const analytics = mockAnalytics();
-    const clawMgr = mockClawManagerClient();
+    const clawMgr = mockClusterInstanceClient();
     const routes = createAdminAssistantRoutes(undefined, analytics as never, clawMgr as never);
     const app = withAuth(routes);
 
@@ -136,7 +136,7 @@ describe('admin ai-assistant routes', () => {
   it('POST /chat returns 400 on invalid messages', async () => {
     const litellm = mockLitellm();
     const analytics = mockAnalytics();
-    const clawMgr = mockClawManagerClient();
+    const clawMgr = mockClusterInstanceClient();
     const routes = createAdminAssistantRoutes(
       litellm as never,
       analytics as never,
@@ -159,7 +159,7 @@ describe('admin ai-assistant routes', () => {
       chatCompletion: vi.fn().mockRejectedValue(new Error('timeout')),
     };
     const analytics = mockAnalytics();
-    const clawMgr = mockClawManagerClient();
+    const clawMgr = mockClusterInstanceClient();
     const aiRepo = mockAiRepo();
     const routes = createAdminAssistantRoutes(
       litellm as never,
@@ -181,7 +181,7 @@ describe('admin ai-assistant routes', () => {
 
   it('GET /context returns platform summary', async () => {
     const analytics = mockAnalytics();
-    const clawMgr = mockClawManagerClient();
+    const clawMgr = mockClusterInstanceClient();
     const routes = createAdminAssistantRoutes(undefined, analytics as never, clawMgr as never);
     const app = withAuth(routes);
 

@@ -577,7 +577,7 @@ function ToggleRow({
 
 const CHANNEL_MODE_OPTIONS: { value: ChannelMode; label: string; description: string }[] = [
   { value: 'matrix', label: 'Matrix', description: '连接 Matrix Synapse 服务器' },
-  { value: 'wps', label: 'WPS', description: '连接 claw-farm WPS IM 通道' },
+  { value: 'wps', label: 'WPS', description: '连接 WPS IM 通道' },
 ];
 
 const WPS_BASE_URL_KEY = 'hmr_wps_base_url';
@@ -643,7 +643,7 @@ function ChannelModeSelector() {
         {/* WPS base URL config */}
         {channelMode === 'wps' && (
           <div className="pt-2 border-t border-border space-y-2">
-            <label className="text-[10px] text-text-muted block">claw-farm 服务地址</label>
+            <label className="text-[10px] text-text-muted block">WPS IM 服务地址</label>
             <div className="flex gap-2">
               <input
                 value={wpsBaseUrl}

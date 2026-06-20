@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { UserManagementService } from '../../contexts/identity-access/user-management-service.js';
-import type { PlatformBeClient } from '../../contexts/gateway/clients/platform-be-client.js';
 import { parseBody, badRequest } from '../../shared/validation.js';
 
 const createUserSchema = z.object({
@@ -24,10 +23,7 @@ const updateUserSchema = z
   })
   .passthrough();
 
-export function createPlatformUserRoutes(
-  userMgmtSvc: UserManagementService,
-  platformBeClient?: PlatformBeClient
-) {
+export function createPlatformUserRoutes(userMgmtSvc: UserManagementService) {
   const app = new Hono();
 
   app.get('/', async (c) => {
@@ -64,15 +60,6 @@ export function createPlatformUserRoutes(
     const user = await userMgmtSvc.toggleDisable(id);
     if (!user) return c.json({ error: 'user not found' }, 404);
     return c.json(user);
-  });
-
-  app.post('/sync', async (c) => {
-    if (!platformBeClient?.isConfigured()) {
-      return c.json({ error: 'platform-be not configured' }, 503);
-    }
-    const { users: upstreamUsers } = await platformBeClient.listUsers();
-    const result = await userMgmtSvc.syncUsersFromUpstream(upstreamUsers, 'platform-be');
-    return c.json({ success: true, ...result });
   });
 
   return app;

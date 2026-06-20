@@ -48,7 +48,7 @@ export function createOpenclawWorkspaceRoutes(workspaceService: WorkspaceService
       return c.json({ agents, total: agents.length });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'upstream unavailable';
-      return c.json({ error: message, service: 'claw-manager' }, 502);
+      return c.json({ error: message, service: 'cluster-instance' }, 502);
     }
   });
 

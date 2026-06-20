@@ -80,7 +80,7 @@ function appendPagination(query: URLSearchParams, params?: PaginationParams): vo
 
 /* ──── Client ──── */
 
-export class ClawHubClient extends BaseGatewayClient {
+export class MarketplaceClient extends BaseGatewayClient {
   /* ──── HMAC Auth Override ──── */
 
   protected override async request<T = unknown>(
@@ -100,7 +100,7 @@ export class ClawHubClient extends BaseGatewayClient {
   }
 
   private injectHmac(opts: RequestOptions, path: string): void {
-    const secret = config.gateway.clawhubHmacSecret;
+    const secret = config.gateway.marketplaceHmacSecret;
     if (!secret) return;
 
     const timestamp = String(Math.floor(Date.now() / 1000));
@@ -111,8 +111,8 @@ export class ClawHubClient extends BaseGatewayClient {
 
     opts.headers = {
       ...opts.headers,
-      'X-Clawhub-Timestamp': timestamp,
-      'X-Clawhub-Signature': `sha256=${signature}`,
+      'X-Marketplace-Timestamp': timestamp,
+      'X-Marketplace-Signature': `sha256=${signature}`,
     };
   }
 

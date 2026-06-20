@@ -7,9 +7,9 @@ import type { AgentProfileRepository } from '../../db/repositories/agent-profile
 import type { AgentProfileService } from '../../contexts/agent-profile/agent-profile-service.js';
 import type { Principal } from '../../middleware/auth.js';
 import type {
-  ClawManagerClient,
-  ClawManagerInstance,
-} from '../../contexts/gateway/clients/claw-manager-client.js';
+  ClusterInstanceClient,
+  ClusterInstance,
+} from '../../contexts/gateway/clients/cluster-instance-client.js';
 
 const instanceActionSchema = z.object({
   action: z.enum(['start', 'stop', 'rebuild']),
@@ -88,7 +88,7 @@ function getUser(c: Context): Principal {
   return c.get('user') as Principal;
 }
 
-function mapRemoteInstance(r: ClawManagerInstance) {
+function mapRemoteInstance(r: ClusterInstance) {
   const status = r.status;
   return {
     id: `cm_${r.employeeNumber}`,
@@ -96,7 +96,7 @@ function mapRemoteInstance(r: ClawManagerInstance) {
     state: status,
     status,
     tenantId: 'default',
-    source: 'claw-manager',
+    source: 'cluster-instance',
     scope: r.appKey === 'default' ? 'personal' : 'organization',
     department: '--',
     jobTitle: '--',
@@ -108,7 +108,7 @@ function mapRemoteInstance(r: ClawManagerInstance) {
       model: { primaryModel: 'auto', fallbackModels: [], maxConcurrency: 1 },
       budget: { monthlyLimitCny: 0, dailyLimitCny: null, alertThresholdPct: 80 },
       storage: { persistentVolumeSize: '--', tempStorageSize: '--' },
-      source: 'claw-manager',
+      source: 'cluster-instance',
     },
     createdAt: r.createdAt,
     updatedAt: r.lastActive,
@@ -133,7 +133,7 @@ export function createAdminEmployeeRoutes(
   svc: InstanceService,
   agentProfileRepo: AgentProfileRepository,
   agentProfileSvc?: AgentProfileService,
-  clawManagerClient?: ClawManagerClient
+  clusterInstanceClient?: ClusterInstanceClient
 ) {
   const app = new Hono();
 
@@ -158,12 +158,12 @@ export function createAdminEmployeeRoutes(
       updatedAt: inst.updatedAt,
     }));
 
-    if (!clawManagerClient?.isConfigured()) {
+    if (!clusterInstanceClient?.isConfigured()) {
       return c.json(localItems);
     }
 
     try {
-      const res = await clawManagerClient.listInstances();
+      const res = await clusterInstanceClient.listInstances();
       if (!res.items?.length) {
         return c.json(localItems);
       }
@@ -173,7 +173,7 @@ export function createAdminEmployeeRoutes(
       const localOnly = localItems.filter((l) => !remoteIds.has(l.id));
       return c.json([...remoteItems, ...localOnly]);
     } catch {
-      /* claw-manager unavailable, fall through to local */
+      /* cluster-instance unavailable, fall through to local */
       return c.json(localItems);
     }
   });
@@ -211,26 +211,29 @@ export function createAdminEmployeeRoutes(
       settings: profileSettings,
     });
 
-    return c.json({
-      id: inst.id,
-      name: inst.name,
-      status: inst.state,
-      state: inst.state,
-      tenantId: inst.tenantId,
-      department: inst.department,
-      departmentId: inst.departmentId,
-      role: inst.jobTitle,
-      jobTitle: inst.jobTitle,
-      employeeNo: inst.employeeNo,
-      employeeId: inst.employeeId,
-      channelId: data.channelId,
-      channelAppId: data.channelAppId,
-      scope: data.scope,
-      ownerId: data.ownerId,
-      riskLevel: data.riskLevel,
-      description: data.description,
-      profile,
-    }, 201);
+    return c.json(
+      {
+        id: inst.id,
+        name: inst.name,
+        status: inst.state,
+        state: inst.state,
+        tenantId: inst.tenantId,
+        department: inst.department,
+        departmentId: inst.departmentId,
+        role: inst.jobTitle,
+        jobTitle: inst.jobTitle,
+        employeeNo: inst.employeeNo,
+        employeeId: inst.employeeId,
+        channelId: data.channelId,
+        channelAppId: data.channelAppId,
+        scope: data.scope,
+        ownerId: data.ownerId,
+        riskLevel: data.riskLevel,
+        description: data.description,
+        profile,
+      },
+      201
+    );
   });
 
   app.get('/:id', async (c) => {

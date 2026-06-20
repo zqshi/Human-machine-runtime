@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
-import { PortalClient } from '../clients/portal-client.js';
+import { ProfileServiceClient } from '../clients/profile-service-client.js';
 import { getUpstreamToken } from '../../../middleware/auth.js';
 
-export function createProfileProxyRoutes(client: PortalClient) {
+export function createProfileProxyRoutes(client: ProfileServiceClient) {
   const app = new Hono();
 
   app.get('/:agentId', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'portal' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'profile-service' }, 503);
     }
     const authToken = getUpstreamToken(c);
     const data = await client.getAgentProfile(c.req.param('agentId'), authToken);
@@ -16,7 +16,7 @@ export function createProfileProxyRoutes(client: PortalClient) {
 
   app.put('/:agentId', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ success: false, error: 'Portal service not configured' }, 503);
+      return c.json({ success: false, error: 'Profile service not configured' }, 503);
     }
     const body = await c.req.json();
     const authToken = getUpstreamToken(c);
@@ -26,7 +26,7 @@ export function createProfileProxyRoutes(client: PortalClient) {
 
   app.get('/:agentId/journey', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'portal' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'profile-service' }, 503);
     }
     const authToken = getUpstreamToken(c);
     const data = await client.getAgentJourney(c.req.param('agentId'), authToken);
@@ -35,7 +35,7 @@ export function createProfileProxyRoutes(client: PortalClient) {
 
   app.get('/:agentId/blog', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'portal' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'profile-service' }, 503);
     }
     const page = Number(c.req.query('page') || 1);
     const pageSize = Number(c.req.query('pageSize') || 20);
@@ -50,7 +50,7 @@ export function createProfileProxyRoutes(client: PortalClient) {
 
   app.get('/:agentId/usage', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'portal' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'profile-service' }, 503);
     }
     const period = c.req.query('period');
     const authToken = getUpstreamToken(c);

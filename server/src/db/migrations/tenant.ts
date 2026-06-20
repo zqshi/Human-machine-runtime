@@ -63,6 +63,7 @@ export async function migrateTenant(db: MigrateDb): Promise<void> {
       approval_policy JSONB DEFAULT '{}',
       request_id VARCHAR(64),
       last_error TEXT,
+      version INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
@@ -78,4 +79,7 @@ export async function migrateTenant(db: MigrateDb): Promise<void> {
   );
   await db.execute(sql`ALTER TABLE instances ADD COLUMN IF NOT EXISTS farm_pod_name VARCHAR(128)`);
   await db.execute(sql`ALTER TABLE instances ADD COLUMN IF NOT EXISTS farm_namespace VARCHAR(128)`);
+  await db.execute(
+    sql`ALTER TABLE instances ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0`
+  );
 }

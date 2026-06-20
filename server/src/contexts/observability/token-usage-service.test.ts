@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TokenUsageService } from './token-usage-service.js';
 
-function mockPortalClient(configured = true) {
+function mockProfileServiceClient(configured = true) {
   return {
     isConfigured: vi.fn().mockReturnValue(configured),
     getUsageSummary: vi.fn().mockResolvedValue({
@@ -38,7 +38,10 @@ function mockStore() {
 
 describe('TokenUsageService', () => {
   it('returns empty summary when no store', async () => {
-    const svc = new TokenUsageService(mockPortalClient() as never, mockLitellmClient() as never);
+    const svc = new TokenUsageService(
+      mockProfileServiceClient() as never,
+      mockLitellmClient() as never
+    );
     const summary = await svc.getUsageSummary('tn-1');
     expect(summary.totalTokens).toBe(0);
     expect(summary.tenantId).toBe('tn-1');
@@ -47,7 +50,7 @@ describe('TokenUsageService', () => {
   it('queries store for summary when available', async () => {
     const store = mockStore();
     const svc = new TokenUsageService(
-      mockPortalClient() as never,
+      mockProfileServiceClient() as never,
       mockLitellmClient() as never,
       store
     );
@@ -56,18 +59,18 @@ describe('TokenUsageService', () => {
     expect(store.getSummary).toHaveBeenCalledWith('tn-1', expect.any(Date));
   });
 
-  it('syncFromPortal skips when portal not configured', async () => {
-    const portal = mockPortalClient(false);
+  it('syncFromPortal skips when profileService not configured', async () => {
+    const profileService = mockProfileServiceClient(false);
     const store = mockStore();
-    const svc = new TokenUsageService(portal as never, mockLitellmClient() as never, store);
+    const svc = new TokenUsageService(profileService as never, mockLitellmClient() as never, store);
     await svc.syncFromPortal('a-1', 'tn-1');
     expect(store.upsertSnapshot).not.toHaveBeenCalled();
   });
 
-  it('syncFromPortal upserts snapshot from portal data', async () => {
-    const portal = mockPortalClient();
+  it('syncFromPortal upserts snapshot from profile-service data', async () => {
+    const profileService = mockProfileServiceClient();
     const store = mockStore();
-    const svc = new TokenUsageService(portal as never, mockLitellmClient() as never, store);
+    const svc = new TokenUsageService(profileService as never, mockLitellmClient() as never, store);
     await svc.syncFromPortal('a-1', 'tn-1');
     expect(store.upsertSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: 'tn-1', model: 'gpt-4', totalTokens: 150 })
@@ -76,16 +79,19 @@ describe('TokenUsageService', () => {
 
   it('getLiteLLMSpend returns null when not configured', async () => {
     const litellm = mockLitellmClient(false);
-    const svc = new TokenUsageService(mockPortalClient() as never, litellm as never);
+    const svc = new TokenUsageService(mockProfileServiceClient() as never, litellm as never);
     const result = await svc.getLiteLLMSpend();
     expect(result).toBeNull();
   });
 
   it('getLiteLLMSpend returns spend data', async () => {
     const litellm = mockLitellmClient();
-    const svc = new TokenUsageService(mockPortalClient() as never, litellm as never);
+    const svc = new TokenUsageService(mockProfileServiceClient() as never, litellm as never);
     const result = await svc.getLiteLLMSpend('2026-05-01', '2026-05-18');
     expect(result).toEqual({ totalSpend: 12.5 });
-    expect(litellm.getSpend).toHaveBeenCalledWith({ startDate: '2026-05-01', endDate: '2026-05-18' });
+    expect(litellm.getSpend).toHaveBeenCalledWith({
+      startDate: '2026-05-01',
+      endDate: '2026-05-18',
+    });
   });
 });

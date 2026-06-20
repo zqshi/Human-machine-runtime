@@ -2,7 +2,7 @@ import { BaseGatewayClient } from './base-client.js';
 
 /* ──── Interfaces ──── */
 
-export interface XspaceWorkspace {
+export interface WorkspaceBackendWorkspace {
   id: string;
   name: string;
   type: string;
@@ -13,7 +13,7 @@ export interface XspaceWorkspace {
   updatedAt: string;
 }
 
-export interface XspaceApp {
+export interface WorkspaceBackendApp {
   id: string;
   workspaceId: string;
   name: string;
@@ -23,7 +23,7 @@ export interface XspaceApp {
   createdAt: string;
 }
 
-export interface XspaceConversation {
+export interface WorkspaceBackendConversation {
   id: string;
   workspaceId: string;
   title?: string;
@@ -32,7 +32,7 @@ export interface XspaceConversation {
   updatedAt: string;
 }
 
-export interface XspaceAgent {
+export interface WorkspaceBackendAgent {
   id: string;
   name: string;
   description?: string;
@@ -43,7 +43,7 @@ export interface XspaceAgent {
   createdAt: string;
 }
 
-export interface XspaceDeployment {
+export interface WorkspaceBackendDeployment {
   id: string;
   appId: string;
   status: string;
@@ -52,7 +52,7 @@ export interface XspaceDeployment {
   updatedAt: string;
 }
 
-export interface XspaceSupabaseAuth {
+export interface WorkspaceBackendSupabaseAuth {
   url: string;
   anonKey: string;
   email: string;
@@ -60,19 +60,18 @@ export interface XspaceSupabaseAuth {
 }
 
 /**
- * xspace uses `/xspace/api/v1/` prefix.
+ * Upstream uses `/api/v1/` prefix.
  * - Singular form for single-resource paths (`/workspace/{id}`, `/agent/{id}`)
  * - Plural for collection list (`/workspaces`, `/agents`)
  * - PATCH for updates (not PUT)
  * - Flat routes for apps/conversations (not nested under workspace)
- * Paths verified against xspace FastAPI router.
  */
-export class XspaceClient extends BaseGatewayClient {
-  private supabaseAuth: XspaceSupabaseAuth | null = null;
+export class WorkspaceBackendClient extends BaseGatewayClient {
+  private supabaseAuth: WorkspaceBackendSupabaseAuth | null = null;
   private cachedToken: string | null = null;
   private tokenExpiresAt = 0;
 
-  setSupabaseAuth(auth: XspaceSupabaseAuth): void {
+  setSupabaseAuth(auth: WorkspaceBackendSupabaseAuth): void {
     this.supabaseAuth = auth;
   }
 
@@ -115,8 +114,8 @@ export class XspaceClient extends BaseGatewayClient {
     if (params.userId) query.set('userId', params.userId);
     if (params.type) query.set('type', params.type);
     const qs = query.toString();
-    return this.request<{ workspaces: XspaceWorkspace[] }>(
-      `/xspace/api/v1/workspaces${qs ? `?${qs}` : ''}`,
+    return this.request<{ workspaces: WorkspaceBackendWorkspace[] }>(
+      `/api/v1/workspaces${qs ? `?${qs}` : ''}`,
       { authToken: token }
     );
   }
@@ -126,7 +125,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceWorkspace>('/xspace/api/v1/workspace', {
+    return this.request<WorkspaceBackendWorkspace>('/api/v1/workspace', {
       method: 'POST',
       body: data,
       authToken: token,
@@ -136,18 +135,18 @@ export class XspaceClient extends BaseGatewayClient {
 
   async getWorkspace(workspaceId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceWorkspace>(`/xspace/api/v1/workspace/${workspaceId}`, {
+    return this.request<WorkspaceBackendWorkspace>(`/api/v1/workspace/${workspaceId}`, {
       authToken: token,
     });
   }
 
   async updateWorkspace(
     workspaceId: string,
-    data: Partial<Pick<XspaceWorkspace, 'name' | 'model'>>,
+    data: Partial<Pick<WorkspaceBackendWorkspace, 'name' | 'model'>>,
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceWorkspace>(`/xspace/api/v1/workspace/${workspaceId}`, {
+    return this.request<WorkspaceBackendWorkspace>(`/api/v1/workspace/${workspaceId}`, {
       method: 'PATCH',
       body: data,
       authToken: token,
@@ -157,7 +156,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async deleteWorkspace(workspaceId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/workspace/${workspaceId}`, {
+    return this.request(`/api/v1/workspace/${workspaceId}`, {
       method: 'DELETE',
       authToken: token,
       timeoutProfile: 'write',
@@ -166,7 +165,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async updateWorkspaceModel(workspaceId: string, model: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/workspace/${workspaceId}`, {
+    return this.request(`/api/v1/workspace/${workspaceId}`, {
       method: 'PATCH',
       body: { model },
       authToken: token,
@@ -176,7 +175,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async addWorkspaceSkill(workspaceId: string, skillId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/workspace/${workspaceId}/skill`, {
+    return this.request(`/api/v1/workspace/${workspaceId}/skill`, {
       method: 'POST',
       body: { skillId },
       authToken: token,
@@ -186,7 +185,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async removeWorkspaceSkill(workspaceId: string, skillId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/workspace/${workspaceId}/skill/${skillId}`, {
+    return this.request(`/api/v1/workspace/${workspaceId}/skill/${skillId}`, {
       method: 'DELETE',
       authToken: token,
       timeoutProfile: 'write',
@@ -195,22 +194,22 @@ export class XspaceClient extends BaseGatewayClient {
 
   async listWorkspaceSkills(workspaceId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/workspace/${workspaceId}/skills`, { authToken: token });
+    return this.request(`/api/v1/workspace/${workspaceId}/skills`, { authToken: token });
   }
 
   /* ──── Apps (flat routes) ──── */
 
   async listApps(workspaceId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<{ apps: XspaceApp[] }>(
-      `/xspace/api/v1/apps?workspaceId=${encodeURIComponent(workspaceId)}`,
+    return this.request<{ apps: WorkspaceBackendApp[] }>(
+      `/api/v1/apps?workspaceId=${encodeURIComponent(workspaceId)}`,
       { authToken: token }
     );
   }
 
   async createApp(workspaceId: string, data: { name: string; type: string }, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceApp>('/xspace/api/v1/app', {
+    return this.request<WorkspaceBackendApp>('/api/v1/app', {
       method: 'POST',
       body: { ...data, workspaceId },
       authToken: token,
@@ -220,17 +219,17 @@ export class XspaceClient extends BaseGatewayClient {
 
   async getApp(_workspaceId: string, appId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceApp>(`/xspace/api/v1/app/${appId}`, { authToken: token });
+    return this.request<WorkspaceBackendApp>(`/api/v1/app/${appId}`, { authToken: token });
   }
 
   async updateApp(
     _workspaceId: string,
     appId: string,
-    data: Partial<Pick<XspaceApp, 'name' | 'type'>>,
+    data: Partial<Pick<WorkspaceBackendApp, 'name' | 'type'>>,
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceApp>(`/xspace/api/v1/app/${appId}`, {
+    return this.request<WorkspaceBackendApp>(`/api/v1/app/${appId}`, {
       method: 'PATCH',
       body: data,
       authToken: token,
@@ -240,7 +239,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async deleteApp(_workspaceId: string, appId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/app/${appId}`, {
+    return this.request(`/api/v1/app/${appId}`, {
       method: 'DELETE',
       authToken: token,
       timeoutProfile: 'write',
@@ -249,7 +248,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async deployApp(_workspaceId: string, appId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceDeployment>(`/xspace/api/v1/app/${appId}/deploy`, {
+    return this.request<WorkspaceBackendDeployment>(`/api/v1/app/${appId}/deploy`, {
       method: 'POST',
       authToken: token,
       timeoutProfile: 'write',
@@ -258,22 +257,22 @@ export class XspaceClient extends BaseGatewayClient {
 
   async getDeploymentStatus(deploymentId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceDeployment>(`/xspace/api/v1/deployment/${deploymentId}`, {
+    return this.request<WorkspaceBackendDeployment>(`/api/v1/deployment/${deploymentId}`, {
       authToken: token,
     });
   }
 
   async previewApp(_workspaceId: string, appId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/app/${appId}/preview`, { authToken: token });
+    return this.request(`/api/v1/app/${appId}/preview`, { authToken: token });
   }
 
   /* ──── Conversations (flat routes) ──── */
 
   async listConversations(workspaceId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<{ conversations: XspaceConversation[] }>(
-      `/xspace/api/v1/conversations?workspaceId=${encodeURIComponent(workspaceId)}`,
+    return this.request<{ conversations: WorkspaceBackendConversation[] }>(
+      `/api/v1/conversations?workspaceId=${encodeURIComponent(workspaceId)}`,
       { authToken: token }
     );
   }
@@ -284,7 +283,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceConversation>('/xspace/api/v1/conversation', {
+    return this.request<WorkspaceBackendConversation>('/api/v1/conversation', {
       method: 'POST',
       body: { ...data, workspaceId },
       authToken: token,
@@ -294,14 +293,14 @@ export class XspaceClient extends BaseGatewayClient {
 
   async getConversation(_workspaceId: string, conversationId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceConversation>(`/xspace/api/v1/conversation/${conversationId}`, {
+    return this.request<WorkspaceBackendConversation>(`/api/v1/conversation/${conversationId}`, {
       authToken: token,
     });
   }
 
   async deleteConversation(_workspaceId: string, conversationId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/conversation/${conversationId}`, {
+    return this.request(`/api/v1/conversation/${conversationId}`, {
       method: 'DELETE',
       authToken: token,
       timeoutProfile: 'write',
@@ -315,7 +314,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/conversation/${conversationId}`, {
+    return this.request(`/api/v1/conversation/${conversationId}`, {
       method: 'PATCH',
       body: { title },
       authToken: token,
@@ -330,7 +329,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/conversation/${conversationId}/message`, {
+    return this.request(`/api/v1/conversation/${conversationId}/message`, {
       method: 'POST',
       body: message,
       authToken: token,
@@ -347,7 +346,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ): Promise<Response> {
     const token = await this.resolveAuthToken(authToken);
-    return this.requestRaw(`/xspace/api/v1/workspace/${workspaceId}/generate`, {
+    return this.requestRaw(`/api/v1/workspace/${workspaceId}/generate`, {
       method: 'POST',
       body: { prompt, ...options },
       headers: { Accept: 'text/event-stream' },
@@ -361,14 +360,14 @@ export class XspaceClient extends BaseGatewayClient {
   async listAgents(params?: { userId?: string }, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
     const query = params?.userId ? `?userId=${encodeURIComponent(params.userId)}` : '';
-    return this.request<{ agents: XspaceAgent[] }>(`/xspace/api/v1/agents${query}`, {
+    return this.request<{ agents: WorkspaceBackendAgent[] }>(`/api/v1/agents${query}`, {
       authToken: token,
     });
   }
 
   async getAgent(agentId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceAgent>(`/xspace/api/v1/agent/${agentId}`, { authToken: token });
+    return this.request<WorkspaceBackendAgent>(`/api/v1/agent/${agentId}`, { authToken: token });
   }
 
   async createAgent(
@@ -376,7 +375,7 @@ export class XspaceClient extends BaseGatewayClient {
     authToken?: string
   ) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceAgent>('/xspace/api/v1/agent', {
+    return this.request<WorkspaceBackendAgent>('/api/v1/agent', {
       method: 'POST',
       body: data,
       authToken: token,
@@ -384,9 +383,9 @@ export class XspaceClient extends BaseGatewayClient {
     });
   }
 
-  async updateAgent(agentId: string, data: Partial<XspaceAgent>, authToken?: string) {
+  async updateAgent(agentId: string, data: Partial<WorkspaceBackendAgent>, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceAgent>(`/xspace/api/v1/agent/${agentId}`, {
+    return this.request<WorkspaceBackendAgent>(`/api/v1/agent/${agentId}`, {
       method: 'PATCH',
       body: data,
       authToken: token,
@@ -396,7 +395,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async deleteAgent(agentId: string, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request(`/xspace/api/v1/agent/${agentId}`, {
+    return this.request(`/api/v1/agent/${agentId}`, {
       method: 'DELETE',
       authToken: token,
       timeoutProfile: 'write',
@@ -405,7 +404,7 @@ export class XspaceClient extends BaseGatewayClient {
 
   async createAgentConversation(agentId: string, data?: { title?: string }, authToken?: string) {
     const token = await this.resolveAuthToken(authToken);
-    return this.request<XspaceConversation>(`/xspace/api/v1/agent/${agentId}/conversation`, {
+    return this.request<WorkspaceBackendConversation>(`/api/v1/agent/${agentId}/conversation`, {
       method: 'POST',
       body: data ?? {},
       authToken: token,
@@ -416,7 +415,7 @@ export class XspaceClient extends BaseGatewayClient {
   /* ──── Common ──── */
 
   async uploadFile(formData: FormData, authToken?: string): Promise<Response> {
-    return this.requestRaw('/xspace/api/v1/common/upload', {
+    return this.requestRaw('/api/v1/common/upload', {
       method: 'POST',
       body: formData as unknown,
       headers: { Accept: 'application/json' },
@@ -426,14 +425,14 @@ export class XspaceClient extends BaseGatewayClient {
   }
 
   async listAvailableModels(authToken?: string) {
-    return this.request('/xspace/api/v1/models', { authToken });
+    return this.request('/api/v1/models', { authToken });
   }
 
   /* ──── WebSocket ──── */
 
   getWebSocketUrl(): string {
     const wsBase = this.baseUrl.replace(/^http/, 'ws');
-    return `${wsBase}/xspace/api/v1/ws`;
+    return `${wsBase}/api/v1/ws`;
   }
 
   /* ──── Health ──── */
@@ -441,7 +440,7 @@ export class XspaceClient extends BaseGatewayClient {
   async healthCheck(): Promise<boolean> {
     if (!this.isConfigured()) return false;
     try {
-      await this.request('/xspace/api/v1/common/health', { skipRetry: true });
+      await this.request('/api/v1/common/health', { skipRetry: true });
       return true;
     } catch {
       return false;

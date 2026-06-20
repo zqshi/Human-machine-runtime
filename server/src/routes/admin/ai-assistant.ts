@@ -6,7 +6,7 @@ import type { AnalyticsService } from '../../contexts/analytics/analytics-servic
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
 import type { SkillService } from '../../contexts/shared-assets/skill-service.js';
 import type { AuditService } from '../../contexts/audit-observability/audit-service.js';
-import type { ClawManagerClient } from '../../contexts/gateway/clients/claw-manager-client.js';
+import type { ClusterInstanceClient } from '../../contexts/gateway/clients/cluster-instance-client.js';
 import { parseBody, badRequest } from '../../shared/validation.js';
 import { newId } from '../../shared/utils.js';
 import { logger } from '../../app/logger.js';
@@ -40,7 +40,7 @@ ${roleLine}
 interface AssistantDeps {
   litellmClient: LiteLLMClient | undefined;
   analyticsService: AnalyticsService;
-  clawManagerClient: ClawManagerClient | undefined;
+  clusterInstanceClient: ClusterInstanceClient | undefined;
   aiGatewayRepo: AiGatewayRepository | undefined;
   skillService: SkillService | undefined;
   auditService: AuditService | undefined;
@@ -75,9 +75,9 @@ async function buildContextSummary(deps: AssistantDeps): Promise<string> {
 
   const [instancesResult, traceStatsResult, skillsResult, auditsResult, alertsResult] =
     await Promise.allSettled([
-      deps.clawManagerClient?.isConfigured()
-        ? deps.clawManagerClient.listInstances()
-        : Promise.reject(new Error('claw-manager not configured')),
+      deps.clusterInstanceClient?.isConfigured()
+        ? deps.clusterInstanceClient.listInstances()
+        : Promise.reject(new Error('cluster-instance not configured')),
       deps.aiGatewayRepo?.getTraceStats(),
       deps.skillService?.listSharedAssets(),
       deps.auditService?.list(10),
@@ -103,7 +103,7 @@ async function buildContextSummary(deps: AssistantDeps): Promise<string> {
       sections.push(list);
     }
   } else {
-    sections.push('## 数字员工实例\n- claw-manager 数据源不可用');
+    sections.push('## 数字员工实例\n- cluster-instance 数据源不可用');
   }
 
   if (traceStatsResult.status === 'fulfilled' && traceStatsResult.value) {
@@ -152,7 +152,7 @@ async function buildContextSummary(deps: AssistantDeps): Promise<string> {
 export function createAdminAssistantRoutes(
   litellmClient: LiteLLMClient | undefined,
   analyticsService: AnalyticsService,
-  clawManagerClient: ClawManagerClient | undefined,
+  clusterInstanceClient: ClusterInstanceClient | undefined,
   aiGatewayRepo?: AiGatewayRepository,
   skillService?: SkillService,
   auditService?: AuditService
@@ -160,7 +160,7 @@ export function createAdminAssistantRoutes(
   const deps: AssistantDeps = {
     litellmClient,
     analyticsService,
-    clawManagerClient,
+    clusterInstanceClient,
     aiGatewayRepo,
     skillService,
     auditService,

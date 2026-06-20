@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { WpsChannelAdapter } from './wps-adapter.js';
-import type { ClawFarmClient } from '../../gateway/clients/claw-farm-client.js';
+import type { ContainerOrchestratorClient } from '../../gateway/clients/container-orchestrator-client.js';
 
-function makeFarmClient(configured = true): ClawFarmClient {
+function makeFarmClient(configured = true): ContainerOrchestratorClient {
   return {
     isConfigured: vi.fn(() => configured),
     sendMessage: vi.fn(async () => ({})),
@@ -10,7 +10,7 @@ function makeFarmClient(configured = true): ClawFarmClient {
       { id: 'ch_1', name: 'WPS 研发群' },
       { id: 'ch_2', name: 'WPS 产品群' },
     ]),
-  } as unknown as ClawFarmClient;
+  } as unknown as ContainerOrchestratorClient;
 }
 
 describe('WpsChannelAdapter', () => {
@@ -19,7 +19,7 @@ describe('WpsChannelAdapter', () => {
     expect(adapter.channelType).toBe('wps');
   });
 
-  it('sendMessage delegates to ClawFarmClient', async () => {
+  it('sendMessage delegates to ContainerOrchestratorClient', async () => {
     const client = makeFarmClient();
     const adapter = new WpsChannelAdapter(client);
 
@@ -73,7 +73,7 @@ describe('WpsChannelAdapter', () => {
     expect(status.error).toBe('timeout');
   });
 
-  it('listConversations maps claw-farm channels', async () => {
+  it('listConversations maps container-orchestrator channels', async () => {
     const adapter = new WpsChannelAdapter(makeFarmClient());
     const convos = await adapter.listConversations('user_1');
     expect(convos).toHaveLength(2);

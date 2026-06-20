@@ -10,7 +10,7 @@ import type {
   WorkspaceDTO,
   WorkspaceConversationDTO,
   WorkspaceAppDTO,
-  XspaceAgentDTO,
+  WorkspaceAgentDTO,
 } from '../../infrastructure/api/openclawWorkspaceApiClient';
 import { workspaceApi } from '../../infrastructure/api/openclawWorkspaceApiClient';
 
@@ -25,7 +25,7 @@ interface WorkspaceState {
   currentWorkspaceId: string | null;
   conversations: WorkspaceConversationDTO[];
   apps: WorkspaceAppDTO[];
-  agents: XspaceAgentDTO[];
+  agents: WorkspaceAgentDTO[];
   loading: boolean;
   generating: boolean;
   generationOutput: GenerationChunk[];

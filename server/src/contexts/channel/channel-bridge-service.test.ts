@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { ChannelBridgeService } from './channel-bridge-service.js';
 import { InboundPipeline } from './inbound-pipeline.js';
-import type { ClawFarmWsBridge, WsBridgeMessage } from '../gateway/clients/claw-farm-ws-bridge.js';
+import type {
+  ContainerOrchestratorWsBridge,
+  WsBridgeMessage,
+} from '../gateway/clients/container-orchestrator-ws-bridge.js';
 
-function makeMockWsBridge(): ClawFarmWsBridge & EventEmitter {
-  const emitter = new EventEmitter() as ClawFarmWsBridge & EventEmitter;
+function makeMockWsBridge(): ContainerOrchestratorWsBridge & EventEmitter {
+  const emitter = new EventEmitter() as ContainerOrchestratorWsBridge & EventEmitter;
   emitter.connect = vi.fn().mockResolvedValue('u1:inst1');
   emitter.disconnect = vi.fn();
   emitter.send = vi.fn().mockReturnValue(true);

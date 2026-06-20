@@ -1,27 +1,27 @@
 import { Hono } from 'hono';
 import type { AnalyticsService } from '../../contexts/analytics/analytics-service.js';
 import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
-import type { ClawHubClient } from '../../contexts/gateway/clients/clawhub-client.js';
-import type { ClawFarmClient } from '../../contexts/gateway/clients/claw-farm-client.js';
-import type { XspaceClient } from '../../contexts/gateway/clients/xspace-client.js';
-import type { PortalClient } from '../../contexts/gateway/clients/portal-client.js';
+import type { MarketplaceClient } from '../../contexts/gateway/clients/marketplace-client.js';
+import type { ContainerOrchestratorClient } from '../../contexts/gateway/clients/container-orchestrator-client.js';
+import type { WorkspaceBackendClient } from '../../contexts/gateway/clients/workspace-backend-client.js';
+import type { ProfileServiceClient } from '../../contexts/gateway/clients/profile-service-client.js';
 
 export interface AnalyticsRouteDeps {
   analyticsSvc: AnalyticsService;
   litellmClient?: LiteLLMClient;
-  clawHubClient?: ClawHubClient;
-  clawFarmClient?: ClawFarmClient;
-  xspaceClient?: XspaceClient;
-  portalClient?: PortalClient;
+  marketplaceClient?: MarketplaceClient;
+  containerOrchestratorClient?: ContainerOrchestratorClient;
+  workspaceBackendClient?: WorkspaceBackendClient;
+  profileServiceClient?: ProfileServiceClient;
 }
 
 export function createAdminAnalyticsRoutes(
   analyticsSvc: AnalyticsService,
   litellmClient?: LiteLLMClient,
-  clawHubClient?: ClawHubClient,
-  clawFarmClient?: ClawFarmClient,
-  xspaceClient?: XspaceClient,
-  portalClient?: PortalClient
+  marketplaceClient?: MarketplaceClient,
+  containerOrchestratorClient?: ContainerOrchestratorClient,
+  workspaceBackendClient?: WorkspaceBackendClient,
+  profileServiceClient?: ProfileServiceClient
 ) {
   const app = new Hono();
 
@@ -54,13 +54,19 @@ export function createAdminAnalyticsRoutes(
   app.get('/gateway-status', async (c) => {
     const checks = await Promise.allSettled([
       checkGateway('litellm', litellmClient),
-      checkGateway('clawhub', clawHubClient),
-      checkGateway('claw-farm', clawFarmClient),
-      checkGateway('xspace', xspaceClient),
-      checkGateway('portal', portalClient),
+      checkGateway('marketplace', marketplaceClient),
+      checkGateway('container-orchestrator', containerOrchestratorClient),
+      checkGateway('workspace-backend', workspaceBackendClient),
+      checkGateway('profile-service', profileServiceClient),
     ]);
 
-    const names = ['litellm', 'clawhub', 'claw-farm', 'xspace', 'portal'];
+    const names = [
+      'litellm',
+      'marketplace',
+      'container-orchestrator',
+      'workspace-backend',
+      'profile-service',
+    ];
     const gateways: Record<string, unknown> = {};
     checks.forEach((r, i) => {
       gateways[names[i]] =

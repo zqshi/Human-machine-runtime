@@ -1,20 +1,22 @@
 import type { InstanceService } from '../tenant-instance/instance-service.js';
 import type { OperationalRepository } from '../../db/repositories/operational-repository.js';
-import type { ClawHubClient } from '../gateway/clients/clawhub-client.js';
+import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
 import { newId } from '../../shared/utils.js';
 
 export class SharedAgentService {
   constructor(
     private instanceSvc: InstanceService,
     private opRepo: OperationalRepository,
-    private clawHubClient?: ClawHubClient
+    private marketplaceClient?: MarketplaceClient
   ) {}
 
   async listAll() {
     const all = await this.instanceSvc.list();
     const registered = await this.opRepo
       .list('tool_config')
-      .then((rows) => rows.filter((r) => (r as Record<string, unknown>).category === 'shared_agent'));
+      .then((rows) =>
+        rows.filter((r) => (r as Record<string, unknown>).category === 'shared_agent')
+      );
 
     const agents = all.map((inst) => ({
       id: inst.id,
@@ -37,15 +39,15 @@ export class SharedAgentService {
     }));
 
     let hubAgents: unknown[] = [];
-    if (this.clawHubClient?.isConfigured()) {
+    if (this.marketplaceClient?.isConfigured()) {
       try {
-        const hubRes = await this.clawHubClient.listAgents({ pageSize: 50 });
+        const hubRes = await this.marketplaceClient.listAgents({ pageSize: 50 });
         const items = Array.isArray(hubRes) ? hubRes : (hubRes as Record<string, unknown>)?.items;
         hubAgents = Array.isArray(items)
           ? items.map((a: Record<string, unknown>) => ({ ...a, type: 'hub' }))
           : [];
       } catch {
-        /* clawhub unavailable */
+        /* marketplace backend unavailable */
       }
     }
 

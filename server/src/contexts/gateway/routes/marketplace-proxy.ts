@@ -1,22 +1,28 @@
 import { Hono } from 'hono';
-import { ClawHubClient } from '../clients/clawhub-client.js';
+import { MarketplaceClient } from '../clients/marketplace-client.js';
 import { getUpstreamToken } from '../../../middleware/auth.js';
 import { GatewayError } from '../clients/base-client.js';
 
-function gatewayErrorResponse(c: { json: (body: unknown, status?: number) => Response }, err: unknown) {
+function gatewayErrorResponse(
+  c: { json: (body: unknown, status?: number) => Response },
+  err: unknown
+) {
   if (err instanceof GatewayError) {
-    return c.json({ success: false, error: err.message, service: 'clawhub' }, err.status as 502);
+    return c.json(
+      { success: false, error: err.message, service: 'marketplace' },
+      err.status as 502
+    );
   }
   const message = err instanceof Error ? err.message : 'upstream unavailable';
-  return c.json({ success: false, error: message, service: 'clawhub' }, 502);
+  return c.json({ success: false, error: message, service: 'marketplace' }, 502);
 }
 
-export function createMarketplaceProxyRoutes(client: ClawHubClient) {
+export function createMarketplaceProxyRoutes(client: MarketplaceClient) {
   const app = new Hono();
 
   app.get('/skills', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'clawhub' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'marketplace' }, 503);
     }
     const keyword = c.req.query('keyword');
     const page = Number(c.req.query('page') || 1);
@@ -35,7 +41,7 @@ export function createMarketplaceProxyRoutes(client: ClawHubClient) {
 
   app.get('/skills/:id', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'clawhub' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'marketplace' }, 503);
     }
     const authToken = getUpstreamToken(c);
     try {
@@ -48,7 +54,7 @@ export function createMarketplaceProxyRoutes(client: ClawHubClient) {
 
   app.get('/skills/search', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'clawhub' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'marketplace' }, 503);
     }
     const keyword = c.req.query('keyword') || '';
     const authToken = getUpstreamToken(c);
@@ -62,7 +68,7 @@ export function createMarketplaceProxyRoutes(client: ClawHubClient) {
 
   app.get('/agents', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'clawhub' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'marketplace' }, 503);
     }
     const keyword = c.req.query('keyword');
     const page = Number(c.req.query('page') || 1);
@@ -81,7 +87,7 @@ export function createMarketplaceProxyRoutes(client: ClawHubClient) {
 
   app.get('/agents/:id', async (c) => {
     if (!client.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'clawhub' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'marketplace' }, 503);
     }
     const authToken = getUpstreamToken(c);
     try {

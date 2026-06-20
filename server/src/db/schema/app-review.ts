@@ -5,7 +5,7 @@ export const appReviews = pgTable(
   {
     id: serial('id').primaryKey(),
     appId: varchar('app_id', { length: 64 }).notNull(),
-    xspaceAppId: varchar('xspace_app_id', { length: 64 }),
+    workspaceBackendAppId: varchar('xspace_app_id', { length: 64 }),
     tenantId: varchar('tenant_id', { length: 64 }).notNull(),
     submitter: varchar('submitter', { length: 128 }).notNull(),
     status: varchar('status', { length: 32 }).notNull().default('pending'),

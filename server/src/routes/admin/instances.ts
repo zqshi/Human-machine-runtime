@@ -1,21 +1,21 @@
 import { Hono } from 'hono';
 import type { InstanceService } from '../../contexts/tenant-instance/instance-service.js';
-import type { ClawFarmClient } from '../../contexts/gateway/clients/claw-farm-client.js';
-import type { ClawManagerClient } from '../../contexts/gateway/clients/claw-manager-client.js';
+import type { ContainerOrchestratorClient } from '../../contexts/gateway/clients/container-orchestrator-client.js';
+import type { ClusterInstanceClient } from '../../contexts/gateway/clients/cluster-instance-client.js';
 
 export function createAdminInstanceRoutes(
   svc: InstanceService,
-  clawFarmClient?: ClawFarmClient,
-  clawManagerClient?: ClawManagerClient
+  containerOrchestratorClient?: ContainerOrchestratorClient,
+  clusterInstanceClient?: ClusterInstanceClient
 ) {
   const app = new Hono();
 
   app.get('/', async (c) => {
     const instances = await svc.list();
 
-    if (!instances.length && clawManagerClient?.isConfigured()) {
+    if (!instances.length && clusterInstanceClient?.isConfigured()) {
       try {
-        const res = await clawManagerClient.listInstances();
+        const res = await clusterInstanceClient.listInstances();
         if (res.items?.length) {
           return c.json({
             instances: res.items.map((r) => ({
@@ -23,7 +23,7 @@ export function createAdminInstanceRoutes(
               name: r.name || r.podName,
               state: r.status,
               tenantId: 'default',
-              source: 'claw-manager',
+              source: 'cluster-instance',
               remote: {
                 podName: r.podName,
                 nodeName: r.nodeName ?? null,
@@ -41,17 +41,17 @@ export function createAdminInstanceRoutes(
     }
 
     let remoteInstances: unknown[] | null = null;
-    if (clawManagerClient?.isConfigured()) {
+    if (clusterInstanceClient?.isConfigured()) {
       try {
-        const res = await clawManagerClient.listInstances();
+        const res = await clusterInstanceClient.listInstances();
         remoteInstances = res.items ?? null;
       } catch {
-        /* claw-manager unavailable */
+        /* cluster-instance unavailable */
       }
     }
-    if (!remoteInstances && clawFarmClient?.isConfigured()) {
+    if (!remoteInstances && containerOrchestratorClient?.isConfigured()) {
       try {
-        const res = await clawFarmClient.listInstances();
+        const res = await containerOrchestratorClient.listInstances();
         const arr = Array.isArray(res) ? res : (res as Record<string, unknown>)?.instances;
         remoteInstances = Array.isArray(arr) ? arr : null;
       } catch {
@@ -70,9 +70,9 @@ export function createAdminInstanceRoutes(
     const inst = await svc.get(c.req.param('id'));
 
     let remoteStatus: unknown = null;
-    if (clawFarmClient?.isConfigured()) {
+    if (containerOrchestratorClient?.isConfigured()) {
       try {
-        remoteStatus = await clawFarmClient.getInstanceStatus(inst.id);
+        remoteStatus = await containerOrchestratorClient.getInstanceStatus(inst.id);
       } catch {
         /* gateway unavailable */
       }

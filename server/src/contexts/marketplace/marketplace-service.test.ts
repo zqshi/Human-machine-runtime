@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MarketplaceService } from './marketplace-service.js';
-import type { ClawHubClient } from '../gateway/clients/clawhub-client.js';
+import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
 
-function makeClient(): ClawHubClient {
+function makeClient(): MarketplaceClient {
   return {
+    isConfigured: vi.fn(() => true),
     listSkills: vi.fn(async (p: any) => ({
       items: [{ id: 's1', name: '技能A' }],
       total: 1,
@@ -17,7 +18,7 @@ function makeClient(): ClawHubClient {
       page: p.page,
     })),
     getAgent: vi.fn(async (id: string) => ({ id, name: 'Agent详情' })),
-  } as unknown as ClawHubClient;
+  } as unknown as MarketplaceClient;
 }
 
 describe('MarketplaceService', () => {
@@ -147,5 +148,12 @@ describe('MarketplaceService', () => {
     const result = await svc.rejectPublish('req-1', 'reviewer1', '质量不达标');
     expect(result?.status).toBe('rejected');
     expect(result?.reviewNote).toBe('质量不达标');
+  });
+
+  it('refuses operations when marketplace backend not configured', async () => {
+    const client = makeClient();
+    (client as any).isConfigured = () => false;
+    const svc = new MarketplaceService(client);
+    await expect(svc.listSkills()).rejects.toThrow(/not configured/);
   });
 });

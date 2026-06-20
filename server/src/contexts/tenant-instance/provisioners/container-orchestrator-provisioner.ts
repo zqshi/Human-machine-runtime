@@ -1,13 +1,13 @@
 import type { IInstanceProvisioner } from '../instance-service.js';
 import type { Instance } from '../domain/instance.js';
-import type { ClawFarmClient } from '../../gateway/clients/claw-farm-client.js';
+import type { ContainerOrchestratorClient } from '../../gateway/clients/container-orchestrator-client.js';
 
-export class ClawFarmProvisioner implements IInstanceProvisioner {
-  constructor(private client: ClawFarmClient) {}
+export class ContainerOrchestratorProvisioner implements IInstanceProvisioner {
+  constructor(private client: ContainerOrchestratorClient) {}
 
   async provision(instance: Instance): Promise<Record<string, unknown>> {
     if (!this.client.isConfigured()) {
-      throw new Error('claw-farm gateway is not configured');
+      throw new Error('container-orchestrator gateway is not configured');
     }
 
     const result = await this.client.createInstance({
@@ -17,7 +17,7 @@ export class ClawFarmProvisioner implements IInstanceProvisioner {
     });
 
     return {
-      engine: 'claw-farm',
+      engine: 'container-orchestrator',
       podName: result.podName,
       empKey: result.empKey,
       status: result.status,

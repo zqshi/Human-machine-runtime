@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { useToastStore } from '../../../application/stores/toastStore';
-import { agentApi, clawHubApi } from '../../../application/services/apiGateway';
+import { agentApi, marketplaceApi } from '../../../application/services/apiGateway';
 import type { SkillItem } from '../../../application/services/apiGateway';
 
 interface Skill {
@@ -41,7 +41,7 @@ function toSkill(agent: Record<string, unknown>): Skill {
   };
 }
 
-/** Map upstream SkillItem (from clawHubApi) to Skill display model */
+/** Map upstream SkillItem (from marketplaceApi) to Skill display model */
 function upstreamSkillToSkill(item: SkillItem): Skill {
   return {
     id: `upstream-${item.id}`,
@@ -58,7 +58,7 @@ function upstreamSkillToSkill(item: SkillItem): Skill {
     desc: item.description ?? '',
     roles: item.category ? [item.category] : [],
     usage: 0,
-    author: item.source ?? 'clawhub',
+    author: item.source ?? 'marketplace',
   };
 }
 
@@ -85,11 +85,11 @@ export function SkillsSidebar() {
       .then((res) => (res.rows || []).map(toSkill).slice(0, 8))
       .catch(() => [] as Skill[]);
 
-    const upstreamP = clawHubApi
+    const upstreamP = marketplaceApi
       .listSkills()
       .then((res) => (res.items || []).map(upstreamSkillToSkill))
       .catch((err) => {
-        console.warn('[SkillsSidebar] clawHubApi.listSkills failed:', err);
+        console.warn('[SkillsSidebar] marketplaceApi.listSkills failed:', err);
         return [] as Skill[];
       });
 
@@ -132,11 +132,11 @@ export function SkillsCenter() {
       .then((res) => (res.rows || []).map(toSkill))
       .catch(() => [] as Skill[]);
 
-    const upstreamP = clawHubApi
+    const upstreamP = marketplaceApi
       .listSkills()
       .then((res) => (res.items || []).map(upstreamSkillToSkill))
       .catch((err) => {
-        console.warn('[SkillsCenter] clawHubApi.listSkills failed:', err);
+        console.warn('[SkillsCenter] marketplaceApi.listSkills failed:', err);
         return [] as Skill[];
       });
 

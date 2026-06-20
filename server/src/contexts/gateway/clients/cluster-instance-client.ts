@@ -1,6 +1,6 @@
 import { BaseGatewayClient } from './base-client.js';
 
-export interface ClawManagerInstance {
+export interface ClusterInstance {
   appKey: string;
   userId: string;
   employeeNumber: number;
@@ -21,16 +21,16 @@ export interface ClawManagerInstance {
   runMode?: 'single' | 'persistent';
 }
 
-export interface ClawManagerListResult {
-  items: ClawManagerInstance[];
+export interface ClusterInstanceListResult {
+  items: ClusterInstance[];
   total: number;
   page: number;
   pageSize: number;
 }
 
-export class ClawManagerClient extends BaseGatewayClient {
-  async listInstances(page = 1, pageSize = 100): Promise<ClawManagerListResult> {
-    return this.request<ClawManagerListResult>(
+export class ClusterInstanceClient extends BaseGatewayClient {
+  async listInstances(page = 1, pageSize = 100): Promise<ClusterInstanceListResult> {
+    return this.request<ClusterInstanceListResult>(
       `/api/v1/instances?page=${page}&pageSize=${pageSize}`
     );
   }

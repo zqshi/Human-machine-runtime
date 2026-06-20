@@ -12,10 +12,10 @@ function mockCtx(dbConnected = true): AppContext {
     },
     gatewayHealth: {
       getStatus: () => [
-        { name: 'clawhub', configured: true, healthy: true, circuit: 'closed' },
-        { name: 'portal', configured: false, healthy: false, circuit: 'open' },
-        { name: 'xspace', configured: true, healthy: true, circuit: 'closed' },
-        { name: 'claw-farm', configured: false, healthy: false, circuit: 'open' },
+        { name: 'marketplace', configured: true, healthy: true, circuit: 'closed' },
+        { name: 'profile-service', configured: false, healthy: false, circuit: 'open' },
+        { name: 'workspace-backend', configured: true, healthy: true, circuit: 'closed' },
+        { name: 'container-orchestrator', configured: false, healthy: false, circuit: 'open' },
         { name: 'litellm', configured: true, healthy: true, circuit: 'closed' },
         { name: 'platform-be', configured: false, healthy: false, circuit: 'open' },
       ],
@@ -62,11 +62,13 @@ describe('health routes', () => {
       const res = await app.request('/detail');
       expect(res.status).toBe(200);
       const body = await res.json();
-      const clawhub = body.gateways.find((g: { name: string }) => g.name === 'clawhub');
-      expect(clawhub.configured).toBe(true);
-      expect(clawhub.circuit).toBe('closed');
-      const portal = body.gateways.find((g: { name: string }) => g.name === 'portal');
-      expect(portal.configured).toBe(false);
+      const marketplace = body.gateways.find((g: { name: string }) => g.name === 'marketplace');
+      expect(marketplace.configured).toBe(true);
+      expect(marketplace.circuit).toBe('closed');
+      const profileService = body.gateways.find(
+        (g: { name: string }) => g.name === 'profile-service'
+      );
+      expect(profileService.configured).toBe(false);
       expect(body.auth.defaultProvider).toContain('local');
     });
   });

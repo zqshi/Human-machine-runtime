@@ -21,92 +21,92 @@ export interface AgentItem {
   [key: string]: unknown;
 }
 
-export const clawHubApi = {
+export const marketplaceApi = {
   listSkills(q?: string): Promise<{ items: SkillItem[]; source: string }> {
     const qs = q ? `?q=${encodeURIComponent(q)}` : '';
-    return request(`/api/proxy/clawhub/skills${qs}`);
+    return request(`/api/proxy/marketplace/skills${qs}`);
   },
 
   getSkill(id: string): Promise<SkillItem> {
-    return request(`/api/proxy/clawhub/skills/${encodeURIComponent(id)}`);
+    return request(`/api/proxy/marketplace/skills/${encodeURIComponent(id)}`);
   },
 
   listAgents(): Promise<{ items: AgentItem[] }> {
-    return request('/api/proxy/clawhub/agents');
+    return request('/api/proxy/marketplace/agents');
   },
 
   listMcpTools(): Promise<{ tools: Record<string, unknown>[] }> {
-    return request('/api/proxy/clawhub/mcp-tools');
+    return request('/api/proxy/marketplace/mcp-tools');
   },
 
   search(q: string): Promise<{ results: Record<string, unknown>[] }> {
-    return request(`/api/proxy/clawhub/search?q=${encodeURIComponent(q)}`);
+    return request(`/api/proxy/marketplace/search?q=${encodeURIComponent(q)}`);
   },
 };
 
-export const portalApi = {
+export const profileApi = {
   getProfile(userId: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/portal/profile/${encodeURIComponent(userId)}`);
+    return request(`/api/proxy/profile/profile/${encodeURIComponent(userId)}`);
   },
 
   getJourney(userId: string): Promise<{ entries: Record<string, unknown>[] }> {
-    return request(`/api/proxy/portal/journey/${encodeURIComponent(userId)}`);
+    return request(`/api/proxy/profile/journey/${encodeURIComponent(userId)}`);
   },
 
   getSettings(userId: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/portal/settings/${encodeURIComponent(userId)}`);
+    return request(`/api/proxy/profile/settings/${encodeURIComponent(userId)}`);
   },
 
   updateSettings(userId: string, data: object): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/portal/settings/${encodeURIComponent(userId)}`, {
+    return request(`/api/proxy/profile/settings/${encodeURIComponent(userId)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 };
 
-export const farmApi = {
+export const channelApi = {
   getProvisionStatus(userId: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/farm/provision-status/${encodeURIComponent(userId)}`);
+    return request(`/api/proxy/channel/provision-status/${encodeURIComponent(userId)}`);
   },
 
   getRuntimeStatus(userId: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/farm/runtime-status/${encodeURIComponent(userId)}`);
+    return request(`/api/proxy/channel/runtime-status/${encodeURIComponent(userId)}`);
   },
 
   resetUser(userId: string): Promise<Record<string, unknown>> {
-    return request('/api/proxy/farm/reset-user', {
+    return request('/api/proxy/channel/reset-user', {
       method: 'POST',
       body: JSON.stringify({ userId }),
     });
   },
 
   newWorkspace(data: object): Promise<Record<string, unknown>> {
-    return request('/api/proxy/farm/new-workspace', {
+    return request('/api/proxy/channel/new-workspace', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   sendMessage(data: object): Promise<Record<string, unknown>> {
-    return request('/api/proxy/farm/send-message', {
+    return request('/api/proxy/channel/send-message', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   getDocContent(url: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/farm/doc-content?url=${encodeURIComponent(url)}`);
+    return request(`/api/proxy/channel/doc-content?url=${encodeURIComponent(url)}`);
   },
 };
 
-export const xspaceApi = {
+export const workspaceApi = {
   listWorkspaces(): Promise<{ workspaces: Record<string, unknown>[] }> {
-    return request('/api/proxy/xspace/workspaces');
+    return request('/api/proxy/workspace/workspaces');
   },
 
   createWorkspace(data: object): Promise<Record<string, unknown>> {
-    return request('/api/proxy/xspace/workspaces', {
+    return request('/api/proxy/workspace/workspaces', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -114,16 +114,16 @@ export const xspaceApi = {
 
   listConversations(workspaceId: string): Promise<{ conversations: Record<string, unknown>[] }> {
     return request(
-      `/api/proxy/xspace/conversations?workspaceId=${encodeURIComponent(workspaceId)}`
+      `/api/proxy/workspace/conversations?workspaceId=${encodeURIComponent(workspaceId)}`
     );
   },
 
   listApps(): Promise<{ apps: Record<string, unknown>[] }> {
-    return request('/api/proxy/xspace/apps');
+    return request('/api/proxy/workspace/apps');
   },
 
   deployApp(appId: string): Promise<Record<string, unknown>> {
-    return request(`/api/proxy/xspace/apps/${encodeURIComponent(appId)}/deploy`, {
+    return request(`/api/proxy/workspace/apps/${encodeURIComponent(appId)}/deploy`, {
       method: 'POST',
     });
   },
@@ -133,7 +133,7 @@ export const xspaceApi = {
     params.set('workspaceId', data.workspaceId);
     params.set('prompt', data.prompt);
     if (data.model) params.set('model', data.model);
-    return `/api/proxy/xspace/generate?${params.toString()}`;
+    return `/api/proxy/workspace/generate?${params.toString()}`;
   },
 };
 

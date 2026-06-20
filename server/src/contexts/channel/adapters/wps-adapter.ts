@@ -6,16 +6,16 @@ import type {
   ChannelStatus,
   InboundMessage,
 } from '../channel-adapter.js';
-import type { ClawFarmClient } from '../../gateway/clients/claw-farm-client.js';
+import type { ContainerOrchestratorClient } from '../../gateway/clients/container-orchestrator-client.js';
 import { logger } from '../../../app/logger.js';
 
 export class WpsChannelAdapter implements IChannelAdapter {
   readonly channelType = 'wps' as const;
   readonly supportsInbound = true;
-  private farmClient: ClawFarmClient;
+  private farmClient: ContainerOrchestratorClient;
   private inboundHandlers: Array<(msg: InboundMessage) => void> = [];
 
-  constructor(farmClient: ClawFarmClient) {
+  constructor(farmClient: ContainerOrchestratorClient) {
     this.farmClient = farmClient;
   }
 
@@ -44,7 +44,11 @@ export class WpsChannelAdapter implements IChannelAdapter {
 
   async getStatus(): Promise<ChannelStatus> {
     if (!this.farmClient.isConfigured()) {
-      return { channelType: 'wps', connected: false, error: 'claw-farm not configured' };
+      return {
+        channelType: 'wps',
+        connected: false,
+        error: 'container-orchestrator not configured',
+      };
     }
     try {
       await this.farmClient.listChannels();

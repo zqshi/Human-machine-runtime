@@ -331,7 +331,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
           invokeCount: 0,
           tags: a.status ? [String(a.status)] : [],
           icon: '',
-          creator: String(a.source ?? 'claw-manager'),
+          creator: String(a.source ?? 'cluster-instance'),
           userId: String(a.userId ?? ''),
         })
       );

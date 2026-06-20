@@ -77,12 +77,9 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   const secured = new Hono();
   secured.use('*', authMiddleware);
   secured.use('*', requireRole('platform_admin'));
-  secured.route('/tenants', createTenantRoutes(ctx.tenantService, ctx.platformBeClient));
+  secured.route('/tenants', createTenantRoutes(ctx.tenantService));
   secured.route('/audits', createAuditRoutes(ctx.auditService));
-  secured.route(
-    '/users',
-    createPlatformUserRoutes(ctx.userManagementService, ctx.platformBeClient)
-  );
+  secured.route('/users', createPlatformUserRoutes(ctx.userManagementService));
   secured.route('/config', createPlatformConfigRoutes(ctx.systemConfigService));
   secured.route(
     '/monitoring',
@@ -100,7 +97,11 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   admin.use('*', auditTrailMiddleware(ctx.auditService));
   admin.route(
     '/instances',
-    createAdminInstanceRoutes(ctx.instanceService, ctx.clawFarmClient, ctx.clawManagerClient)
+    createAdminInstanceRoutes(
+      ctx.instanceService,
+      ctx.containerOrchestratorClient,
+      ctx.clusterInstanceClient
+    )
   );
   admin.route(
     '/employees',
@@ -108,7 +109,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
       ctx.instanceService,
       ctx.agentProfileRepo,
       ctx.agentProfileService,
-      ctx.clawManagerClient
+      ctx.clusterInstanceClient
     )
   );
   admin.route(
@@ -117,7 +118,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
       ctx.skillService,
       ctx.instanceService,
       ctx.operationalRepo,
-      ctx.clawHubClient
+      ctx.marketplaceClient
     )
   );
   admin.route('/tools', createAdminToolRoutes(ctx.toolManagementService));
@@ -142,10 +143,10 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
     createAdminAnalyticsRoutes(
       ctx.analyticsService,
       ctx.litellmClient,
-      ctx.clawHubClient,
-      ctx.clawFarmClient,
-      ctx.xspaceClient,
-      ctx.portalClient
+      ctx.marketplaceClient,
+      ctx.containerOrchestratorClient,
+      ctx.workspaceBackendClient,
+      ctx.profileServiceClient
     )
   );
   admin.route('/agents/shared', createAdminSharedAgentRoutes(ctx.sharedAgentService));
@@ -160,8 +161,8 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
       ctx.instanceService,
       ctx.skillService,
       ctx.litellmClient,
-      ctx.clawHubClient,
-      ctx.clawManagerClient
+      ctx.marketplaceClient,
+      ctx.clusterInstanceClient
     )
   );
   admin.route(
@@ -169,13 +170,16 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
     createAdminAssistantRoutes(
       ctx.litellmClient,
       ctx.analyticsService,
-      ctx.clawManagerClient,
+      ctx.clusterInstanceClient,
       ctx.aiGatewayRepo,
       ctx.skillService,
       ctx.auditService
     )
   );
-  admin.route('/eval', createAdminEvalRoutes(ctx.evalBenchmarkRepo, ctx.evalService, ctx.evalEvaluatorRepo));
+  admin.route(
+    '/eval',
+    createAdminEvalRoutes(ctx.evalBenchmarkRepo, ctx.evalService, ctx.evalEvaluatorRepo)
+  );
   admin.route(
     '/scheduled-tasks',
     createAdminScheduledTaskRoutes(
@@ -192,7 +196,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   const control = new Hono();
   control.use('*', authMiddleware);
   control.use('*', requireRole('platform_admin', 'tenant_admin'));
-  control.route('/instances', createInstanceRoutes(ctx.instanceService, ctx.clawManagerClient));
+  control.route('/instances', createInstanceRoutes(ctx.instanceService, ctx.clusterInstanceClient));
   control.route('/departments', createDepartmentRoutes(ctx.departmentService));
   control.route('/skills', createSkillRoutes(ctx.skillService));
   control.route('/documents', createDocumentRoutes(ctx.documentService));
@@ -242,14 +246,13 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
 
   const proxy = new Hono();
   proxy.use('*', authMiddleware);
-  proxy.route('/marketplace', createMarketplaceProxyRoutes(ctx.clawHubClient));
-  proxy.route('/clawhub', createMarketplaceProxyRoutes(ctx.clawHubClient));
-  proxy.route('/profile', createProfileProxyRoutes(ctx.portalClient));
-  proxy.route('/portal', createProfileProxyRoutes(ctx.portalClient));
-  proxy.route('/workspace', createWorkspaceProxyRoutes(ctx.xspaceClient));
-  proxy.route('/xspace', createWorkspaceProxyRoutes(ctx.xspaceClient));
-  proxy.route('/channel', createChannelProxyRoutes(ctx.clawFarmClient, ctx.channelService));
-  proxy.route('/farm', createChannelProxyRoutes(ctx.clawFarmClient, ctx.channelService));
+  proxy.route('/marketplace', createMarketplaceProxyRoutes(ctx.marketplaceClient));
+  proxy.route('/profile', createProfileProxyRoutes(ctx.profileServiceClient));
+  proxy.route('/workspace', createWorkspaceProxyRoutes(ctx.workspaceBackendClient));
+  proxy.route(
+    '/channel',
+    createChannelProxyRoutes(ctx.containerOrchestratorClient, ctx.channelService)
+  );
   proxy.route('/mcp', createMcpProxyRoutes(ctx.mcpService));
   app.route('/api/proxy', proxy);
 

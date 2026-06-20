@@ -29,10 +29,9 @@ export interface ActivityRecord {
 }
 
 /**
- * claw-farm uses `/api/portal/*` RPC-style routes — not REST CRUD.
- * Paths verified against claw-farm/internal/router/router.go.
+ * Upstream uses `/api/*` RPC-style routes — not REST CRUD.
  */
-export class ClawFarmClient extends BaseGatewayClient {
+export class ContainerOrchestratorClient extends BaseGatewayClient {
   /* ──── Webhook ──── */
 
   async webhookReceive(payload: WebhookPayload, authToken?: string) {
@@ -47,14 +46,14 @@ export class ClawFarmClient extends BaseGatewayClient {
   /* ──── Instance Management ──── */
 
   async listInstances(authToken?: string) {
-    return this.request<{ instances: FarmInstance[] }>('/api/portal/provision-status', {
+    return this.request<{ instances: FarmInstance[] }>('/api/provision-status', {
       authToken,
     });
   }
 
   async getInstanceStatus(instanceId: string, authToken?: string) {
     return this.request<FarmInstance>(
-      `/api/portal/runtime-status?userID=${encodeURIComponent(instanceId)}`,
+      `/api/runtime-status?userID=${encodeURIComponent(instanceId)}`,
       { authToken }
     );
   }
@@ -63,7 +62,7 @@ export class ClawFarmClient extends BaseGatewayClient {
     data: { appKey: string; userID: string; name?: string; chatModel?: string },
     authToken?: string
   ) {
-    return this.request<FarmInstance>('/api/portal/new-workspace', {
+    return this.request<FarmInstance>('/api/new-workspace', {
       method: 'POST',
       body: data,
       authToken,
@@ -72,7 +71,7 @@ export class ClawFarmClient extends BaseGatewayClient {
   }
 
   async startInstance(instanceId: string, authToken?: string) {
-    return this.request('/api/portal/start-all', {
+    return this.request('/api/start-all', {
       method: 'POST',
       body: { userIDs: [instanceId] },
       authToken,
@@ -81,7 +80,7 @@ export class ClawFarmClient extends BaseGatewayClient {
   }
 
   async stopInstance(instanceId: string, authToken?: string) {
-    return this.request('/api/portal/reset-user', {
+    return this.request('/api/reset-user', {
       method: 'POST',
       body: { userID: instanceId },
       authToken,
@@ -90,7 +89,7 @@ export class ClawFarmClient extends BaseGatewayClient {
   }
 
   async restartInstance(instanceId: string, authToken?: string) {
-    return this.request('/api/portal/reset-user', {
+    return this.request('/api/reset-user', {
       method: 'POST',
       body: { userID: instanceId },
       authToken,
@@ -99,7 +98,7 @@ export class ClawFarmClient extends BaseGatewayClient {
   }
 
   async deleteInstance(instanceId: string, authToken?: string) {
-    return this.request('/api/portal/reset-user', {
+    return this.request('/api/reset-user', {
       method: 'POST',
       body: { userID: instanceId },
       authToken,
@@ -110,7 +109,7 @@ export class ClawFarmClient extends BaseGatewayClient {
   /* ──── Channel / Messaging ──── */
 
   async listChannels(authToken?: string) {
-    return this.request('/api/portal/provision-status', { authToken });
+    return this.request('/api/provision-status', { authToken });
   }
 
   async sendMessage(
@@ -134,16 +133,15 @@ export class ClawFarmClient extends BaseGatewayClient {
   /* ──── Activity ──── */
 
   async getUserActivity(userId: string, authToken?: string) {
-    return this.request<ActivityRecord>(
-      `/api/portal/activity?userID=${encodeURIComponent(userId)}`,
-      { authToken }
-    );
+    return this.request<ActivityRecord>(`/api/activity?userID=${encodeURIComponent(userId)}`, {
+      authToken,
+    });
   }
 
   /* ──── WebSocket ──── */
 
   getWebSocketUrl(): string {
-    const wsUrl = config.gateway.clawFarmWsUrl;
+    const wsUrl = config.gateway.containerOrchestratorWsUrl;
     if (wsUrl) return wsUrl;
     return this.baseUrl.replace(/^http/, 'ws') + '/ws';
   }

@@ -1,4 +1,7 @@
-import type { ClawFarmWsBridge, WsBridgeMessage } from '../gateway/clients/claw-farm-ws-bridge.js';
+import type {
+  ContainerOrchestratorWsBridge,
+  WsBridgeMessage,
+} from '../gateway/clients/container-orchestrator-ws-bridge.js';
 import type { ChannelType, InboundMessage } from './channel-adapter.js';
 import type { InboundPipeline } from './inbound-pipeline.js';
 import { logger } from '../../app/logger.js';
@@ -15,7 +18,7 @@ export class ChannelBridgeService {
   private sessions = new Map<string, BridgeSession>();
 
   constructor(
-    private wsBridge: ClawFarmWsBridge,
+    private wsBridge: ContainerOrchestratorWsBridge,
     private inboundPipeline: InboundPipeline
   ) {
     this.wsBridge.on('message', (_key: string, msg: WsBridgeMessage) => {

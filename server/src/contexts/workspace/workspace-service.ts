@@ -5,9 +5,9 @@ import type {
   WorkspaceType,
 } from './domain/workspace.js';
 import { createWorkspace } from './domain/workspace.js';
-import type { XspaceClient } from '../gateway/clients/xspace-client.js';
-import type { ClawHubClient } from '../gateway/clients/clawhub-client.js';
-import type { ClawManagerClient } from '../gateway/clients/claw-manager-client.js';
+import type { WorkspaceBackendClient } from '../gateway/clients/workspace-backend-client.js';
+import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
+import type { ClusterInstanceClient } from '../gateway/clients/cluster-instance-client.js';
 
 export interface IWorkspaceRepository {
   findByOwner(ownerId: string): Promise<Workspace[]>;
@@ -24,25 +24,34 @@ export interface WorkspaceAgent {
   employeeNumber: number;
   lastActive: string;
   createdAt: string;
-  source: 'claw-manager';
+  source: 'cluster-instance';
 }
 
 export class WorkspaceService {
   private repo: IWorkspaceRepository;
-  private xspaceClient: XspaceClient;
-  private clawHubClient: ClawHubClient | null;
-  private clawManagerClient: ClawManagerClient | null;
+  private workspaceBackendClient: WorkspaceBackendClient;
+  private marketplaceClient: MarketplaceClient | null;
+  private clusterInstanceClient: ClusterInstanceClient | null;
 
   constructor(
     repo: IWorkspaceRepository,
-    xspaceClient: XspaceClient,
-    clawHubClient?: ClawHubClient,
-    clawManagerClient?: ClawManagerClient
+    workspaceBackendClient: WorkspaceBackendClient,
+    marketplaceClient?: MarketplaceClient,
+    clusterInstanceClient?: ClusterInstanceClient
   ) {
     this.repo = repo;
-    this.xspaceClient = xspaceClient;
-    this.clawHubClient = clawHubClient ?? null;
-    this.clawManagerClient = clawManagerClient ?? null;
+    this.workspaceBackendClient = workspaceBackendClient;
+    this.marketplaceClient = marketplaceClient ?? null;
+    this.clusterInstanceClient = clusterInstanceClient ?? null;
+  }
+
+  /** AI 工作区后端（workspace-backend）未配置时，所有依赖它的操作明确拒绝，而非崩溃。 */
+  private requireWorkspaceBackend(): void {
+    if (!this.workspaceBackendClient.isConfigured()) {
+      throw new Error(
+        'AI workspace backend (workspace-backend) not configured — set WORKSPACE_BACKEND_API_URL or disable workspace features'
+      );
+    }
   }
 
   async listByOwner(ownerId: string): Promise<Workspace[]> {
@@ -64,9 +73,14 @@ export class WorkspaceService {
     sourceChannel?: string;
     sourceConversationId?: string;
   }): Promise<Workspace> {
+    this.requireWorkspaceBackend();
     const ws = createWorkspace(params);
     await this.repo.save(ws);
-    await this.xspaceClient.createWorkspace({ name: ws.name, type: ws.type, userId: ws.ownerId });
+    await this.workspaceBackendClient.createWorkspace({
+      name: ws.name,
+      type: ws.type,
+      userId: ws.ownerId,
+    });
     return ws;
   }
 
@@ -100,14 +114,15 @@ export class WorkspaceService {
     options?: { model?: string; conversationId?: string; agentId?: string },
     authToken?: string
   ): Promise<Response> {
-    return this.xspaceClient.generateStream(workspaceId, prompt, options, authToken);
+    this.requireWorkspaceBackend();
+    return this.workspaceBackendClient.generateStream(workspaceId, prompt, options, authToken);
   }
 
   async listAgents(_ownerId: string, _authToken?: string): Promise<WorkspaceAgent[]> {
-    if (!this.clawManagerClient?.isConfigured()) {
+    if (!this.clusterInstanceClient?.isConfigured()) {
       return [];
     }
-    const res = await this.clawManagerClient.listInstances();
+    const res = await this.clusterInstanceClient.listInstances();
     return res.items
       .filter((i) => i.isActive)
       .map(
@@ -119,20 +134,22 @@ export class WorkspaceService {
           employeeNumber: i.employeeNumber,
           lastActive: i.lastActive,
           createdAt: i.createdAt,
-          source: 'claw-manager',
+          source: 'cluster-instance',
         })
       );
   }
 
   async installSkill(workspaceId: string, skillId: string, authToken?: string): Promise<unknown> {
-    if (this.clawHubClient?.isConfigured()) {
-      await this.clawHubClient.downloadSkill(skillId, undefined, authToken);
+    this.requireWorkspaceBackend();
+    if (this.marketplaceClient?.isConfigured()) {
+      await this.marketplaceClient.downloadSkill(skillId, undefined, authToken);
     }
-    return this.xspaceClient.addWorkspaceSkill(workspaceId, skillId, authToken);
+    return this.workspaceBackendClient.addWorkspaceSkill(workspaceId, skillId, authToken);
   }
 
   async listConversations(workspaceId: string): Promise<WorkspaceConversation[]> {
-    const data = await this.xspaceClient.listConversations(workspaceId);
+    this.requireWorkspaceBackend();
+    const data = await this.workspaceBackendClient.listConversations(workspaceId);
     const arr = (data as Record<string, unknown>)?.conversations;
     return Array.isArray(arr) ? (arr as WorkspaceConversation[]) : [];
   }
@@ -143,16 +160,22 @@ export class WorkspaceService {
     content: string,
     sender: string
   ): Promise<unknown> {
-    return this.xspaceClient.sendMessage(workspaceId, conversationId, { content, role: sender });
+    this.requireWorkspaceBackend();
+    return this.workspaceBackendClient.sendMessage(workspaceId, conversationId, {
+      content,
+      role: sender,
+    });
   }
 
   async listApps(workspaceId: string): Promise<WorkspaceApp[]> {
-    const data = await this.xspaceClient.listApps(workspaceId);
+    this.requireWorkspaceBackend();
+    const data = await this.workspaceBackendClient.listApps(workspaceId);
     const arr = (data as Record<string, unknown>)?.apps;
     return Array.isArray(arr) ? (arr as WorkspaceApp[]) : [];
   }
 
   async deployApp(workspaceId: string, appId: string): Promise<unknown> {
-    return this.xspaceClient.deployApp(workspaceId, appId);
+    this.requireWorkspaceBackend();
+    return this.workspaceBackendClient.deployApp(workspaceId, appId);
   }
 }

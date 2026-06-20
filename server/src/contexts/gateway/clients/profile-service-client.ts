@@ -55,15 +55,14 @@ function appendPagination(query: URLSearchParams, params?: PaginationParams): vo
 }
 
 /**
- * portal-backend uses `/api/portal/*` session-based routes — no agentId in path.
+ * Upstream uses `/api/*` session-based routes — no agentId in path.
  * Agent identity determined by auth token / session cookie.
- * Paths verified against ks-claw/service/portal-backend/src/routes/.
  */
-export class PortalClient extends BaseGatewayClient {
+export class ProfileServiceClient extends BaseGatewayClient {
   /* ──── Profile ──── */
 
   async getAgentProfile(_agentId: string, authToken?: string) {
-    return this.request<AgentProfile>('/api/portal/profile', { authToken });
+    return this.request<AgentProfile>('/api/profile', { authToken });
   }
 
   async updateAgentProfile(
@@ -71,7 +70,7 @@ export class PortalClient extends BaseGatewayClient {
     data: Partial<Pick<AgentProfile, 'name' | 'avatar' | 'bio' | 'voice' | 'locale' | 'metadata'>>,
     authToken?: string
   ) {
-    return this.request<AgentProfile>('/api/portal/profile', {
+    return this.request<AgentProfile>('/api/profile', {
       method: 'POST',
       body: data,
       authToken,
@@ -82,11 +81,11 @@ export class PortalClient extends BaseGatewayClient {
   /* ──── Settings ──── */
 
   async getAgentSettings(_agentId: string, authToken?: string) {
-    return this.request<AgentSettings>('/api/portal/settings', { authToken });
+    return this.request<AgentSettings>('/api/settings', { authToken });
   }
 
   async updateAgentSettings(_agentId: string, data: Partial<AgentSettings>, authToken?: string) {
-    return this.request<AgentSettings>('/api/portal/settings', {
+    return this.request<AgentSettings>('/api/settings', {
       method: 'POST',
       body: data,
       authToken,
@@ -97,17 +96,16 @@ export class PortalClient extends BaseGatewayClient {
   /* ──── Journey & Blog ──── */
 
   async getAgentJourney(_agentId: string, authToken?: string) {
-    return this.request('/api/portal/journey', { authToken });
+    return this.request('/api/journey', { authToken });
   }
 
   async listBlogEntries(_agentId: string, params?: PaginationParams, authToken?: string) {
     const query = new URLSearchParams();
     appendPagination(query, params);
     const qs = query.toString();
-    return this.request<{ entries: BlogEntry[]; total: number }>(
-      `/api/portal/blog${qs ? `?${qs}` : ''}`,
-      { authToken }
-    );
+    return this.request<{ entries: BlogEntry[]; total: number }>(`/api/blog${qs ? `?${qs}` : ''}`, {
+      authToken,
+    });
   }
 
   async createBlogEntry(
@@ -115,7 +113,7 @@ export class PortalClient extends BaseGatewayClient {
     data: { title: string; content: string },
     authToken?: string
   ) {
-    return this.request<BlogEntry>('/api/portal/blog', {
+    return this.request<BlogEntry>('/api/blog', {
       method: 'POST',
       body: data,
       authToken,
@@ -135,27 +133,27 @@ export class PortalClient extends BaseGatewayClient {
     if (params?.since) query.set('since', params.since);
     appendPagination(query, params);
     return this.request<{ activities: ActivityRecord[]; total: number }>(
-      `/api/portal/activity?${query.toString()}`,
+      `/api/activity?${query.toString()}`,
       { authToken }
     );
   }
 
   async getActivityAggregate(_agentId: string, period?: string, authToken?: string) {
     const query = period ? `?period=${encodeURIComponent(period)}` : '';
-    return this.request(`/api/portal/activity/aggregate${query}`, { authToken });
+    return this.request(`/api/activity/aggregate${query}`, { authToken });
   }
 
   /* ──── Usage ──── */
 
   async getUsageSummary(_agentId: string, period?: string, authToken?: string) {
     const query = period ? `?period=${period}` : '';
-    return this.request(`/api/portal/usage${query}`, { authToken });
+    return this.request(`/api/usage${query}`, { authToken });
   }
 
   /* ──── Skills ──── */
 
   async listSkills(authToken?: string) {
-    return this.request('/api/portal/skills', { authToken });
+    return this.request('/api/skills', { authToken });
   }
 
   /* ──── Health ──── */

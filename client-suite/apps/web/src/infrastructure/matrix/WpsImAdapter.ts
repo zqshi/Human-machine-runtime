@@ -1,6 +1,6 @@
 /**
- * WpsImAdapter — WPS IM (claw-farm) 适配器
- * WebSocket 连接 claw-farm 实时通信，BFF 代理路由收发消息
+ * WpsImAdapter — WPS IM 适配器
+ * WebSocket 连接实时通信，BFF 代理路由收发消息
  */
 import type {
   IMatrixClient,
@@ -56,8 +56,8 @@ type WpsEvent =
   | { type: 'typing'; roomId: string; userId: string; typing: boolean }
   | { type: 'connected'; userId: string };
 
-const BFF_SEND_MESSAGE = '/api/proxy/farm/send-message';
-const BFF_PROFILE = '/api/proxy/portal/profile';
+const BFF_SEND_MESSAGE = '/api/proxy/channel/send-message';
+const BFF_PROFILE = '/api/proxy/profile/profile';
 
 function mapContentType(t: WpsMessageContent['type']): MessageContentType {
   if (t === 'image') return 'image';

@@ -4,7 +4,10 @@ import { registerWeeklyReport } from './weekly-report.js';
 import { registerEmployeeCleanup } from './employee-cleanup.js';
 import type { AiGatewayRepository } from '../../../db/repositories/ai-gateway-repository.js';
 import type { AnalyticsService } from '../../analytics/analytics-service.js';
-import type { ClawManagerClient, ClawManagerInstance } from '../../gateway/clients/claw-manager-client.js';
+import type {
+  ClusterInstanceClient,
+  ClusterInstance,
+} from '../../gateway/clients/cluster-instance-client.js';
 import type { InstanceService } from '../../tenant-instance/instance-service.js';
 
 function makeHandler() {
@@ -56,7 +59,7 @@ describe('trace-cleanup', () => {
 });
 
 describe('employee-cleanup', () => {
-  function makeInst(over: Partial<ClawManagerInstance>): ClawManagerInstance {
+  function makeInst(over: Partial<ClusterInstance>): ClusterInstance {
     return {
       appKey: 'app1',
       userId: 'u1',
@@ -97,7 +100,7 @@ describe('employee-cleanup', () => {
         page: 1,
         pageSize: 1000,
       })),
-    } as unknown as ClawManagerClient;
+    } as unknown as ClusterInstanceClient;
     const instSvc = { remove: vi.fn(async () => ({})) } as unknown as InstanceService;
     registerEmployeeCleanup(h, claw, instSvc);
 
@@ -118,12 +121,17 @@ describe('employee-cleanup', () => {
         page: 1,
         pageSize: 1000,
       })),
-    } as unknown as ClawManagerClient;
+    } as unknown as ClusterInstanceClient;
     const instSvc = { remove: vi.fn(async () => ({ id: 'app1' })) } as unknown as InstanceService;
     registerEmployeeCleanup(h, claw, instSvc);
 
     const r = await h.run(
-      makeCtx({ criteria: 'inactive', inactiveDays: 30, mode: 'detect-and-clean', scope: ['instances'] })
+      makeCtx({
+        criteria: 'inactive',
+        inactiveDays: 30,
+        mode: 'detect-and-clean',
+        scope: ['instances'],
+      })
     );
     expect(instSvc.remove).toHaveBeenCalledWith('app1');
     expect(r.conclusion).toContain('已清理 1/1');
@@ -141,7 +149,7 @@ describe('employee-cleanup', () => {
         page: 1,
         pageSize: 1000,
       })),
-    } as unknown as ClawManagerClient;
+    } as unknown as ClusterInstanceClient;
     const instSvc = { remove: vi.fn() } as unknown as InstanceService;
     registerEmployeeCleanup(h, claw, instSvc);
 

@@ -5,8 +5,8 @@ import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repos
 import type { InstanceService } from '../../contexts/tenant-instance/instance-service.js';
 import type { SkillService } from '../../contexts/shared-assets/skill-service.js';
 import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
-import type { ClawHubClient } from '../../contexts/gateway/clients/clawhub-client.js';
-import type { ClawManagerClient } from '../../contexts/gateway/clients/claw-manager-client.js';
+import type { MarketplaceClient } from '../../contexts/gateway/clients/marketplace-client.js';
+import type { ClusterInstanceClient } from '../../contexts/gateway/clients/cluster-instance-client.js';
 import type { Principal } from '../../middleware/auth.js';
 
 function getUser(c: Context): Principal {
@@ -19,8 +19,8 @@ export function createAdminDashboardRoutes(
   instanceService: InstanceService,
   skillService: SkillService,
   litellmClient?: LiteLLMClient,
-  clawHubClient?: ClawHubClient,
-  clawManagerClient?: ClawManagerClient
+  marketplaceClient?: MarketplaceClient,
+  clusterInstanceClient?: ClusterInstanceClient
 ) {
   const app = new Hono();
 
@@ -36,9 +36,9 @@ export function createAdminDashboardRoutes(
     ]);
 
     let instances = localInstances;
-    if (!instances.length && clawManagerClient?.isConfigured()) {
+    if (!instances.length && clusterInstanceClient?.isConfigured()) {
       try {
-        const res = await clawManagerClient.listInstances();
+        const res = await clusterInstanceClient.listInstances();
         instances = (res.items ?? []).map((r) => ({
           state: r.status,
         })) as typeof instances;
@@ -58,8 +58,8 @@ export function createAdminDashboardRoutes(
       litellmClient?.isConfigured()
         ? litellmClient.healthCheck().catch(() => null)
         : Promise.resolve(null),
-      clawHubClient?.isConfigured()
-        ? clawHubClient
+      marketplaceClient?.isConfigured()
+        ? marketplaceClient
             .listSkills({ pageSize: 1 })
             .then((r) => (r as Record<string, unknown>)?.total ?? null)
             .catch(() => null)

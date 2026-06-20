@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { logger } from '../../../app/logger.js';
-import type { ClawFarmClient } from './claw-farm-client.js';
+import type { ContainerOrchestratorClient } from './container-orchestrator-client.js';
 
 export interface WsBridgeMessage {
   type: string;
@@ -27,11 +27,11 @@ const RECONNECT_BASE_MS = 2_000;
 const PING_INTERVAL_MS = 30_000;
 const CONNECTION_IDLE_MS = 300_000;
 
-export class ClawFarmWsBridge extends EventEmitter {
+export class ContainerOrchestratorWsBridge extends EventEmitter {
   private connections = new Map<string, UpstreamConnection>();
   private pingTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private clawFarmClient: ClawFarmClient) {
+  constructor(private containerOrchestratorClient: ContainerOrchestratorClient) {
     super();
   }
 
@@ -69,7 +69,7 @@ export class ClawFarmWsBridge extends EventEmitter {
     };
 
     ws.addEventListener('open', () => {
-      logger.info({ userId, instanceId }, 'claw-farm WS upstream connected');
+      logger.info({ userId, instanceId }, 'container-orchestrator WS upstream connected');
       conn.reconnectAttempts = 0;
       this.emit('upstream:open', key);
     });
@@ -91,13 +91,16 @@ export class ClawFarmWsBridge extends EventEmitter {
     });
 
     ws.addEventListener('close', (event) => {
-      logger.info({ userId, instanceId, code: event.code }, 'claw-farm WS upstream closed');
+      logger.info(
+        { userId, instanceId, code: event.code },
+        'container-orchestrator WS upstream closed'
+      );
       this.emit('upstream:close', key, event.code);
       this.maybeReconnect(key, conn, authToken);
     });
 
     ws.addEventListener('error', () => {
-      logger.warn({ userId, instanceId }, 'claw-farm WS upstream error');
+      logger.warn({ userId, instanceId }, 'container-orchestrator WS upstream error');
     });
 
     this.connections.set(key, conn);
@@ -149,7 +152,7 @@ export class ClawFarmWsBridge extends EventEmitter {
   }
 
   private buildWsUrl(instanceId: string, authToken?: string): string {
-    const base = this.clawFarmClient.getWebSocketUrl();
+    const base = this.containerOrchestratorClient.getWebSocketUrl();
     const url = new URL(base);
     url.searchParams.set('instanceId', instanceId);
     if (authToken) url.searchParams.set('token', authToken);
@@ -167,13 +170,13 @@ export class ClawFarmWsBridge extends EventEmitter {
     const delay = RECONNECT_BASE_MS * 2 ** (conn.reconnectAttempts - 1);
     logger.info(
       { key, attempt: conn.reconnectAttempts, delayMs: delay },
-      'scheduling claw-farm WS reconnect'
+      'scheduling container-orchestrator WS reconnect'
     );
 
     setTimeout(() => {
       if (!this.connections.has(key)) return;
       this.connect(conn.userId, conn.instanceId, authToken).catch((err) => {
-        logger.error({ key, err: String(err) }, 'claw-farm WS reconnect failed');
+        logger.error({ key, err: String(err) }, 'container-orchestrator WS reconnect failed');
       });
     }, delay);
   }
@@ -194,7 +197,7 @@ export class ClawFarmWsBridge extends EventEmitter {
     for (const [key, conn] of this.connections) {
       if (conn.ws.readyState === WebSocket.OPEN) {
         if (now - conn.lastPingAt > CONNECTION_IDLE_MS) {
-          logger.info({ key }, 'closing idle claw-farm WS connection');
+          logger.info({ key }, 'closing idle container-orchestrator WS connection');
           this.closeUpstream(key, conn, 1000, 'idle timeout');
           continue;
         }

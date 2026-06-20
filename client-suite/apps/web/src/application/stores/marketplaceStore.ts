@@ -34,7 +34,7 @@ const MOCK_SKILLS: MarketplaceSkillDTO[] = [
     author: 'ClawHub',
     category: '文本处理',
     downloads: 3420,
-    source: 'clawhub',
+    source: 'marketplace',
   },
   {
     id: 'mk-codereview',
@@ -44,7 +44,7 @@ const MOCK_SKILLS: MarketplaceSkillDTO[] = [
     author: 'ClawHub',
     category: '开发',
     downloads: 2150,
-    source: 'clawhub',
+    source: 'marketplace',
   },
   {
     id: 'mk-translate',
@@ -64,7 +64,7 @@ const MOCK_SKILLS: MarketplaceSkillDTO[] = [
     author: 'ClawHub',
     category: '效率',
     downloads: 4560,
-    source: 'clawhub',
+    source: 'marketplace',
   },
   {
     id: 'mk-dataclean',
@@ -84,7 +84,7 @@ const MOCK_SKILLS: MarketplaceSkillDTO[] = [
     author: 'ClawHub',
     category: '效率',
     downloads: 1890,
-    source: 'clawhub',
+    source: 'marketplace',
   },
   {
     id: 'mk-competitor',

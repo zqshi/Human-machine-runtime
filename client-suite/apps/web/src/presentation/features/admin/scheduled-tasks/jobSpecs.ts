@@ -31,9 +31,7 @@ export interface FieldOption {
 }
 
 /** 字段条件显示：equals（值相等）或 includes（数组包含）二选一 */
-export type ShowWhen =
-  | { key: string; equals: unknown }
-  | { key: string; includes: unknown };
+export type ShowWhen = { key: string; equals: unknown } | { key: string; includes: unknown };
 
 /**
  * 判断字段在当前值集下是否可见（showWhen 条件求值的唯一入口）。
@@ -89,7 +87,13 @@ export const JOB_SPECS: JobSpec[] = [
     icon: 'smart_toy',
     description: '定时触发数字员工/LLM 执行一次任务，产出结论',
     fields: [
-      { key: 'instanceId', label: '数字员工 ID', type: 'text', placeholder: 'inst_xxx', required: true },
+      {
+        key: 'instanceId',
+        label: '数字员工 ID',
+        type: 'text',
+        placeholder: 'inst_xxx',
+        required: true,
+      },
       { key: 'modelId', label: '模型 ID', type: 'text', placeholder: '留空用默认', help: '可选' },
       { key: 'prompt', label: '执行指令', type: 'textarea', required: true },
     ],
@@ -191,7 +195,7 @@ export const JOB_SPECS: JobSpec[] = [
         default: 'inactive',
         options: [
           { value: 'inactive', label: '长期未活跃' },
-          { value: 'manager-flagged', label: 'claw-manager 标记离职' },
+          { value: 'manager-flagged', label: '集群实例标记离职' },
         ],
       },
       {
@@ -238,9 +242,7 @@ export const JOB_SPECS: JobSpec[] = [
 
 /** 按 jobType + handlerKey 找 spec */
 export function findSpec(jobType: string, handlerKey?: string): JobSpec | undefined {
-  return JOB_SPECS.find(
-    (s) => s.jobType === jobType && (s.handlerKey ?? undefined) === handlerKey
-  );
+  return JOB_SPECS.find((s) => s.jobType === jobType && (s.handlerKey ?? undefined) === handlerKey);
 }
 
 /** 按 id 找 spec */
@@ -249,10 +251,7 @@ export function findSpecById(id: string): JobSpec | undefined {
 }
 
 /** 从已有 task 的 jobPayload 反推 spec id */
-export function specIdOf(task: {
-  jobType: string;
-  jobPayload: Record<string, unknown>;
-}): string {
+export function specIdOf(task: { jobType: string; jobPayload: Record<string, unknown> }): string {
   const spec = findSpec(task.jobType, task.jobPayload?.handlerKey as string | undefined);
   return spec?.id ?? (task.jobType === 'agent' ? 'agent' : 'system:echo');
 }

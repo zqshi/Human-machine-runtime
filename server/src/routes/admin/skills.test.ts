@@ -166,12 +166,12 @@ describe('admin skill routes', () => {
 
   it('GET /:id/file returns 400 when filename is missing', async () => {
     const deps = mockDeps();
-    const clawHub = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
     const inner = createAdminSkillRoutes(
       deps.skillSvc as never,
       deps.instanceSvc as never,
       deps.opRepo as never,
-      clawHub as never
+      marketplace as never
     );
     const app = wrapWithAuth(inner);
 
@@ -182,14 +182,14 @@ describe('admin skill routes', () => {
     expect(body.error).toBe('filename query parameter is required');
   });
 
-  it('GET /:id/file returns 503 when clawhub not configured', async () => {
+  it('GET /:id/file returns 503 when marketplace backend not configured', async () => {
     const { app } = buildApp();
 
     const res = await app.request('/sk-1/file?filename=index.ts');
     expect(res.status).toBe(503);
 
     const body = await res.json();
-    expect(body.error).toBe('clawhub not configured');
+    expect(body.error).toBe('marketplace backend not configured');
   });
 
   it('GET /:id/file returns file content from zip', async () => {
@@ -198,12 +198,12 @@ describe('admin skill routes', () => {
     zip.addFile('index.ts', Buffer.from('console.log("hello")'));
     const zipBuffer = zip.toBuffer();
 
-    const clawHub = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
     const inner = createAdminSkillRoutes(
       deps.skillSvc as never,
       deps.instanceSvc as never,
       deps.opRepo as never,
-      clawHub as never
+      marketplace as never
     );
     const app = wrapWithAuth(inner);
 
@@ -226,12 +226,12 @@ describe('admin skill routes', () => {
 
   it('GET /:id/file returns 404 when upstream returns non-ok', async () => {
     const deps = mockDeps();
-    const clawHub = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
     const inner = createAdminSkillRoutes(
       deps.skillSvc as never,
       deps.instanceSvc as never,
       deps.opRepo as never,
-      clawHub as never
+      marketplace as never
     );
     const app = wrapWithAuth(inner);
 
@@ -254,12 +254,12 @@ describe('admin skill routes', () => {
     zip.addFile('other.ts', Buffer.from('nope'));
     const zipBuffer = zip.toBuffer();
 
-    const clawHub = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(true), baseUrl: 'http://hub' };
     const inner = createAdminSkillRoutes(
       deps.skillSvc as never,
       deps.instanceSvc as never,
       deps.opRepo as never,
-      clawHub as never
+      marketplace as never
     );
     const app = wrapWithAuth(inner);
 

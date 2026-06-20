@@ -21,7 +21,7 @@ export type TimeoutProfile = 'read' | 'write' | 'stream';
 const TIMEOUT_PROFILES: Record<TimeoutProfile, () => number> = {
   read: () => config.gateway.readTimeoutMs,
   write: () => config.gateway.writeTimeoutMs,
-  stream: () => config.gateway.xspaceStreamTimeoutMs,
+  stream: () => config.gateway.workspaceBackendStreamTimeoutMs,
 };
 
 export interface GatewayRequestLog {
@@ -109,9 +109,9 @@ export abstract class BaseGatewayClient {
             method,
             headers,
             body: (isFormData ? opts.body : opts.body ? JSON.stringify(opts.body) : undefined) as
-          | FormData
-          | string
-          | undefined,
+              | FormData
+              | string
+              | undefined,
             signal: controller.signal,
           });
 

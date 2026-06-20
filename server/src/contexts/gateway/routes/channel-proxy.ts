@@ -1,17 +1,17 @@
 import { Hono } from 'hono';
-import { ClawFarmClient } from '../clients/claw-farm-client.js';
+import { ContainerOrchestratorClient } from '../clients/container-orchestrator-client.js';
 import type { ChannelService } from '../../channel/channel-service.js';
 import { getUpstreamToken } from '../../../middleware/auth.js';
 
 export function createChannelProxyRoutes(
-  farmClient: ClawFarmClient,
+  farmClient: ContainerOrchestratorClient,
   channelService?: ChannelService
 ) {
   const app = new Hono();
 
   app.get('/channels', async (c) => {
     if (!farmClient.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'claw-farm' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'container-orchestrator' }, 503);
     }
     const authToken = getUpstreamToken(c);
     const data = await farmClient.listChannels(authToken);
@@ -30,7 +30,7 @@ export function createChannelProxyRoutes(
 
   app.get('/instances', async (c) => {
     if (!farmClient.isConfigured()) {
-      return c.json({ error: 'upstream not configured', service: 'claw-farm' }, 503);
+      return c.json({ error: 'upstream not configured', service: 'container-orchestrator' }, 503);
     }
     const authToken = getUpstreamToken(c);
     const data = await farmClient.listInstances(authToken);

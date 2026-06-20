@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import * as jose from 'jose';
 import { authMiddleware, requireScope, requirePermission, requireRole } from './auth.js';
@@ -84,6 +84,62 @@ describe('authMiddleware', () => {
     const res = await app.request('/test', {
       headers: { authorization: `Bearer ${token}` },
     });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('authMiddleware · DB 回查防越权', () => {
+  function buildAppWithAuthService(authService: unknown) {
+    const app = new Hono();
+    app.use('*', async (c, next) => {
+      (c as unknown as { set(k: string, v: unknown): void }).set('authService', authService);
+      await next();
+    });
+    app.use('*', authMiddleware);
+    app.get('/test', (c) => c.json({ user: c.get('user') }));
+    return app;
+  }
+
+  it('authService 存在时走 authenticateToken 回查，JWT 内伪造的 tenantId/permissions 被忽略（以 DB 为准）', async () => {
+    const authenticateToken = vi.fn(async () => ({
+      username: 'admin',
+      scope: 'tenant',
+      role: 'tenant_admin',
+      tenantId: 'real-tenant',
+      permissions: ['tenant:instance:read'],
+    }));
+    const app = buildAppWithAuthService({ authenticateToken });
+    // JWT 故意伪造 tenantId 与越权 permissions
+    const token = await makeToken({
+      sub: 'admin',
+      scope: 'tenant',
+      role: 'tenant_admin',
+      tenantId: 'fake-tenant',
+      permissions: ['platform:*'],
+    });
+    const res = await app.request('/test', { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user.tenantId).toBe('real-tenant'); // DB 为准，非 JWT 的 fake
+    expect(body.user.permissions).toEqual(['tenant:instance:read']); // DB 权限，非 JWT 越权
+    expect(authenticateToken).toHaveBeenCalledOnce();
+    expect(authenticateToken.mock.calls[0][0]).toMatch(/^Bearer /);
+  });
+
+  it('authService.authenticateToken 抛错（用户禁用/不存在）→ 401，不回退到不安全的纯验签', async () => {
+    const authenticateToken = vi.fn(async () => {
+      throw new Error('user disabled');
+    });
+    const app = buildAppWithAuthService({ authenticateToken });
+    // 即便 JWT 签名合法，回查失败也必须拒绝（防降权后旧 token 仍有效）
+    const token = await makeToken({
+      sub: 'admin',
+      scope: 'platform',
+      role: 'platform_admin',
+      tenantId: null,
+      permissions: ['platform:*'],
+    });
+    const res = await app.request('/test', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(401);
   });
 });

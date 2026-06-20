@@ -15,10 +15,10 @@ export {
 export { weKnoraApi } from '../../infrastructure/api/weKnoraClient';
 export type { ChatMessage as WeKnoraChatMessage } from '../../infrastructure/api/weKnoraClient';
 export {
-  clawHubApi,
-  portalApi,
-  farmApi,
-  xspaceApi,
+  marketplaceApi,
+  profileApi,
+  channelApi,
+  workspaceApi,
   mcpApi,
 } from '../../infrastructure/api/upstreamApiClient';
 export type { SkillItem, AgentItem } from '../../infrastructure/api/upstreamApiClient';

@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { TenantService } from '../../contexts/tenant-management/tenant-service.js';
-import type { PlatformBeClient } from '../../contexts/gateway/clients/platform-be-client.js';
 
 const createTenantSchema = z.object({
   name: z.string().min(1),
@@ -25,10 +24,7 @@ const createTenantSchema = z.object({
     .optional(),
 });
 
-export function createTenantRoutes(
-  tenantService: TenantService,
-  platformBeClient?: PlatformBeClient
-) {
+export function createTenantRoutes(tenantService: TenantService) {
   const app = new Hono();
 
   app.get('/', async (c) => {
@@ -88,15 +84,6 @@ export function createTenantRoutes(
   app.delete('/:id', async (c) => {
     await tenantService.delete(c.req.param('id'));
     return c.json({ success: true });
-  });
-
-  app.post('/sync', async (c) => {
-    if (!platformBeClient?.isConfigured()) {
-      return c.json({ error: 'platform-be not configured' }, 503);
-    }
-    const { organizations } = await platformBeClient.listOrganizations();
-    const result = await tenantService.syncFromUpstream(organizations);
-    return c.json({ success: true, ...result });
   });
 
   return app;

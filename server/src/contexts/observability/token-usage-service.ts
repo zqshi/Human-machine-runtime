@@ -1,4 +1,4 @@
-import type { PortalClient } from '../gateway/clients/portal-client.js';
+import type { ProfileServiceClient } from '../gateway/clients/profile-service-client.js';
 import type { LiteLLMClient } from '../gateway/clients/litellm-client.js';
 import { logger } from '../../app/logger.js';
 
@@ -27,12 +27,16 @@ export interface ITokenUsageStore {
 }
 
 export class TokenUsageService {
-  private portalClient: PortalClient;
+  private profileServiceClient: ProfileServiceClient;
   private litellmClient: LiteLLMClient;
   private store: ITokenUsageStore | null;
 
-  constructor(portalClient: PortalClient, litellmClient: LiteLLMClient, store?: ITokenUsageStore) {
-    this.portalClient = portalClient;
+  constructor(
+    profileServiceClient: ProfileServiceClient,
+    litellmClient: LiteLLMClient,
+    store?: ITokenUsageStore
+  ) {
+    this.profileServiceClient = profileServiceClient;
     this.litellmClient = litellmClient;
     this.store = store ?? null;
   }
@@ -54,9 +58,9 @@ export class TokenUsageService {
   }
 
   async syncFromPortal(agentId: string, tenantId: string, period?: string): Promise<void> {
-    if (!this.portalClient.isConfigured() || !this.store) return;
+    if (!this.profileServiceClient.isConfigured() || !this.store) return;
     try {
-      const usage = (await this.portalClient.getUsageSummary(agentId, period)) as Record<
+      const usage = (await this.profileServiceClient.getUsageSummary(agentId, period)) as Record<
         string,
         unknown
       >;
@@ -73,7 +77,7 @@ export class TokenUsageService {
         });
       }
     } catch (err) {
-      logger.warn({ agentId, tenantId, err }, 'token usage sync from portal failed');
+      logger.warn({ agentId, tenantId, err }, 'token usage sync from profile service failed');
     }
   }
 

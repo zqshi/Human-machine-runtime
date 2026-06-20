@@ -5,7 +5,7 @@ import AdmZip from 'adm-zip';
 import type { SkillService } from '../../contexts/shared-assets/skill-service.js';
 import type { InstanceService } from '../../contexts/tenant-instance/instance-service.js';
 import type { OperationalRepository } from '../../db/repositories/operational-repository.js';
-import type { ClawHubClient } from '../../contexts/gateway/clients/clawhub-client.js';
+import type { MarketplaceClient } from '../../contexts/gateway/clients/marketplace-client.js';
 import type { Principal } from '../../middleware/auth.js';
 
 const createSkillSchema = z.object({
@@ -41,7 +41,7 @@ export function createAdminSkillRoutes(
   skillSvc: SkillService,
   instanceSvc: InstanceService,
   opRepo: OperationalRepository,
-  clawHubClient?: ClawHubClient
+  marketplaceClient?: MarketplaceClient
 ) {
   const app = new Hono();
 
@@ -99,9 +99,9 @@ export function createAdminSkillRoutes(
     const localSkills = skills.map((s) => ({ ...s, source: 'local' }));
 
     let hubSkills: Record<string, unknown>[] = [];
-    if (source !== 'local' && clawHubClient?.isConfigured()) {
+    if (source !== 'local' && marketplaceClient?.isConfigured()) {
       try {
-        const hubRes = await clawHubClient.listSkills({
+        const hubRes = await marketplaceClient.listSkills({
           keyword: keyword || name,
           page: 1,
           pageSize: 50,
@@ -111,7 +111,7 @@ export function createAdminSkillRoutes(
           hubSkills = items.map((s: Record<string, unknown>) => ({ ...s, source: 'hub' }));
         }
       } catch {
-        /* clawhub unavailable */
+        /* marketplace backend unavailable */
       }
     }
 
@@ -134,12 +134,12 @@ export function createAdminSkillRoutes(
       });
     }
 
-    if (clawHubClient?.isConfigured()) {
+    if (marketplaceClient?.isConfigured()) {
       try {
-        const hubSkill = await clawHubClient.getSkill(id);
+        const hubSkill = await marketplaceClient.getSkill(id);
         if (hubSkill) return c.json({ ...hubSkill, source: 'hub' });
       } catch {
-        /* clawhub unavailable */
+        /* marketplace backend unavailable */
       }
     }
 
@@ -241,11 +241,11 @@ export function createAdminSkillRoutes(
     if (!filename) {
       return c.json({ error: 'filename query parameter is required' }, 400);
     }
-    if (!clawHubClient?.isConfigured()) {
-      return c.json({ error: 'clawhub not configured' }, 503);
+    if (!marketplaceClient?.isConfigured()) {
+      return c.json({ error: 'marketplace backend not configured' }, 503);
     }
     try {
-      const baseUrl = (clawHubClient as unknown as { baseUrl: string }).baseUrl;
+      const baseUrl = (marketplaceClient as unknown as { baseUrl: string }).baseUrl;
       const params = new URLSearchParams({ slug: id });
       if (version) params.set('version', version);
       const res = await fetch(`${baseUrl}/api/v1/download?${params}`);

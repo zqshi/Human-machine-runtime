@@ -9,6 +9,8 @@ import { db, pool } from '../db/client.js';
 import { createAppContext } from './bootstrap.js';
 import { logger } from './logger.js';
 import { AppError } from '../shared/utils.js';
+import { metricsMiddleware } from '../middleware/metrics.js';
+import { registry } from '../shared/metrics.js';
 
 const app = new Hono();
 
@@ -18,6 +20,13 @@ app.use('*', errorHandler);
 app.use('*', secureHeaders());
 app.use('*', corsMiddleware);
 app.use('/api/*', rateLimitMiddleware);
+app.use('*', metricsMiddleware);
+
+// Prometheus 抓取端点（不经 rateLimit，避免抓取被限流）
+app.get('/metrics', async (c) => {
+  c.header('Content-Type', registry.contentType);
+  return c.body(await registry.metrics());
+});
 
 const ctx = createAppContext(db);
 registerRoutes(app, ctx);

@@ -6,19 +6,19 @@ import type {
   AgentTaskResult,
   AgentCapability,
 } from '../domain/agent-runtime-adapter.js';
-import type { ClawManagerClient } from '../../gateway/clients/claw-manager-client.js';
+import type { ClusterInstanceClient } from '../../gateway/clients/cluster-instance-client.js';
 import { newId } from '../../../shared/utils.js';
 
 export class OpenClawAdapter implements IAgentRuntimeAdapter {
   readonly framework: AgentFramework = 'openclaw';
   readonly version = '1.0.0';
 
-  private clawManagerClient: ClawManagerClient;
+  private clusterInstanceClient: ClusterInstanceClient;
   private completionCallbacks: Array<(result: AgentTaskResult) => void> = [];
   private taskMap = new Map<string, { state: AgentTaskStatus; startedAt: number }>();
 
-  constructor(clawManagerClient: ClawManagerClient) {
-    this.clawManagerClient = clawManagerClient;
+  constructor(clusterInstanceClient: ClusterInstanceClient) {
+    this.clusterInstanceClient = clusterInstanceClient;
   }
 
   async submitTask(task: AgentTaskInput): Promise<{ taskId: string; accepted: boolean }> {
@@ -105,7 +105,7 @@ export class OpenClawAdapter implements IAgentRuntimeAdapter {
   async healthCheck(): Promise<{ healthy: boolean; latencyMs: number }> {
     const start = Date.now();
     try {
-      await this.clawManagerClient.listInstances(1, 1);
+      await this.clusterInstanceClient.listInstances(1, 1);
       return { healthy: true, latencyMs: Date.now() - start };
     } catch {
       return { healthy: false, latencyMs: Date.now() - start };

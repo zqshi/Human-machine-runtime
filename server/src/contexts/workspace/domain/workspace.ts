@@ -10,7 +10,7 @@ export interface Workspace {
   tenantId: string;
   description: string;
   status: 'active' | 'archived';
-  xspaceWorkspaceId?: string;
+  workspaceBackendWorkspaceId?: string;
   sourceChannel?: string;
   sourceConversationId?: string;
   createdAt: string;

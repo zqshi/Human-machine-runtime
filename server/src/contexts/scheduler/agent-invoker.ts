@@ -2,7 +2,7 @@
  * AgentInvoker —— 「主动触发数字员工执行」的抽象接口
  *
  * 背景：项目当前无统一的「主动驱动数字员工实例执行任意 prompt 任务」入口
- * （AgentRuntimeService.execute 是对话副产物提取；ClawManagerClient 无任务接口；
+ * （AgentRuntimeService.execute 是对话副产物提取；ClusterInstanceClient 无任务接口；
  * EvalService 直接调 LLM）。故定义此接口隔离，先给基于 LiteLLMClient 的默认实现
  * （LlmAgentInvoker，见 app/bootstrap 组装），待数字员工主动执行能力就绪后替换实现。
  */

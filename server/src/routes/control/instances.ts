@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { InstanceService } from '../../contexts/tenant-instance/instance-service.js';
-import type { ClawManagerClient } from '../../contexts/gateway/clients/claw-manager-client.js';
+import type { ClusterInstanceClient } from '../../contexts/gateway/clients/cluster-instance-client.js';
 import { parseBody, badRequest } from '../../shared/validation.js';
 
 const createInstanceSchema = z.object({
@@ -22,7 +22,7 @@ const createInstanceSchema = z.object({
 
 export function createInstanceRoutes(
   instanceService: InstanceService,
-  clawManagerClient?: ClawManagerClient
+  clusterInstanceClient?: ClusterInstanceClient
 ) {
   const app = new Hono();
 
@@ -30,15 +30,15 @@ export function createInstanceRoutes(
     const tenantId = c.req.query('tenantId');
     const instances = await instanceService.list(tenantId);
 
-    if (!instances.length && clawManagerClient?.isConfigured()) {
+    if (!instances.length && clusterInstanceClient?.isConfigured()) {
       try {
-        const res = await clawManagerClient.listInstances();
+        const res = await clusterInstanceClient.listInstances();
         if (res.items?.length) {
           const mapped = res.items.map((r) => ({
             id: `cm_${r.employeeNumber}`,
             tenantId: 'default',
             name: r.name || r.podName,
-            source: 'claw-manager',
+            source: 'cluster-instance',
             state: r.status,
             creator: r.managedBy,
             employeeNo: String(r.employeeNumber),

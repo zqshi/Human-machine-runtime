@@ -16,6 +16,7 @@ import type { IToolRegistry } from '../tool-management/tool-registry.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { Database } from '../../db/client.js';
 import { DbMapStore } from '../../db/repositories/agent-runtime-repository.js';
+import { decisionsCreatedTotal } from '../../shared/metrics.js';
 
 function createMapStore<V>(): IMapStore<V> {
   const map = new Map<string, V>();
@@ -35,6 +36,8 @@ export class AgentRuntimeService {
   private started = false;
   private dbStores: DbMapStore<unknown>[] = [];
   private simulatorEnabled: boolean;
+  /** 决策存储：Simulator 与真实消息投影共用，落 agent_decision（openclawEntities）表 */
+  private decisionStore: IMapStore<Decision> | null = null;
 
   constructor(llmClient: ILLMClient | null, db?: Database, opts?: { simulatorEnabled?: boolean }) {
     this.simulatorEnabled = opts?.simulatorEnabled ?? false;
@@ -70,6 +73,7 @@ export class AgentRuntimeService {
 
     this.simulator = new AgentSimulator(simStores, broadcast);
     this.executor = new AgentExecutor(llmClient, execStores, broadcast);
+    this.decisionStore = simStores.decisions;
   }
 
   async start(): Promise<void> {
@@ -88,6 +92,17 @@ export class AgentRuntimeService {
 
   async execute(userText: string, responseText: string, sessionId: string, tenantId?: string) {
     return this.executor.execute(userText, responseText, sessionId, tenantId);
+  }
+
+  /**
+   * 记录一条由真实消息投影产生的决策（responseStatus='pending'）。
+   * 落 agent_decision 表（经 DbMapStore upsert 持久化）并广播 decision:created，
+   * 供前端 SSE 实时呈现与人工确认。与 Simulator 产生决策走同一存储与事件通道。
+   */
+  recordDecision(decision: Decision): void {
+    this.decisionStore?.set(decision.id, decision);
+    appEventBus.publish('decision:created', decision as unknown as Record<string, unknown>);
+    decisionsCreatedTotal.labels(decision.urgency).inc();
   }
 
   /** 注入工具注册中心，激活 Agent 工具调用兜底（bootstrap 在 toolRegistry 实例化后调用）。 */

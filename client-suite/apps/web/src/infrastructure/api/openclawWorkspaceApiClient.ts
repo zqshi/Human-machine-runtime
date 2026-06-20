@@ -41,7 +41,7 @@ export interface WorkspaceAppDTO {
   deployUrl?: string;
 }
 
-export interface XspaceAgentDTO {
+export interface WorkspaceAgentDTO {
   id: string;
   name: string;
   description?: string;
@@ -132,7 +132,7 @@ export const workspaceApi = {
     });
   },
 
-  listAgents(): Promise<{ agents: XspaceAgentDTO[]; total: number }> {
+  listAgents(): Promise<{ agents: WorkspaceAgentDTO[]; total: number }> {
     return request('/api/openclaw/agents');
   },
 };

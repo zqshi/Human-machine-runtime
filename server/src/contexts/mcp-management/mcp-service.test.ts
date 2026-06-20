@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { McpService } from './mcp-service.js';
 
-function mockClawHubClient(configured = true) {
+function mockMarketplaceClient(configured = true) {
   return {
     isConfigured: vi.fn().mockReturnValue(configured),
     listMcpGroups: vi.fn().mockResolvedValue({
@@ -22,15 +22,15 @@ function mockPolicyStore() {
 
 describe('McpService', () => {
   it('returns empty groups when client not configured', async () => {
-    const client = mockClawHubClient(false);
+    const client = mockMarketplaceClient(false);
     const svc = new McpService(client as never);
     const groups = await svc.listMcpGroups('tn-1');
     expect(groups).toEqual([]);
     expect(client.listMcpGroups).not.toHaveBeenCalled();
   });
 
-  it('lists groups from clawhub', async () => {
-    const client = mockClawHubClient();
+  it('lists groups from marketplace', async () => {
+    const client = mockMarketplaceClient();
     const svc = new McpService(client as never);
     const groups = await svc.listMcpGroups('tn-1');
     expect(groups).toHaveLength(1);
@@ -38,7 +38,7 @@ describe('McpService', () => {
   });
 
   it('merges policy enabled state into groups', async () => {
-    const client = mockClawHubClient();
+    const client = mockMarketplaceClient();
     const store = mockPolicyStore();
     store.findByTenant.mockResolvedValue([
       { tenantId: 'tn-1', mcpGroupId: 'g-1', enabled: false, requiresApproval: false },
@@ -49,7 +49,7 @@ describe('McpService', () => {
   });
 
   it('enableGroup upserts policy', async () => {
-    const client = mockClawHubClient();
+    const client = mockMarketplaceClient();
     const store = mockPolicyStore();
     const svc = new McpService(client as never, store);
     await svc.enableGroup('tn-1', 'g-1');
@@ -59,7 +59,7 @@ describe('McpService', () => {
   });
 
   it('disableGroup upserts policy with enabled=false', async () => {
-    const client = mockClawHubClient();
+    const client = mockMarketplaceClient();
     const store = mockPolicyStore();
     const svc = new McpService(client as never, store);
     await svc.disableGroup('tn-1', 'g-1');
@@ -67,14 +67,14 @@ describe('McpService', () => {
   });
 
   it('returns empty tools when client not configured', async () => {
-    const client = mockClawHubClient(false);
+    const client = mockMarketplaceClient(false);
     const svc = new McpService(client as never);
     const tools = await svc.listTools('g-1');
     expect(tools).toEqual([]);
   });
 
-  it('lists tools from clawhub', async () => {
-    const client = mockClawHubClient();
+  it('lists tools from marketplace', async () => {
+    const client = mockMarketplaceClient();
     const svc = new McpService(client as never);
     const tools = await svc.listTools('g-1');
     expect(tools).toHaveLength(1);

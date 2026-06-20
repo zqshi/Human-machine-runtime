@@ -1,4 +1,4 @@
-import type { ClawHubClient } from '../gateway/clients/clawhub-client.js';
+import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
 
 export interface MarketplaceSkill {
   id: string;
@@ -47,19 +47,27 @@ export interface IApprovalStore {
 }
 
 export class MarketplaceService {
-  private client: ClawHubClient;
+  private client: MarketplaceClient;
   private audit: IAuditSink | null;
   private approvalStore: IApprovalStore | null;
 
-  constructor(client: ClawHubClient, audit?: IAuditSink, approvalStore?: IApprovalStore) {
+  constructor(client: MarketplaceClient, audit?: IAuditSink, approvalStore?: IApprovalStore) {
     this.client = client;
     this.audit = audit ?? null;
     this.approvalStore = approvalStore ?? null;
   }
 
+  /** 技能市场后端（marketplace）未配置时明确拒绝，而非崩溃。 */
+  private requireConfigured(): void {
+    if (!this.client.isConfigured()) {
+      throw new Error('Marketplace backend (marketplace) not configured — set MARKETPLACE_API_URL');
+    }
+  }
+
   async listSkills(
     params: { keyword?: string; page?: number; pageSize?: number } = {}
   ): Promise<unknown> {
+    this.requireConfigured();
     return this.client.listSkills({
       keyword: params.keyword,
       page: params.page || 1,
@@ -71,6 +79,7 @@ export class MarketplaceService {
     tenantId: string,
     params: { keyword?: string; page?: number; pageSize?: number } = {}
   ): Promise<unknown> {
+    this.requireConfigured();
     const result = await this.client.listSkills({
       keyword: params.keyword,
       page: params.page || 1,
@@ -81,10 +90,12 @@ export class MarketplaceService {
   }
 
   async getSkill(id: string): Promise<unknown> {
+    this.requireConfigured();
     return this.client.getSkill(id);
   }
 
   async searchSkills(keyword: string): Promise<unknown> {
+    this.requireConfigured();
     return this.client.searchSkills(keyword);
   }
 
@@ -94,6 +105,7 @@ export class MarketplaceService {
     actor: string,
     tenantId: string
   ): Promise<PublishRequest | unknown> {
+    this.requireConfigured();
     if (!this.approvalStore) {
       const result = await this.client.publishSkill(skillSlug, data);
       this.audit?.log('marketplace.skill.published', { skillSlug, actor, version: data.version });
@@ -126,6 +138,7 @@ export class MarketplaceService {
     reviewer: string,
     authToken?: string
   ): Promise<PublishRequest | null> {
+    this.requireConfigured();
     if (!this.approvalStore) return null;
     const req = await this.approvalStore.findById(requestId);
     if (!req || req.status !== 'pending') return null;
@@ -174,6 +187,7 @@ export class MarketplaceService {
     actor?: string,
     authToken?: string
   ): Promise<unknown> {
+    this.requireConfigured();
     const result = await this.client.publishSkill(slug, data, authToken);
     this.audit?.log('marketplace.skill.published', { slug, actor, version: data.version });
     return result;
@@ -186,22 +200,26 @@ export class MarketplaceService {
     note?: string,
     authToken?: string
   ): Promise<unknown> {
+    this.requireConfigured();
     const result = await this.client.moderateSkill(skillId, action, note, authToken);
     this.audit?.log('marketplace.skill.moderated', { skillId, action, actor, note });
     return result;
   }
 
   async downloadSkill(skillId: string, version?: string, authToken?: string): Promise<unknown> {
+    this.requireConfigured();
     return this.client.downloadSkill(skillId, version, authToken);
   }
 
   async getSkillStats(skillId: string, authToken?: string): Promise<unknown> {
+    this.requireConfigured();
     return this.client.getSkillStats(skillId, authToken);
   }
 
   async listAgents(
     params: { keyword?: string; page?: number; pageSize?: number } = {}
   ): Promise<unknown> {
+    this.requireConfigured();
     return this.client.listAgents({
       keyword: params.keyword,
       page: params.page || 1,
@@ -210,6 +228,7 @@ export class MarketplaceService {
   }
 
   async getAgent(id: string): Promise<unknown> {
+    this.requireConfigured();
     return this.client.getAgent(id);
   }
 
@@ -217,6 +236,7 @@ export class MarketplaceService {
     params?: { type?: string; page?: number; pageSize?: number },
     authToken?: string
   ): Promise<unknown> {
+    this.requireConfigured();
     return this.client.adminModerationQueue(params, authToken);
   }
 }

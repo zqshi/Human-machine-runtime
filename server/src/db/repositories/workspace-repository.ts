@@ -7,11 +7,11 @@ import type { IWorkspaceRepository } from '../../contexts/workspace/workspace-se
 export class WorkspaceRepository implements IWorkspaceRepository {
   constructor(private db: Database) {}
 
-  async findByXspaceId(xspaceWorkspaceId: string): Promise<Workspace | null> {
+  async findByWorkspaceBackendId(workspaceBackendWorkspaceId: string): Promise<Workspace | null> {
     const rows = await this.db.select().from(workspaces);
     const match = rows.find((row) => {
       const data = (row.data ?? {}) as Record<string, unknown>;
-      return data.xspaceWorkspaceId === xspaceWorkspaceId;
+      return data.workspaceBackendWorkspaceId === workspaceBackendWorkspaceId;
     });
     return match ? toWorkspace(match) : null;
   }
@@ -65,7 +65,7 @@ function toWorkspace(row: typeof workspaces.$inferSelect): Workspace {
     tenantId: (data.tenantId as string) || '',
     description: row.description || '',
     status: (row.status as Workspace['status']) || 'active',
-    xspaceWorkspaceId: (data.xspaceWorkspaceId as string) || undefined,
+    workspaceBackendWorkspaceId: (data.workspaceBackendWorkspaceId as string) || undefined,
     sourceChannel: (data.sourceChannel as string) || undefined,
     sourceConversationId: (data.sourceConversationId as string) || undefined,
     createdAt: row.createdAt?.toISOString() || new Date().toISOString(),

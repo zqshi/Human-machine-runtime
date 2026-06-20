@@ -131,8 +131,8 @@ describe('admin analytics routes', () => {
       isConfigured: vi.fn().mockReturnValue(true),
       healthCheck: vi.fn().mockResolvedValue({ status: 'ok' }),
     };
-    const clawhub = { isConfigured: vi.fn().mockReturnValue(false) };
-    const inner = createAdminAnalyticsRoutes(svc as never, litellm as never, clawhub as never);
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(false) };
+    const inner = createAdminAnalyticsRoutes(svc as never, litellm as never, marketplace as never);
     const app = wrapWithAuth(inner);
 
     const res = await app.request('/gateway-status');
@@ -140,7 +140,7 @@ describe('admin analytics routes', () => {
 
     const body = await res.json();
     expect(body.gateways.litellm.status).toBe('ok');
-    expect(body.gateways.clawhub.status).toBe('unconfigured');
+    expect(body.gateways.marketplace.status).toBe('unconfigured');
   });
 
   it('GET /gateway-status handles litellm error', async () => {
@@ -149,8 +149,8 @@ describe('admin analytics routes', () => {
       isConfigured: vi.fn().mockReturnValue(true),
       healthCheck: vi.fn().mockRejectedValue(new Error('connection refused')),
     };
-    const clawhub = { isConfigured: vi.fn().mockReturnValue(false) };
-    const inner = createAdminAnalyticsRoutes(svc as never, litellm as never, clawhub as never);
+    const marketplace = { isConfigured: vi.fn().mockReturnValue(false) };
+    const inner = createAdminAnalyticsRoutes(svc as never, litellm as never, marketplace as never);
     const app = wrapWithAuth(inner);
 
     const res = await app.request('/gateway-status');
@@ -171,6 +171,6 @@ describe('admin analytics routes', () => {
 
     const body = await res.json();
     expect(body.gateways.litellm.status).toBe('unconfigured');
-    expect(body.gateways.clawhub.status).toBe('unconfigured');
+    expect(body.gateways.marketplace.status).toBe('unconfigured');
   });
 });
