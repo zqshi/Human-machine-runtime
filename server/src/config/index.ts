@@ -9,6 +9,11 @@ function optionalInt(key: string, fallback: number): number {
   return v ? parseInt(v, 10) : fallback;
 }
 
+function optionalFloat(key: string, fallback: number): number {
+  const v = env[key];
+  return v ? parseFloat(v) : fallback;
+}
+
 export const config = {
   env: optional('NODE_ENV', 'development'),
   port: optionalInt('PORT', 3002),
@@ -111,6 +116,17 @@ export const config = {
     simulatorEnabled: env.AGENT_SIMULATOR_ENABLED === 'true',
     /** Agent 默认 LLM 模型别名（经 LiteLLM 路由）。留空 → ILLMClient.isAvailable=false → AgentExecutor 走关键词降级；配真实模型后走 LLM。 */
     llmModel: optional('AGENT_LLM_MODEL', ''),
+  },
+
+  // Claude Agent SDK 配置。apiKey 留空时 bootstrap 不注册 ClaudeAgentSdkAdapter,系统降级到 OpenClaw。
+  claude: {
+    apiKey: optional('ANTHROPIC_API_KEY', ''),
+    workerImage: optional('CLAUDE_WORKER_IMAGE', 'claude-worker:latest'),
+    workerTimeoutMs: optionalInt('CLAUDE_WORKER_TIMEOUT_MS', 120_000),
+    workspaceRoot: optional('CLAUDE_WORKSPACE_ROOT', '/tmp/hmr-tasks'),
+    defaultModel: optional('CLAUDE_DEFAULT_MODEL', 'claude-sonnet-4-6'),
+    defaultMaxTurns: optionalInt('CLAUDE_DEFAULT_MAX_TURNS', 20),
+    defaultBudgetUsd: optionalFloat('CLAUDE_DEFAULT_BUDGET_USD', 5),
   },
 
   weknora: {

@@ -1,4 +1,10 @@
-export type AgentFramework = 'openclaw' | 'dify' | 'coze' | 'langchain' | 'custom';
+export type AgentFramework =
+  | 'openclaw'
+  | 'dify'
+  | 'coze'
+  | 'langchain'
+  | 'custom'
+  | 'claude-agent-sdk';
 
 export type TaskPriority = 'critical' | 'high' | 'normal' | 'low';
 
@@ -49,6 +55,8 @@ export interface AgentTaskResult {
   artifacts?: Array<{ type: string; uri: string; name: string }>;
   tokenUsage?: { prompt: number; completion: number; total: number };
   durationMs: number;
+  /** 失败原因(success=false 时) */
+  error?: string;
 }
 
 export interface IAgentRuntimeAdapter {

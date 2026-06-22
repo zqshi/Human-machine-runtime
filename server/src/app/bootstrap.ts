@@ -130,6 +130,9 @@ import { RecommendationEngine } from '../contexts/runtime-engine/recommendation-
 import { ReceiptManager } from '../contexts/runtime-engine/receipt-manager.js';
 import { AgentRuntimeAdapterRegistry } from '../contexts/agent-core/domain/agent-runtime-adapter.js';
 import { OpenClawAdapter } from '../contexts/agent-core/adapters/openclaw-adapter.js';
+import { ClaudeAgentSdkAdapter } from '../contexts/agent-core/adapters/claude-agent-sdk-adapter.js';
+import { DockerWorkerRunner } from '../contexts/agent-core/infrastructure/docker-worker-runner.js';
+import { DbInstanceSessionStore } from '../contexts/agent-core/infrastructure/instance-session-store.js';
 
 export interface AppContext {
   db: Database;
@@ -418,6 +421,47 @@ export function createAppContext(db: Database): AppContext {
   const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
   const openClawAdapter = new OpenClawAdapter(clusterInstanceClient);
   agentAdapterRegistry.register(openClawAdapter);
+
+  // Claude Agent SDK adapter(主执行引擎)。env 不配 ANTHROPIC_API_KEY 时跳过,
+  // 系统降级到只有 OpenClaw 的旧行为。
+  if (config.claude.apiKey) {
+    const claudeSessionStore = new DbInstanceSessionStore(db);
+    const claudeWorkerRunner = new DockerWorkerRunner();
+    const claudeAdapter = new ClaudeAgentSdkAdapter(claudeWorkerRunner, claudeSessionStore, {
+      apiKey: config.claude.apiKey,
+      workerImage: config.claude.workerImage,
+      workerTimeoutMs: config.claude.workerTimeoutMs,
+      workspaceRoot: config.claude.workspaceRoot,
+      defaultModel: config.claude.defaultModel,
+      defaultMaxTurns: config.claude.defaultMaxTurns,
+      defaultBudgetUsd: config.claude.defaultBudgetUsd,
+    });
+    agentAdapterRegistry.register(claudeAdapter);
+
+    claudeAdapter.onTaskComplete((result) => {
+      const receipt = receiptManager.getReceipt(result.taskId);
+      if (!receipt) return;
+      if (result.success) {
+        receiptManager
+          .sendSuccessReceipt(receipt.id, receipt.summary, JSON.stringify(result.output))
+          .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
+      } else {
+        receiptManager
+          .sendFailureReceipt(
+            receipt.id,
+            receipt.summary,
+            result.error ?? 'claude task failed'
+          )
+          .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
+      }
+      appEventBus.publish('receipt:sent', {
+        receiptId: result.taskId,
+        taskId: result.taskId,
+        channel: receipt.originChannel ?? 'unknown',
+        success: result.success,
+      });
+    });
+  }
 
   openClawAdapter.onTaskComplete((result) => {
     const receipt = receiptManager.getReceipt(result.taskId);
