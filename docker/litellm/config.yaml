@@ -1,0 +1,31 @@
+# LiteLLM 代理配置 — HMR 私有化部署占位
+#
+# 用途:claude-worker 路径A 的企业 Anthropic 兼容代理 / 路径B AgentExecutor 的 LLM 网关。
+# 部署时替换 model_list 为企业自有模型(qwen/deepseek/glm 等),通过 OpenAI 兼容端点接入。
+# 文档: https://docs.litellm.ai/docs/proxy/configs
+#
+# 路径A(claude-worker 转发):容器内 SDK 经 ANTHROPIC_BASE_URL 指向 LiteLLM 的 /v1/messages,
+#   需 LiteLLM 配置 Anthropic 兼容路由(见下方 anthropic_passthrough 注释)。国产模型能否支撑
+#   Claude Agent SDK 完整能力(工具调用/computer use)需实测,不支持则走路径B。
+# 路径B(AgentExecutor 降级):server 经 LiteLLMClient 调 /v1/chat/completions,配 AGENT_LLM_MODEL。
+
+model_list:
+  # 示例:通义千问(替换 api_base/api_key 为真实值,或用 os.environ/<NAME> 注入)
+  - model_name: qwen-plus
+    litellm_params:
+      model: openai/qwen-plus
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/DASHSCOPE_API_KEY
+  # 示例:DeepSeek
+  - model_name: deepseek-chat
+    litellm_params:
+      model: openai/deepseek-chat
+      api_base: https://api.deepseek.com/v1
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+litellm_settings:
+  drop_params: true
+  telemetry: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

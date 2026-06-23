@@ -58,6 +58,7 @@ class FakeSessionStore implements InstanceSessionStore {
 function makeConfig(overrides: Partial<ClaudeAdapterConfig> = {}): ClaudeAdapterConfig {
   return {
     apiKey: 'sk-ant-test',
+    anthropicBaseUrl: '',
     workerImage: 'claude-worker:latest',
     workerTimeoutMs: 30_000,
     workspaceRoot: '/tmp/hmr-tasks',

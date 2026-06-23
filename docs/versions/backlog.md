@@ -8,9 +8,9 @@
 |------|------|------|------|
 | v1.0.x | 投产工程 4 阶段 | done | 见 `memory/MEMORY.md` 与 git log |
 | v1.1.x | 流程可用性补强（Conduit/配额/调度重试/实例自愈） | done | 见 `memory/MEMORY.md` |
-| v1.2.1 | 投产外部契约收尾 | current | T1/T2/T3/T5：claude-agent-sdk 接回 gateway clients |
-| v1.2.2 | 商业模式闭环（计费/套餐/用量报表） | next | T4/T6/T7/T8/T10/T11：quota↔analytics↔billing 写侧贯通 |
-| v1.3.x | （待规划） | backlog | 候选: SSO 接入、真实支付网关、可观测性增强、知识库 RAG 深化 |
+| v1.2.1 | 投产外部契约收尾 + 私有化前置 | done | snapshot 已归档；claude-worker 双路径 + 配置修复 + credential 后端 + 集成测试端到端实测通过 |
+| v1.2.2 | 商业模式闭环（计费/套餐/用量报表） | current | 已激活但非立即启动（内部推广暂不计费，用户决策推迟）；T4/T6/T7/T8/T10/T11 |
+| v1.3.x | （待规划） | backlog | 候选: SSO 接入、真实支付网关、可观测性增强、知识库 RAG 深化、credential 前端、eval 真实化 |
 
 ## 长期技术债务
 
@@ -18,7 +18,12 @@
 
 | ID | 债务 | 来源版本 | 优先级 | 处置版本 |
 |----|------|---------|--------|---------|
-| - | （首次审计后填充） | - | - | - |
+| D1 | eval-benchmark 是 STUB（actualOutput 占位），需接真实 Agent | v1.2.1 | P2 | v1.3+ |
+| D2 | knowledge + employee-memory 检索能力未进 agent 决策回路（仅 Matrix 命令手动查） | v1.2.1 | P1 | v1.3+ |
+| D3 | tool-management executor 与 claude-agent-sdk 主链路脱节 | v1.2.1 | P2 | v1.3+ |
+| D4 | credential-vault 前端管理面（后端 API 已就绪，T10） | v1.2.1 | P2 | v1.3+ |
+| D5 | tool-management db 连接解锁接入（credentialManagementService.getCredentialSecret 已提供，需注入 ToolManagementService） | v1.2.1 | P2 | v1.3+ |
+| D6 | credential-repository 集成测试（DB 层，mock Database） | v1.2.1 | P3 | v1.3+ |
 
 ## 候选方向（未排期）
 

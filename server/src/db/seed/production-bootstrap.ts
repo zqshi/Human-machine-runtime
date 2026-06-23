@@ -43,7 +43,7 @@ async function seedProduction() {
   console.log('  ✓ Default tenant ensured');
 
   /* ── 2. 应急管理员账号（仅 AUTH_ALLOW_LOCAL_FALLBACK=true 时有意义）── */
-  const adminPassword = process.env.HMR_ADMIN_PASSWORD;
+  const adminPassword = process.env.HMR_SEED_ADMIN_PASSWORD;
   if (adminPassword) {
     const hash = await bcrypt.hash(adminPassword, 12);
     await db.execute(sql`
@@ -51,9 +51,9 @@ async function seedProduction() {
       VALUES ('admin', ${`bcrypt:${hash}`}, 'platform_admin', 'platform', '平台管理员', NULL, 'seed')
       ON CONFLICT (username) DO UPDATE SET password_hash = ${`bcrypt:${hash}`}, updated_at = now()
     `);
-    console.log('  ✓ Admin user created/updated (password from HMR_ADMIN_PASSWORD)');
+    console.log('  ✓ Admin user created/updated (password from HMR_SEED_ADMIN_PASSWORD)');
   } else {
-    console.log('  ⊘ HMR_ADMIN_PASSWORD not set, skipping admin user creation');
+    console.log('  ⊘ HMR_SEED_ADMIN_PASSWORD not set, skipping admin user creation');
   }
 
   /* ── 3. 系统配置 ── */

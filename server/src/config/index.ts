@@ -120,6 +120,10 @@ export const config = {
   // Claude Agent SDK 配置。apiKey 留空时 bootstrap 不注册 ClaudeAgentSdkAdapter,系统降级到 OpenClaw。
   claude: {
     apiKey: optional('ANTHROPIC_API_KEY', ''),
+    // 私有化:经此 URL 转发企业 Anthropic 兼容代理(LiteLLM /v1/messages 或自建代理)。
+    // 留空则 claude-worker 容器内 SDK 直连 api.anthropic.com(需 Anthropic 出口);
+    // 配值则注入容器 ANTHROPIC_BASE_URL,SDK 经代理转发(内网无出口场景可用)。
+    anthropicBaseUrl: optional('ANTHROPIC_BASE_URL', ''),
     workerImage: optional('CLAUDE_WORKER_IMAGE', 'claude-worker:latest'),
     workerTimeoutMs: optionalInt('CLAUDE_WORKER_TIMEOUT_MS', 120_000),
     workspaceRoot: optional('CLAUDE_WORKSPACE_ROOT', '/tmp/hmr-tasks'),

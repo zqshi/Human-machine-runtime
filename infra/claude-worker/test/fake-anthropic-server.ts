@@ -157,16 +157,19 @@ export async function startFakeAnthropicServer(
 
   return new Promise((resolve, reject) => {
     server.on('error', reject);
-    server.listen(port, '127.0.0.1', () => {
+    // 监听 0.0.0.0(非 127.0.0.1):让容器经 host.docker.internal(host IP)可达。
+    // 127.0.0.1 仅 loopback,容器 bridge 网络 + mac docker desktop 的 --network host 均访问不到。
+    server.listen(port, '0.0.0.0', () => {
       const addr = server.address();
       if (!addr || typeof addr === 'string') {
         reject(new Error('failed to bind fake anthropic server'));
         return;
       }
       const actualPort = addr.port;
+      // url 用 host.docker.internal(容器视角的 host 地址);host 进程不通过此 url 访问 server。
       resolve({
         port: actualPort,
-        url: `http://127.0.0.1:${actualPort}`,
+        url: `http://host.docker.internal:${actualPort}`,
         requests: received,
         close: () =>
           new Promise<void>((resolveClose, rejectClose) => {

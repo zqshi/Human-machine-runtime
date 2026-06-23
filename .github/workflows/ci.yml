@@ -45,3 +45,25 @@ jobs:
         run: cd client-suite/apps/web && npx tsc --noEmit
       - name: Unit Tests
         run: cd client-suite && npx vitest run
+
+  # 集成测试:claude-worker 端到端(用 fake-anthropic-server,不需真实 Anthropic key)
+  # 解除"集成测试默认 skip,CI 不跑"的阻断,端到端回归纳入 CI 保障。
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      - name: Install server deps
+        run: cd server && npm ci
+      - name: Build claude-worker image
+        run: bash scripts/build-claude-worker.sh
+      - name: Integration Tests (fake Anthropic server, no real API key)
+        env:
+          CLAUDE_WORKER_E2E: "1"
+        run: cd server && npm run test:integration

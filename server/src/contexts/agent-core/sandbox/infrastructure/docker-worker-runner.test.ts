@@ -154,6 +154,75 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(task.sessionId).toBeUndefined();
   });
 
+  it('anthropicBaseUrl 有值时 env file 注入 ANTHROPIC_BASE_URL(私有化经企业代理转发)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    try {
+      await import('fs').then((m) => m.unlinkSync(envFilePath));
+    } catch {
+      // ignore
+    }
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(
+      makeOpts({ anthropicBaseUrl: 'http://litellm:4000' }),
+      {},
+      new AbortController()
+    );
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    expect(captured!).toContain('ANTHROPIC_API_KEY=sk-ant-test');
+    expect(captured!).toContain('ANTHROPIC_BASE_URL=http://litellm:4000');
+    expect(captured!).toContain('CLAUDE_TASK_JSON=');
+  });
+
+  it('anthropicBaseUrl 缺省时 env file 不含 ANTHROPIC_BASE_URL(SDK 直连 api.anthropic.com)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    try {
+      await import('fs').then((m) => m.unlinkSync(envFilePath));
+    } catch {
+      // ignore
+    }
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(makeOpts(), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    expect(captured!).toContain('ANTHROPIC_API_KEY=sk-ant-test');
+    expect(captured!).not.toContain('ANTHROPIC_BASE_URL');
+  });
+
   it('任务完成后清理 env file(不留 apiKey 残留)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);

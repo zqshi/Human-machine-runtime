@@ -25,6 +25,8 @@ export interface WorkerRunOptions {
   maxBudgetUsd: number;
   timeoutMs: number;
   apiKey: string;
+  /** 私有化:Anthropic API 基址;有值则注入容器 ANTHROPIC_BASE_URL,让 SDK 经企业代理转发(空则 SDK 直连) */
+  anthropicBaseUrl?: string;
   workerImage: string;
 }
 
@@ -87,12 +89,14 @@ export class DockerWorkerRunner implements IWorkerRunner {
     // 文件权限 0600;apiKey 不再走命令行 -e(避免 ps/proc 暴露)
     const envFile = join(tmpdir(), `hmr-task-${opts.taskId}.env`);
     const payload = this.buildPayload(opts);
+    // env 行顺序无关;anthropicBaseUrl 有值时追加 ANTHROPIC_BASE_URL,让容器内 SDK 经企业代理转发(空则 SDK 默认直连)
+    const envLines = [`ANTHROPIC_API_KEY=${opts.apiKey}`];
+    if (opts.anthropicBaseUrl) {
+      envLines.push(`ANTHROPIC_BASE_URL=${opts.anthropicBaseUrl}`);
+    }
+    envLines.push(`CLAUDE_TASK_JSON=${JSON.stringify(payload)}`);
     try {
-      writeFileSync(
-        envFile,
-        `ANTHROPIC_API_KEY=${opts.apiKey}\nCLAUDE_TASK_JSON=${JSON.stringify(payload)}\n`,
-        { mode: 0o600 }
-      );
+      writeFileSync(envFile, `${envLines.join('\n')}\n`, { mode: 0o600 });
     } catch {
       // tmpdir 不可写时让 docker run 暴露真实错误
     }

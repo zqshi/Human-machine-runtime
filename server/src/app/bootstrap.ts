@@ -7,6 +7,7 @@ import { encrypt, decrypt } from '../contexts/credential-vault/crypto.js';
 // 拆分出的子模块
 import type { AppContext } from './bootstrap/types.js';
 import { buildGatewayClients } from './bootstrap/gateway-clients.js';
+import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
 // 类型重新导出,保持现有 `import type { AppContext } from '../app/bootstrap.js'` 调用方不破坏
@@ -35,8 +36,6 @@ import { InstanceService } from '../contexts/tenant-instance/instance-service.js
 import { ModelGrantChecker } from '../contexts/gateway/model-grant-checker.js';
 import { LlmKeySyncService } from '../contexts/gateway/llm-key-sync-service.js';
 import { DocumentService } from '../contexts/document/document-service.js';
-import { CredentialService } from '../contexts/credential-vault/credential-service.js';
-import { LeaseService } from '../contexts/credential-vault/lease-service.js';
 import { ChannelService } from '../contexts/channel/channel-service.js';
 import { MatrixChannelAdapter } from '../contexts/channel/adapters/matrix-adapter.js';
 import { WpsChannelAdapter } from '../contexts/channel/adapters/wps-adapter.js';
@@ -227,8 +226,9 @@ export function createAppContext(db: Database): AppContext {
   const skillService = new SkillService(skillRepo, auditService);
   const documentService = new DocumentService(documentRepo, auditService);
 
-  const credentialService = new CredentialService(config.credential.encryptionKey);
-  const leaseService = new LeaseService(config.credential.leaseDefaultTtlSec);
+  // credential-vault:加解密 + lease + 持久化 + 管理服务,统一从 buildCredentialBundle 组装(见 bootstrap/credentials.ts)
+  const { credentialService, leaseService, credentialManagementService } =
+    buildCredentialBundle(db);
 
   // 9 个外部服务 HTTP 客户端:统一从 buildGatewayClients 构造(见 bootstrap/gateway-clients.ts)
   const {
@@ -348,6 +348,7 @@ export function createAppContext(db: Database): AppContext {
     const claudeWorkerRunner = new DockerWorkerRunner();
     const claudeAdapter = new ClaudeAgentSdkAdapter(claudeWorkerRunner, claudeSessionStore, {
       apiKey: config.claude.apiKey,
+      anthropicBaseUrl: config.claude.anthropicBaseUrl,
       workerImage: config.claude.workerImage,
       workerTimeoutMs: config.claude.workerTimeoutMs,
       workspaceRoot: config.claude.workspaceRoot,
@@ -723,6 +724,7 @@ export function createAppContext(db: Database): AppContext {
     documentService,
     credentialService,
     leaseService,
+    credentialManagementService,
     channelService,
     decisionConsole,
     mcpService,

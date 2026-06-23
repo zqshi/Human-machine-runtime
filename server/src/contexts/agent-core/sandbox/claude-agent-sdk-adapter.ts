@@ -21,6 +21,8 @@ import type { InstanceSessionStore } from './infrastructure/instance-session-sto
  */
 export interface ClaudeAdapterConfig {
   apiKey: string;
+  /** 私有化:Anthropic API 基址(经企业代理转发);空则 SDK 直连 api.anthropic.com */
+  anthropicBaseUrl: string;
   workerImage: string;
   workerTimeoutMs: number;
   workspaceRoot: string;
@@ -127,6 +129,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       maxBudgetUsd: budgetUsd,
       timeoutMs: typeof task.timeout === 'number' ? task.timeout : this.config.workerTimeoutMs,
       apiKey: this.config.apiKey,
+      anthropicBaseUrl: this.config.anthropicBaseUrl,
       workerImage: this.config.workerImage,
     };
 

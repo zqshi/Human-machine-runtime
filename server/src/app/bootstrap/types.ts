@@ -16,6 +16,7 @@ import type { DepartmentService } from '../../contexts/department/department-ser
 import type { DocumentService } from '../../contexts/document/document-service.js';
 import type { CredentialService } from '../../contexts/credential-vault/credential-service.js';
 import type { LeaseService } from '../../contexts/credential-vault/lease-service.js';
+import type { CredentialManagementService } from '../../contexts/credential-vault/credential-management-service.js';
 import type { ChannelService } from '../../contexts/channel/channel-service.js';
 import type { DecisionConsole } from '../../contexts/channel/decision-console.js';
 import type { McpService } from '../../contexts/mcp-management/mcp-service.js';
@@ -84,6 +85,7 @@ export interface AppContext {
   documentService: DocumentService;
   credentialService: CredentialService;
   leaseService: LeaseService;
+  credentialManagementService: CredentialManagementService;
   channelService: ChannelService;
   decisionConsole: DecisionConsole;
   mcpService: McpService;

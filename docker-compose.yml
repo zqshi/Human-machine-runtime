@@ -57,6 +57,22 @@ services:
       - conduit_data:/var/lib/matrix-conduit
       - ./docker/conduit/conduit.toml:/etc/conduit.toml:ro
 
+  # LiteLLM 代理(路径B 降级 / 路径A 企业转发):私有化场景接入企业模型。
+  # profile 控制:默认不起;`docker-compose --profile litellm up` 或 `--profile full` 启用。
+  # config.yaml 占位指向企业模型,部署时替换(见 docker/litellm/config.yaml)。
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./docker/litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:-sk-hmr-litellm-dev}"
+    profiles:
+      - litellm
+      - full
+
   hmr-server:
     build:
       context: ./server
@@ -76,12 +92,18 @@ services:
       AUTH_DEFAULT_PROVIDER: local
       MATRIX_HOMESERVER_URL: http://conduit:6167
       MATRIX_BOT_USER_ID: "@hmr-bot:localhost"
-      LITELLM_BASE_URL: ""
-      CLAWHUB_API_URL: ""
-      PORTAL_API_URL: ""
-      XSPACE_API_URL: ""
-      CLAW_FARM_API_URL: ""
-      PLATFORM_BE_API_URL: ""
+      # 路径B(LiteLLM 降级):默认指向 litellm 服务;AGENT_LLM_MODEL 未配则 AgentExecutor 走关键词降级
+      LITELLM_BASE_URL: "${LITELLM_BASE_URL:-http://litellm:4000}"
+      # 路径A(claude-worker):ANTHROPIC_API_KEY 配置后启用;ANTHROPIC_BASE_URL 经企业代理转发
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      ANTHROPIC_BASE_URL: "${ANTHROPIC_BASE_URL:-}"
+      CLAUDE_WORKER_IMAGE: "${CLAUDE_WORKER_IMAGE:-claude-worker:latest}"
+      # 外部服务网关(变量名对齐 config/index.ts;留空则对应 client isConfigured=false,调用方守卫拦截)
+      MARKETPLACE_API_URL: "${MARKETPLACE_API_URL:-}"
+      PROFILE_SERVICE_API_URL: "${PROFILE_SERVICE_API_URL:-}"
+      WORKSPACE_BACKEND_API_URL: "${WORKSPACE_BACKEND_API_URL:-}"
+      CONTAINER_ORCHESTRATOR_API_URL: "${CONTAINER_ORCHESTRATOR_API_URL:-}"
+      PLATFORM_BE_API_URL: "${PLATFORM_BE_API_URL:-}"
       WEKNORA_API_URL: http://weknora:8080
       WEKNORA_ENABLED: "${WEKNORA_ENABLED:-}"
       WEKNORA_ADMIN_API_KEY: "${WEKNORA_ADMIN_API_KEY:-}"

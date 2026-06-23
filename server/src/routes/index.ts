@@ -44,6 +44,7 @@ import { createAdminAssistantRoutes } from './admin/ai-assistant.js';
 import { createAdminEvalRoutes } from './admin/eval-benchmark.js';
 import { createAdminScheduledTaskRoutes } from './admin/scheduled-tasks.js';
 import { createAdminMemoryRoutes } from './admin/employee-memory.js';
+import { createAdminCredentialRoutes } from './admin/credentials.js';
 import { createOpenclawTaskRoutes } from './openclaw/tasks.js';
 import { createOpenclawDecisionRoutes } from './openclaw/decisions.js';
 import { createOpenclawSignalRoutes } from './openclaw/signals.js';
@@ -191,6 +192,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
     )
   );
   admin.route('/employee-memory', createAdminMemoryRoutes(ctx.memoryService));
+  admin.route('/credentials', createAdminCredentialRoutes(ctx.credentialManagementService));
   app.route('/api/admin', admin);
 
   /* ──── Control (L2 管理控制面) ──── */
