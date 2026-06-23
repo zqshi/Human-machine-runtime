@@ -79,10 +79,7 @@ export function validateAgentDefinitionSpec(
   if (!spec.modelConfig.primaryModel) {
     errors.push({ field: 'modelConfig.primaryModel', message: 'required' });
   }
-  if (
-    spec.modelConfig.maxConcurrency < 1 ||
-    spec.modelConfig.maxConcurrency > 100
-  ) {
+  if (spec.modelConfig.maxConcurrency < 1 || spec.modelConfig.maxConcurrency > 100) {
     errors.push({ field: 'modelConfig.maxConcurrency', message: 'must be 1-100' });
   }
 

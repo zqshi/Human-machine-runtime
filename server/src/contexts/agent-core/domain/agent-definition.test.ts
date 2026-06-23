@@ -22,7 +22,9 @@ describe('validateAgentDefinitionSpec', () => {
   it('sandboxTemplate 合法值通过(basic/high-privilege/network-isolated)', () => {
     for (const t of ['basic', 'high-privilege', 'network-isolated']) {
       const spec = { ...defaultAgentDefinitionSpec(), sandboxTemplate: t };
-      expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'sandboxTemplate')).toBe(false);
+      expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'sandboxTemplate')).toBe(
+        false
+      );
     }
   });
 

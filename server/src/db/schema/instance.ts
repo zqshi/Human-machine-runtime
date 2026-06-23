@@ -22,8 +22,9 @@ export const instances = pgTable(
     jobCode: varchar('job_code', { length: 64 }),
     jobTitle: varchar('job_title', { length: 128 }),
     department: varchar('department', { length: 128 }),
-    departmentId: varchar('department_id', { length: 64 })
-      .references(() => departments.id, { onDelete: 'set null' }),
+    departmentId: varchar('department_id', { length: 64 }).references(() => departments.id, {
+      onDelete: 'set null',
+    }),
     matrixRoomId: varchar('matrix_room_id', { length: 128 }),
     permissionTemplateId: varchar('permission_template_id', { length: 64 }),
     permissionTemplate: jsonb('permission_template').$type<Record<string, unknown>>(),

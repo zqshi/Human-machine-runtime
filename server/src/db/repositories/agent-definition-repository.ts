@@ -15,9 +15,13 @@ import type {
 export class AgentDefinitionRepository {
   constructor(private db: Database) {}
 
-  async create(
-    input: { id: string; tenantId: string; name: string; spec: AgentDefinitionSpec; description: string | null }
-  ): Promise<AgentDefinition> {
+  async create(input: {
+    id: string;
+    tenantId: string;
+    name: string;
+    spec: AgentDefinitionSpec;
+    description: string | null;
+  }): Promise<AgentDefinition> {
     const [row] = await this.db
       .insert(agentDefinitions)
       .values({
@@ -64,10 +68,7 @@ export class AgentDefinitionRepository {
     return rows.map(toDomain);
   }
 
-  async updateSpec(
-    id: string,
-    spec: AgentDefinitionSpec
-  ): Promise<AgentDefinition | null> {
+  async updateSpec(id: string, spec: AgentDefinitionSpec): Promise<AgentDefinition | null> {
     const [row] = await this.db
       .update(agentDefinitions)
       .set({

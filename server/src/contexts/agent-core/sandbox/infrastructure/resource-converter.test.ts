@@ -84,10 +84,7 @@ describe('toDockerResourceArgs', () => {
   });
   it('自定义 fallback 生效', () => {
     expect(
-      toDockerResourceArgs(
-        { cpu: 'bad', memory: 'bad' },
-        { cpus: '0.5', memory: '512m' }
-      )
+      toDockerResourceArgs({ cpu: 'bad', memory: 'bad' }, { cpus: '0.5', memory: '512m' })
     ).toEqual({ cpus: '0.5', memory: '512m' });
   });
 });
