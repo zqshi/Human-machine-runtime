@@ -13,7 +13,11 @@
  *   失败时不推进 nextRunAt（下次 tick 立即重试），成功后清零 retry_count。
  */
 
-import type { ScheduledTaskRepository, ScheduledTaskRow, ScheduledTaskRunRow } from '../../db/repositories/scheduled-task-repository.js';
+import type {
+  ScheduledTaskRepository,
+  ScheduledTaskRow,
+  ScheduledTaskRunRow,
+} from '../../db/repositories/scheduled-task-repository.js';
 import type { JobHandlerRegistry } from './job-handler-registry.js';
 import type { ICronCalculator } from './domain/cron.js';
 import type { LockProvider } from './domain/lock.js';
@@ -35,10 +39,7 @@ export class TimeoutError extends Error {
  * 由外层（bootstrap.ts）注入 NotificationService.createAlert 等具体实现，
  * scheduler 自身不依赖 NotificationService（保持 DDD 分层）。
  */
-export type SchedulerDeadLetterHandler = (
-  task: ScheduledTaskRow,
-  errorMessage: string
-) => void;
+export type SchedulerDeadLetterHandler = (task: ScheduledTaskRow, errorMessage: string) => void;
 
 export class SchedulerService {
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -92,7 +93,10 @@ export class SchedulerService {
   }
 
   /** 手动触发一次（triggerType=manual，不推进 schedule） */
-  async runOnce(taskId: string, triggerType: TriggerType = 'manual'): Promise<ScheduledTaskRunRow | null> {
+  async runOnce(
+    taskId: string,
+    triggerType: TriggerType = 'manual'
+  ): Promise<ScheduledTaskRunRow | null> {
     const task = await this.repo.getTask(taskId);
     if (!task) return null;
     return this.executeTask(task, triggerType);
@@ -177,8 +181,7 @@ export class SchedulerService {
 
       // 重试判定:system 类默认可重试,agent 类默认不可(jobPayload.retryable=true 可显式开启)
       const payload = (task.jobPayload as Record<string, unknown>) ?? {};
-      const isRetryable =
-        task.jobType === 'system' || payload.retryable === true;
+      const isRetryable = task.jobType === 'system' || payload.retryable === true;
       const maxAttempts = task.maxAttempts ?? 3;
       const currentRetry = task.retryCount ?? 0;
       const shouldRetry =
@@ -231,9 +234,11 @@ export class SchedulerService {
           logger.warn({ taskId: task.id, err: String(err) }, 'scheduler: advanceSchedule failed')
         );
       }
-      await this.lock.unlock(task.id).catch((err) =>
-        logger.warn({ taskId: task.id, err: String(err) }, 'scheduler: unlock failed')
-      );
+      await this.lock
+        .unlock(task.id)
+        .catch((err) =>
+          logger.warn({ taskId: task.id, err: String(err) }, 'scheduler: unlock failed')
+        );
     }
   }
 

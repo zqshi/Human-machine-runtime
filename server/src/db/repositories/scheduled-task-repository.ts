@@ -144,10 +144,7 @@ export class ScheduledTaskRepository {
   }
 
   async deleteTask(id: string): Promise<boolean> {
-    const [row] = await this.db
-      .delete(scheduledTasks)
-      .where(eq(scheduledTasks.id, id))
-      .returning();
+    const [row] = await this.db.delete(scheduledTasks).where(eq(scheduledTasks.id, id)).returning();
     return !!row;
   }
 
@@ -231,7 +228,9 @@ export class ScheduledTaskRepository {
         cnt: sql<number>`count(*)::int`,
       })
       .from(scheduledTaskRuns)
-      .where(and(eq(scheduledTaskRuns.taskId, taskId), sql`${scheduledTaskRuns.createdAt} >= ${since}`))
+      .where(
+        and(eq(scheduledTaskRuns.taskId, taskId), sql`${scheduledTaskRuns.createdAt} >= ${since}`)
+      )
       .groupBy(scheduledTaskRuns.status);
     const out: Record<string, number> = {};
     for (const r of rows) out[r.status] = Number(r.cnt);

@@ -58,11 +58,7 @@ export class InstanceHealthRepository {
   }
 
   /** 最近 windowMs 内是否存在指定 status 的快照(rebuild cooldown 去重用) */
-  async hasRecentByStatus(
-    instanceId: string,
-    status: string,
-    windowMs: number
-  ): Promise<boolean> {
+  async hasRecentByStatus(instanceId: string, status: string, windowMs: number): Promise<boolean> {
     const since = new Date(Date.now() - windowMs);
     const rows = await this.db
       .select({ id: instanceHealthSnapshots.id })

@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SchedulerService } from './scheduler-service.js';
-import type { ScheduledTaskRepository, ScheduledTaskRow } from '../../db/repositories/scheduled-task-repository.js';
+import type {
+  ScheduledTaskRepository,
+  ScheduledTaskRow,
+} from '../../db/repositories/scheduled-task-repository.js';
 import type { JobHandlerRegistry } from './job-handler-registry.js';
 import type { JobHandler, JobResult } from './domain/job-handler.js';
 
@@ -247,7 +250,7 @@ describe('SchedulerService', () => {
       // 已重试 maxAttempts-1=2 次,本次第 3 次失败 → 死信
       await svc.runOnce(
         'task_1',
-        'scheduled',
+        'scheduled'
         // 注:runOnce 不接受 row override,需通过 getTask mock 控制 retryCount
       );
       // 用第二个测试:重制 task 让 retryCount 已达 maxAttempts-1
