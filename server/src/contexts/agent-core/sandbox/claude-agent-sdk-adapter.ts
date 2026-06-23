@@ -1,4 +1,5 @@
 import { newId } from '../../../shared/utils.js';
+import { estimateCostUsd } from '../domain/pricing.js';
 import type {
   IAgentRuntimeAdapter,
   AgentFramework,
@@ -6,13 +7,13 @@ import type {
   AgentTaskStatus,
   AgentTaskResult,
   AgentCapability,
-} from '../domain/agent-runtime-adapter.js';
+} from './agent-runtime-adapter.js';
 import type {
   IWorkerRunner,
   WorkerRunOptions,
   WorkerCallbacks,
-} from '../infrastructure/docker-worker-runner.js';
-import type { InstanceSessionStore } from '../infrastructure/instance-session-store.js';
+} from './infrastructure/docker-worker-runner.js';
+import type { InstanceSessionStore } from './infrastructure/instance-session-store.js';
 
 /**
  * ClaudeAgentSdkAdapter 配置。
@@ -46,7 +47,16 @@ interface ActiveTask {
   instanceId?: string;
   /** 最终态守卫:已置 final 则后续 onError/onResult/resolve 全部忽略,防重复 emit */
   finalState?: 'completed' | 'failed';
+  /** worker 上报的 token 用量(累积值,用于入账);result/progress 事件到达时更新 */
+  usage?: { prompt: number; completion: number; total: number; model?: string };
+  /** 已用 USD 估算(基于 usage 累积计算);超过 budgetUsd * 1.2 触发熔断 */
+  usedUsd: number;
+  /** 单任务预算上限(USD);-1 表示不限制 */
+  budgetUsd: number;
 }
+
+/** 预算熔断宽限系数:估算误差容许 20%(SDK 计数 bug 或估算偏差留余地) */
+const BUDGET_OVERRIDE_FACTOR = 1.2;
 
 /**
  * 用 Claude Agent SDK 在 Docker 沙箱中执行 Agent 任务的 adapter。
@@ -91,7 +101,18 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
     };
 
     const abortCtl = new AbortController();
-    this.activeTasks.set(taskId, { state, abortCtl, startedAt: Date.now(), instanceId });
+    const budgetUsd =
+      typeof (input.maxBudgetUsd as number) === 'number'
+        ? (input.maxBudgetUsd as number)
+        : this.config.defaultBudgetUsd;
+    this.activeTasks.set(taskId, {
+      state,
+      abortCtl,
+      startedAt: Date.now(),
+      instanceId,
+      usedUsd: 0,
+      budgetUsd,
+    });
 
     const opts: WorkerRunOptions = {
       taskId,
@@ -103,8 +124,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       allowedTools: parseAllowedTools(input.allowedTools),
       model: typeof input.model === 'string' ? input.model : this.config.defaultModel,
       maxTurns: typeof input.maxTurns === 'number' ? input.maxTurns : this.config.defaultMaxTurns,
-      maxBudgetUsd:
-        typeof input.maxBudgetUsd === 'number' ? input.maxBudgetUsd : this.config.defaultBudgetUsd,
+      maxBudgetUsd: budgetUsd,
       timeoutMs: typeof task.timeout === 'number' ? task.timeout : this.config.workerTimeoutMs,
       apiKey: this.config.apiKey,
       workerImage: this.config.workerImage,
@@ -224,6 +244,31 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
         a.state.output = { summary: r.result };
         a.state.progress = 100;
         a.state.lastUpdatedAt = new Date();
+        if (r.usage) {
+          a.usage = {
+            prompt: r.usage.inputTokens,
+            completion: r.usage.outputTokens,
+            total: r.usage.inputTokens + r.usage.outputTokens,
+            ...(r.usage.model ? { model: r.usage.model } : {}),
+          };
+          // 累计 USD 估算(SDK result.usage 是整次会话的总累积)
+          const model = r.usage.model ?? opts.model;
+          a.usedUsd = estimateCostUsd(model, r.usage.inputTokens, r.usage.outputTokens);
+          // 预算二次熔断:超阈值立即 abort + mark failed
+          if (
+            a.budgetUsd > 0 &&
+            a.usedUsd > a.budgetUsd * BUDGET_OVERRIDE_FACTOR &&
+            !a.finalState
+          ) {
+            a.abortCtl.abort();
+            this.markFailed(
+              taskId,
+              new Error(
+                `budget cap exceeded: used $${a.usedUsd.toFixed(4)} > budget $${a.budgetUsd} × ${BUDGET_OVERRIDE_FACTOR}`
+              )
+            );
+          }
+        }
       },
       onError: (err) => {
         this.markFailed(taskId, err);
@@ -275,6 +320,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       success,
       output,
       durationMs: Date.now() - active.startedAt,
+      ...(active.usage ? { tokenUsage: active.usage } : {}),
       ...(errorMessage ? { error: errorMessage } : {}),
     };
     for (const cb of [...this.completionCallbacks]) {

@@ -1,4 +1,5 @@
 import type { NormalizedMessage } from './message-normalizer.js';
+import { buildPrompt, parseLlmResponse } from './recommendation-prompt.js';
 
 export interface DecisionContext {
   triggeredBy: NormalizedMessage;
@@ -6,6 +7,20 @@ export interface DecisionContext {
   historicalDecisions: HistoricalDecision[];
   dataPoints: DataPoint[];
 }
+
+/**
+ * LLM 客户端抽象(与 agent-core 的 ILLMClient 结构兼容,避免跨上下文依赖)。
+ * - chatCompletion: 返回模型响应文本,不可用或失败返回 null
+ */
+export interface RecommendationLlmClient {
+  readonly isAvailable: boolean;
+  chatCompletion(
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+  ): Promise<{ content: string | null } | null>;
+}
+
+/** 历史决策提供者:由调用方注入(避免 runtime-engine 反向依赖 agent-core) */
+export type RecentDecisionsProvider = () => Promise<HistoricalDecision[]>;
 
 export interface HistoricalDecision {
   id: string;
@@ -48,6 +63,11 @@ export interface RecommendationResult {
 export class RecommendationEngine {
   private decisionHistory: HistoricalDecision[] = [];
 
+  constructor(
+    private readonly llmClient?: RecommendationLlmClient | null,
+    private readonly recentDecisionsProvider?: RecentDecisionsProvider | null
+  ) {}
+
   addDecisionRecord(decision: HistoricalDecision): void {
     this.decisionHistory.push(decision);
     if (this.decisionHistory.length > 1000) {
@@ -56,6 +76,47 @@ export class RecommendationEngine {
   }
 
   async generateRecommendations(ctx: DecisionContext): Promise<RecommendationResult> {
+    // 若 LLM 可用,优先走 LLM 路径(规则匹配作为降级)
+    if (this.llmClient?.isAvailable) {
+      const llmResult = await this.generateWithLlm(ctx);
+      if (llmResult) return llmResult;
+    }
+
+    return this.generateWithRules(ctx);
+  }
+
+  private async generateWithLlm(ctx: DecisionContext): Promise<RecommendationResult | null> {
+    // 若 ctx 未传 historicalDecisions,从 provider 取
+    let historical = ctx.historicalDecisions;
+    if (historical.length === 0 && this.recentDecisionsProvider) {
+      try {
+        historical = await this.recentDecisionsProvider();
+      } catch {
+        historical = [];
+      }
+    }
+
+    const messages = buildPrompt(ctx.triggeredBy, historical);
+    let llmResponse: { content: string | null } | null;
+    try {
+      llmResponse = await this.llmClient!.chatCompletion(messages);
+    } catch {
+      return null;
+    }
+    if (!llmResponse?.content) return null;
+
+    const recommendations = parseLlmResponse(llmResponse.content);
+    if (recommendations.length === 0) return null;
+
+    return {
+      messageId: ctx.triggeredBy.id,
+      recommendations: recommendations.sort((a, b) => b.confidence - a.confidence),
+      contextUsed: ['llm', 'message_intent', 'message_urgency', 'historical_decisions'],
+      generatedAt: new Date(),
+    };
+  }
+
+  private generateWithRules(ctx: DecisionContext): RecommendationResult {
     const recommendations: Recommendation[] = [];
     const contextUsed: string[] = [];
 

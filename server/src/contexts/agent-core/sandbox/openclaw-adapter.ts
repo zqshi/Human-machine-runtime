@@ -5,7 +5,7 @@ import type {
   AgentTaskStatus,
   AgentTaskResult,
   AgentCapability,
-} from '../domain/agent-runtime-adapter.js';
+} from './agent-runtime-adapter.js';
 import type { ClusterInstanceClient } from '../../gateway/clients/cluster-instance-client.js';
 import { newId } from '../../../shared/utils.js';
 

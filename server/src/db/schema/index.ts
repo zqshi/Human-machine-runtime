@@ -20,3 +20,4 @@ export * from './tool-registry.js';
 export * from './eval-benchmark.js';
 export * from './employee-memory.js';
 export * from './scheduled-tasks.js';
+export * from './billing.js';

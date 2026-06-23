@@ -41,7 +41,7 @@ export class WpsOAuthProvider implements IAuthProvider {
     );
   }
 
-  getAuthorizationUrl(state: string, redirectUri: string): string {
+  getAuthorizationUrl(state: string, redirectUri: string, codeChallenge?: string): string {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
@@ -49,11 +49,22 @@ export class WpsOAuthProvider implements IAuthProvider {
       scope: this.config.scopes.join(' '),
       state,
     });
+
+    if (codeChallenge) {
+      params.set('code_challenge', codeChallenge);
+      params.set('code_challenge_method', 'S256');
+    }
+
     return `${WPS_AUTHORIZE_URL}?${params.toString()}`;
   }
 
-  async handleCallback(code: string, _state: string, redirectUri: string): Promise<AuthResult> {
-    const tokenData = await this.exchangeCode(code, redirectUri);
+  async handleCallback(
+    code: string,
+    _state: string,
+    redirectUri: string,
+    codeVerifier?: string
+  ): Promise<AuthResult> {
+    const tokenData = await this.exchangeCode(code, redirectUri, codeVerifier);
     const userInfo = await this.fetchUserInfo(tokenData.access_token);
 
     return {
@@ -97,7 +108,11 @@ export class WpsOAuthProvider implements IAuthProvider {
     };
   }
 
-  private async exchangeCode(code: string, redirectUri: string): Promise<WpsTokenResponse> {
+  private async exchangeCode(
+    code: string,
+    redirectUri: string,
+    codeVerifier?: string
+  ): Promise<WpsTokenResponse> {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -105,6 +120,10 @@ export class WpsOAuthProvider implements IAuthProvider {
       client_secret: this.config.clientSecret,
       redirect_uri: redirectUri || this.config.redirectUri || '',
     });
+
+    if (codeVerifier) {
+      body.set('code_verifier', codeVerifier);
+    }
 
     const res = await fetch(WPS_TOKEN_URL, {
       method: 'POST',

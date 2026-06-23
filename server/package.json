@@ -18,7 +18,9 @@
     "db:setup:prod": "NODE_ENV=production tsx src/db/migrate.ts && tsx src/db/seed/production-bootstrap.ts",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:all": "npm test && npm run test:integration"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",

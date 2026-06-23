@@ -55,8 +55,8 @@ const server: ServerType = serve({ fetch: app.fetch, port: config.port }, (info)
     });
   }
 
-  ctx.agentRuntimeService.start().catch((err) => {
-    logger.error({ err }, 'AgentRuntimeService failed to start');
+  ctx.agentCore.session.load().catch((err) => {
+    logger.error({ err }, 'AgentCore SessionStore failed to load');
   });
 
   ctx.gatewayHealth.start();

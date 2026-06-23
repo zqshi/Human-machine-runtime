@@ -1,15 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  ClaudeAgentSdkAdapter,
-  type ClaudeAdapterConfig,
-} from './claude-agent-sdk-adapter.js';
+import { ClaudeAgentSdkAdapter, type ClaudeAdapterConfig } from './claude-agent-sdk-adapter.js';
 import type {
   IWorkerRunner,
   WorkerCallbacks,
   WorkerRunOptions,
-} from '../infrastructure/docker-worker-runner.js';
-import type { InstanceSessionStore } from '../infrastructure/instance-session-store.js';
-import type { AgentTaskInput } from '../domain/agent-runtime-adapter.js';
+} from './infrastructure/docker-worker-runner.js';
+import type { InstanceSessionStore } from './infrastructure/instance-session-store.js';
+import type { AgentTaskInput } from './agent-runtime-adapter.js';
 
 /** 可控的 fake runner:捕获最后一次调用的 opts/cbs,让测试主动触发事件 + 控制 resolve */
 class FakeRunner implements IWorkerRunner {
@@ -31,7 +28,11 @@ class FakeRunner implements IWorkerRunner {
     this.resolveFn?.();
   }
 
-  async run(opts: WorkerRunOptions, cbs: WorkerCallbacks, abortCtl: AbortController): Promise<void> {
+  async run(
+    opts: WorkerRunOptions,
+    cbs: WorkerCallbacks,
+    abortCtl: AbortController
+  ): Promise<void> {
     this.lastOpts = opts;
     this.lastCbs = cbs;
     this.lastAbort = abortCtl;
@@ -85,7 +86,11 @@ function tick(): Promise<void> {
 
 describe('ClaudeAgentSdkAdapter - 静态属性', () => {
   it('framework 标识为 claude-agent-sdk', () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     expect(adapter.framework).toBe('claude-agent-sdk');
     expect(adapter.version).toBe('1.0.0');
   });
@@ -93,7 +98,11 @@ describe('ClaudeAgentSdkAdapter - 静态属性', () => {
 
 describe('ClaudeAgentSdkAdapter - submitTask', () => {
   it('接受任务并返回唯一 taskId', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const res = await adapter.submitTask(makeTask());
     expect(res.accepted).toBe(true);
     expect(res.taskId).toMatch(/^cld_/);
@@ -112,7 +121,11 @@ describe('ClaudeAgentSdkAdapter - submitTask', () => {
   });
 
   it('提交后状态为 dispatched', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const { taskId } = await adapter.submitTask(makeTask());
     const status = await adapter.getTaskStatus(taskId);
     expect(status.state).toBe('dispatched');
@@ -201,6 +214,32 @@ describe('ClaudeAgentSdkAdapter - 生命周期回调', () => {
     expect(calls[0]!.taskId).toBe(taskId);
   });
 
+  it('result 事件携带 usage 时,onTaskComplete 输出 tokenUsage', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    const calls: AgentTaskResult[] = [];
+    adapter.onTaskComplete((r) => calls.push(r));
+    await adapter.submitTask(makeTask());
+    await tick();
+
+    runner.lastCbs!.onResult!({
+      result: 'done',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 1200, outputTokens: 300, model: 'claude-sonnet-4-6' },
+    });
+    await tick();
+    runner.resolveRun();
+    await tick();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.tokenUsage).toEqual({
+      prompt: 1200,
+      completion: 300,
+      total: 1500,
+      model: 'claude-sonnet-4-6',
+    });
+  });
+
   it('result 后再 onError → state 为 failed(错误优先于 result)', async () => {
     const runner = new FakeRunner();
     const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
@@ -247,7 +286,11 @@ describe('ClaudeAgentSdkAdapter - 生命周期回调', () => {
   });
 
   it('onTaskComplete 返回 unsubscribe 函数', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const cb = vi.fn();
     const unsub = adapter.onTaskComplete(cb);
     expect(typeof unsub).toBe('function');
@@ -273,7 +316,11 @@ describe('ClaudeAgentSdkAdapter - cancelTask', () => {
   });
 
   it('不存在的 taskId 返回 cancelled:false', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const res = await adapter.cancelTask('not-exist');
     expect(res.cancelled).toBe(false);
   });
@@ -295,7 +342,11 @@ describe('ClaudeAgentSdkAdapter - cancelTask', () => {
 
 describe('ClaudeAgentSdkAdapter - capabilities & health', () => {
   it('listCapabilities 返回核心能力列表', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const caps = await adapter.listCapabilities();
     const ids = caps.map((c) => c.id);
     expect(ids).toContain('text-generation');
@@ -304,7 +355,11 @@ describe('ClaudeAgentSdkAdapter - capabilities & health', () => {
   });
 
   it('镜像可用时 healthCheck 返回 healthy', async () => {
-    const adapter = new ClaudeAgentSdkAdapter(new FakeRunner(), new FakeSessionStore(), makeConfig());
+    const adapter = new ClaudeAgentSdkAdapter(
+      new FakeRunner(),
+      new FakeSessionStore(),
+      makeConfig()
+    );
     const h = await adapter.healthCheck();
     expect(h.healthy).toBe(true);
   });
@@ -318,5 +373,136 @@ describe('ClaudeAgentSdkAdapter - capabilities & health', () => {
   });
 });
 
+describe('ClaudeAgentSdkAdapter - 预算二次熔断', () => {
+  it('usage 在预算内时正常 completed', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    const calls: AgentTaskResult[] = [];
+    adapter.onTaskComplete((r) => calls.push(r));
+    // 默认 budget 3 USD,允许 1.2 × 3 = 3.6 USD
+    // sonnet: 100k input × $3/M + 50k output × $15/M = $1.05,远低于阈值
+    await adapter.submitTask(
+      makeTask({
+        input: {
+          prompt: 'small task',
+          instanceId: 'inst-1',
+          maxBudgetUsd: 3,
+        },
+      })
+    );
+    await tick();
+
+    runner.lastCbs!.onResult!({
+      result: 'done',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 100_000, outputTokens: 50_000, model: 'claude-sonnet-4-6' },
+    });
+    await tick();
+    runner.resolveRun();
+    await tick();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.success).toBe(true);
+    expect(calls[0]!.tokenUsage?.total).toBe(150_000);
+  });
+
+  it('usage 超过 budget × 1.2 时触发熔断 markFailed + abort', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    const calls: AgentTaskResult[] = [];
+    adapter.onTaskComplete((r) => calls.push(r));
+    // budget 1 USD,允许 1.2 USD
+    // sonnet: 1M input × $3/M = $3 > 1.2,触发熔断
+    await adapter.submitTask(
+      makeTask({
+        input: {
+          prompt: 'expensive task',
+          instanceId: 'inst-2',
+          maxBudgetUsd: 1,
+        },
+      })
+    );
+    await tick();
+
+    runner.lastCbs!.onResult!({
+      result: 'some output',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 1_000_000, outputTokens: 0, model: 'claude-sonnet-4-6' },
+    });
+    await tick();
+
+    expect(runner.lastAbort!.signal.aborted).toBe(true);
+    const status = await adapter.getTaskStatus(runner.lastOpts!.taskId);
+    expect(status.state).toBe('failed');
+    expect(status.error).toMatch(/budget cap exceeded/i);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.success).toBe(false);
+    // 即使熔断,usage 仍上报(供 tokenUsageService 入账)
+    expect(calls[0]!.tokenUsage?.prompt).toBe(1_000_000);
+  });
+
+  it('budgetUsd = 0 不限制预算(永不熔断)', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    const calls: AgentTaskResult[] = [];
+    adapter.onTaskComplete((r) => calls.push(r));
+    await adapter.submitTask(
+      makeTask({
+        input: {
+          prompt: 'unlimited',
+          instanceId: 'inst-3',
+          maxBudgetUsd: 0,
+        },
+      })
+    );
+    await tick();
+
+    // 即使 100M token 也不熔断
+    runner.lastCbs!.onResult!({
+      result: 'huge result',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 100_000_000, outputTokens: 100_000_000, model: 'claude-opus-4-6' },
+    });
+    await tick();
+    runner.resolveRun();
+    await tick();
+
+    expect(runner.lastAbort!.signal.aborted).toBe(false);
+    expect(calls[0]!.success).toBe(true);
+  });
+
+  it('opus 任务按 opus 单价估算(更早触发熔断)', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    const calls: AgentTaskResult[] = [];
+    adapter.onTaskComplete((r) => calls.push(r));
+    // budget 2 USD,允许 2.4 USD
+    // opus: 100k input × $15/M + 10k output × $75/M = $1.5 + $0.75 = $2.25(未超)
+    // 提升到 200k input + 20k output = $3 + $1.5 = $4.5(超 2.4)
+    await adapter.submitTask(
+      makeTask({
+        input: {
+          prompt: 'opus task',
+          instanceId: 'inst-4',
+          maxBudgetUsd: 2,
+          model: 'claude-opus-4-6',
+        },
+      })
+    );
+    await tick();
+
+    runner.lastCbs!.onResult!({
+      result: 'opus output',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 200_000, outputTokens: 20_000, model: 'claude-opus-4-6' },
+    });
+    await tick();
+
+    expect(runner.lastAbort!.signal.aborted).toBe(true);
+    expect(calls[0]!.success).toBe(false);
+  });
+});
+
 // 引入类型供 onTaskComplete 测试用
-import type { AgentTaskResult } from '../domain/agent-runtime-adapter.js';
+import type { AgentTaskResult } from './agent-runtime-adapter.js';

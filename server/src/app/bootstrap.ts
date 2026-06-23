@@ -75,8 +75,10 @@ import { OperationalRepository } from '../db/repositories/operational-repository
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
 import { AgentProfileRepository } from '../db/repositories/agent-profile-repository.js';
 import { TokenUsageRepository } from '../db/repositories/token-usage-repository.js';
-import { AgentRuntimeService } from '../contexts/agent-core/agent-runtime-service.js';
-import { LiteLlmClientAdapter } from '../contexts/agent-core/adapters/litellm-llm-client.js';
+import { AgentCore } from '../contexts/agent-core/agent-core.js';
+import { SessionStore } from '../contexts/agent-core/session/session-store.js';
+import { AgentHarness } from '../contexts/agent-core/harness/harness.js';
+import { LiteLlmClientAdapter } from '../contexts/agent-core/harness/litellm-llm-client.js';
 import { projectDecision } from '../contexts/runtime-engine/decision-projector.js';
 import { AnalyticsService } from '../contexts/analytics/analytics-service.js';
 import { UserManagementService } from '../contexts/identity-access/user-management-service.js';
@@ -121,6 +123,12 @@ import { AgentJobHandler } from '../contexts/scheduler/handlers/agent-handler.js
 import { LlmAgentInvoker } from '../contexts/scheduler/handlers/llm-agent-invoker.js';
 import { registerEmployeeCleanup } from '../contexts/scheduler/handlers/employee-cleanup.js';
 import { registerWeeklyReport } from '../contexts/scheduler/handlers/weekly-report.js';
+import { DbOAuthStateRepository } from '../db/repositories/oauth-state-repository.js';
+import type { IOAuthStateStore } from '../contexts/identity-access/oauth-state-store.js';
+import { registerOAuthStateCleanup } from '../contexts/scheduler/handlers/oauth-state-cleanup.js';
+import { BillingRepository } from '../db/repositories/billing-repository.js';
+import { BillingService } from '../contexts/billing/billing-service.js';
+import { estimateCostUsd } from '../contexts/agent-core/domain/pricing.js';
 import type { ICronCalculator } from '../contexts/scheduler/domain/cron.js';
 
 import { MessageNormalizer } from '../contexts/runtime-engine/message-normalizer.js';
@@ -128,11 +136,11 @@ import { PriorityScorer } from '../contexts/runtime-engine/priority-scorer.js';
 import { DedupEngine } from '../contexts/runtime-engine/dedup-engine.js';
 import { RecommendationEngine } from '../contexts/runtime-engine/recommendation-engine.js';
 import { ReceiptManager } from '../contexts/runtime-engine/receipt-manager.js';
-import { AgentRuntimeAdapterRegistry } from '../contexts/agent-core/domain/agent-runtime-adapter.js';
-import { OpenClawAdapter } from '../contexts/agent-core/adapters/openclaw-adapter.js';
-import { ClaudeAgentSdkAdapter } from '../contexts/agent-core/adapters/claude-agent-sdk-adapter.js';
-import { DockerWorkerRunner } from '../contexts/agent-core/infrastructure/docker-worker-runner.js';
-import { DbInstanceSessionStore } from '../contexts/agent-core/infrastructure/instance-session-store.js';
+import { AgentRuntimeAdapterRegistry } from '../contexts/agent-core/sandbox/adapter-registry.js';
+import { OpenClawAdapter } from '../contexts/agent-core/sandbox/openclaw-adapter.js';
+import { ClaudeAgentSdkAdapter } from '../contexts/agent-core/sandbox/claude-agent-sdk-adapter.js';
+import { DockerWorkerRunner } from '../contexts/agent-core/sandbox/infrastructure/docker-worker-runner.js';
+import { DbInstanceSessionStore } from '../contexts/agent-core/sandbox/infrastructure/instance-session-store.js';
 
 export interface AppContext {
   db: Database;
@@ -168,7 +176,7 @@ export interface AppContext {
   containerOrchestratorWsBridge: ContainerOrchestratorWsBridge | null;
   weKnoraClient: WeKnoraClient | null;
   knowledgeService: KnowledgeService | null;
-  agentRuntimeService: AgentRuntimeService;
+  agentCore: AgentCore;
   analyticsService: AnalyticsService;
   userManagementService: UserManagementService;
   systemConfigService: SystemConfigService;
@@ -196,7 +204,10 @@ export interface AppContext {
   dedupEngine: DedupEngine;
   recommendationEngine: RecommendationEngine;
   receiptManager: ReceiptManager;
+  /** @deprecated 用 ctx.agentCore.sandbox。下个版本删除。 */
   agentAdapterRegistry: AgentRuntimeAdapterRegistry;
+  oauthStateStore: IOAuthStateStore;
+  billingService: BillingService;
 }
 
 function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegistry {
@@ -373,7 +384,15 @@ export function createAppContext(db: Database): AppContext {
   const messageNormalizer = new MessageNormalizer();
   const dedupEngine = new DedupEngine();
   const priorityScorer = new PriorityScorer();
-  const recommendationEngine = new RecommendationEngine();
+  // agent-core 三层重构(D2-D5):Session(状态)/Harness(编排)/Sandbox(执行)。
+  // agentSession 提前实例化,inboundPipeline 闭包需引用 recordDecision。
+  // agentHarness / agentCore 在 agentAdapterRegistry 构造完成后组装(下方)。
+  const agentSession = new SessionStore(db);
+  // 提前实例化 agentLlmClient,供 RecommendationEngine + agentHarness 共享。
+  // recentDecisionsProvider 暂不接入(provider 需要 agentSession 已构造,
+  // 避免循环依赖,留待后续按需补齐)
+  const agentLlmClient = new LiteLlmClientAdapter(litellmClient, config.agent.llmModel);
+  const recommendationEngine = new RecommendationEngine(agentLlmClient);
 
   inboundPipeline.use(async (msg) => {
     const normalized = messageNormalizer.normalize(msg);
@@ -409,13 +428,24 @@ export function createAppContext(db: Database): AppContext {
           { message: normalized, recommendation: primary },
           Date.now()
         );
-        agentRuntimeService.recordDecision(decision);
+        agentSession.recordDecision(decision);
       }
     }
   });
 
   const channelService = buildChannelService(containerOrchestratorClient, inboundPipeline);
   const receiptManager = new ReceiptManager(channelService);
+
+  /* tokenUsageService 提前实例化:claudeAdapter.onTaskComplete 回调闭包需要捕获它 */
+  const tokenUsageService = new TokenUsageService(
+    profileServiceClient,
+    litellmClient,
+    tokenUsageRepo
+  );
+
+  /* billingService 提前实例化:claudeAdapter.onTaskComplete 记账闭包需要捕获它 */
+  const billingRepo = new BillingRepository(db);
+  const billingService = new BillingService(billingRepo);
 
   /* ──── AgentRuntimeAdapter Registry ──── */
   const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
@@ -440,6 +470,41 @@ export function createAppContext(db: Database): AppContext {
 
     claudeAdapter.onTaskComplete((result) => {
       const receipt = receiptManager.getReceipt(result.taskId);
+      // token 用量入账(无论 receipt 是否存在,usage 都是真实 LLM 消耗)
+      if (result.success && result.tokenUsage) {
+        const tenantIdForUsage = receipt?.tenantId ?? 'unknown';
+        tokenUsageService
+          .recordUsage({
+            tenantId: tenantIdForUsage,
+            model: result.tokenUsage.model,
+            inputTokens: result.tokenUsage.prompt,
+            outputTokens: result.tokenUsage.completion,
+            source: 'claude-agent-sdk',
+          })
+          .catch((err) => logger.warn({ err: String(err) }, 'claude token usage record failed'));
+        // billing 记账:按定价表估算 USD 成本,落入 billing_events + 累加账户余额
+        const costUsd = estimateCostUsd(
+          result.tokenUsage.model,
+          result.tokenUsage.prompt,
+          result.tokenUsage.completion
+        );
+        if (costUsd > 0) {
+          billingService
+            .recordEvent({
+              tenantId: tenantIdForUsage,
+              type: 'token_usage',
+              amount: costUsd,
+              metadata: {
+                model: result.tokenUsage.model,
+                inputTokens: result.tokenUsage.prompt,
+                outputTokens: result.tokenUsage.completion,
+                taskId: result.taskId,
+                source: 'claude-agent-sdk',
+              },
+            })
+            .catch((err) => logger.warn({ err: String(err) }, 'claude billing record failed'));
+        }
+      }
       if (!receipt) return;
       if (result.success) {
         receiptManager
@@ -447,11 +512,7 @@ export function createAppContext(db: Database): AppContext {
           .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
       } else {
         receiptManager
-          .sendFailureReceipt(
-            receipt.id,
-            receipt.summary,
-            result.error ?? 'claude task failed'
-          )
+          .sendFailureReceipt(receipt.id, receipt.summary, result.error ?? 'claude task failed')
           .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
       }
       appEventBus.publish('receipt:sent', {
@@ -491,11 +552,6 @@ export function createAppContext(db: Database): AppContext {
   const channelRouter = new ChannelRouter(channelService, channelRoutingRepo);
   const decisionConsole = new DecisionConsole(channelService, channelRouter);
   const mcpService = new McpService(marketplaceClient);
-  const tokenUsageService = new TokenUsageService(
-    profileServiceClient,
-    litellmClient,
-    tokenUsageRepo
-  );
 
   const marketplaceAudit = {
     log(type: string, payload: Record<string, unknown>) {
@@ -512,11 +568,12 @@ export function createAppContext(db: Database): AppContext {
   );
   const agentProfileService = new AgentProfileService(profileServiceClient);
 
-  // 注入真实 LLM（经 LiteLLM 路由）。llmModel 留空时 adapter.isAvailable=false，AgentExecutor 自动降级到关键词匹配。
-  const agentLlmClient = new LiteLlmClientAdapter(litellmClient, config.agent.llmModel);
-  const agentRuntimeService = new AgentRuntimeService(agentLlmClient, db, {
-    simulatorEnabled: config.agent.simulatorEnabled,
-  });
+  // 注入真实 LLM（经 LiteLLM 路由）。agentLlmClient 已在 Runtime Engine 段提前实例化(供 RecommendationEngine 共享)。
+  // llmModel 留空时 adapter.isAvailable=false，AgentExecutor 自动降级到关键词匹配。
+  // agent-core 三层(D2-D5):Session 已提前实例化,Sandbox 用上面的 agentAdapterRegistry,
+  // Harness 编排两者,AgentCore 作为 facade 暴露给 AppContext。
+  const agentHarness = new AgentHarness(agentLlmClient, agentSession, agentAdapterRegistry);
+  const agentCore = new AgentCore(agentSession, agentHarness, agentAdapterRegistry);
 
   const analyticsService = new AnalyticsService(db, aiGatewayRepo, instanceService);
   const userManagementService = new UserManagementService(userRepo);
@@ -544,8 +601,8 @@ export function createAppContext(db: Database): AppContext {
     notificationService,
     new PgAdvisoryLockProvider(pool)
   );
-  // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentRuntimeService 实例化的顺序问题）
-  agentRuntimeService.setToolRegistry(toolRegistryService);
+  // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentHarness 实例化的顺序问题）
+  agentHarness.setToolRegistry(toolRegistryService);
   // P4: 定时工具健康检查（每 5 分钟探活各 source、维护 healthStatus、转 down 告警）。
   // 多实例并发已由 advisory lock（PgAdvisoryLockProvider, key=tool-health-check）兜底：
   // 同一时刻只有一个实例实际探活，其余跳过。
@@ -654,10 +711,12 @@ export function createAppContext(db: Database): AppContext {
   const scheduledTaskRepo = new ScheduledTaskRepository(db);
   const scheduledTaskCron = new CronExpressionCalculator();
   const scheduledTaskLock = new PgAdvisoryLockProvider(pool);
+  const oauthStateStore: IOAuthStateStore = new DbOAuthStateRepository(db);
   const systemHandler = new SystemJobHandler();
   registerTraceCleanup(systemHandler, aiGatewayRepo);
   registerEmployeeCleanup(systemHandler, clusterInstanceClient, instanceService);
   registerWeeklyReport(systemHandler, analyticsService);
+  registerOAuthStateCleanup(systemHandler, oauthStateStore);
   const jobHandlerRegistry = new JobHandlerRegistry();
   const agentInvoker = new LlmAgentInvoker(litellmClient, {});
   jobHandlerRegistry.register(new AgentJobHandler(agentInvoker));
@@ -832,7 +891,7 @@ export function createAppContext(db: Database): AppContext {
       : null,
     weKnoraClient,
     knowledgeService,
-    agentRuntimeService,
+    agentCore,
     analyticsService,
     userManagementService,
     systemConfigService,
@@ -860,6 +919,8 @@ export function createAppContext(db: Database): AppContext {
     recommendationEngine,
     receiptManager,
     agentAdapterRegistry,
+    oauthStateStore,
+    billingService,
     gatewayHealth: new GatewayHealth([
       marketplaceClient,
       profileServiceClient,

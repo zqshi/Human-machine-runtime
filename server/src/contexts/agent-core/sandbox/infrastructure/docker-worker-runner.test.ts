@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter, PassThrough } from 'stream';
+import { existsSync, readFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { DockerWorkerRunner, type Spawner, type WorkerRunOptions } from './docker-worker-runner.js';
 
 /** 可控的 fake child_process.spawn 返回值 */
@@ -94,7 +97,64 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(args[volumeIdx + 1]).toBe('/data/tasks/cld_x:/workspace');
   });
 
-  it('注入 ANTHROPIC_API_KEY 和 CLAUDE_TASK_JSON 环境变量', async () => {
+  it('注入 ANTHROPIC_API_KEY 和 CLAUDE_TASK_JSON 通过 --env-file(避免 ps/proc 暴露)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    // 清掉历史残留再开跑
+    try {
+      await import('fs').then((m) => m.unlinkSync(envFilePath));
+    } catch {
+      // ignore
+    }
+
+    // 在 spawn 触发后、close 之前读 env file,此时 finalize 还没跑
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      // spawn 调用意味着 env file 已写入
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(makeOpts(), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    const args = spawner.spawn.mock.calls[0]![1] as string[];
+    // 不应再出现命令行 -e ANTHROPIC_API_KEY / -e CLAUDE_TASK_JSON
+    const envPairs = args.filter((_, i, arr) => i > 0 && arr[i - 1] === '-e');
+    expect(envPairs.some((e) => e.startsWith('ANTHROPIC_API_KEY='))).toBe(false);
+    expect(envPairs.some((e) => e.startsWith('CLAUDE_TASK_JSON='))).toBe(false);
+    // 应改用 --env-file
+    const envFileIdx = args.indexOf('--env-file');
+    expect(envFileIdx).toBeGreaterThan(-1);
+    expect(args[envFileIdx + 1]).toBe(envFilePath);
+
+    // 验证 env file 内容(在 finalize 清理前已捕获)
+    expect(captured).not.toBeNull();
+    expect(captured!).toContain('ANTHROPIC_API_KEY=sk-ant-test');
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.prompt).toBe('say hi');
+    expect(task.allowedTools).toEqual(['Bash', 'Write', 'Read']);
+    expect(task.model).toBe('claude-sonnet-4-6');
+    expect(task.maxTurns).toBe(5);
+    expect(task.maxBudgetUsd).toBe(2);
+    expect(task.sessionId).toBeUndefined();
+  });
+
+  it('任务完成后清理 env file(不留 apiKey 残留)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);
     const runner = new DockerWorkerRunner(spawner);
@@ -103,35 +163,42 @@ describe('DockerWorkerRunner - 命令构造', () => {
     child.emit('close', 0, null);
     await promise;
 
-    const args = spawner.spawn.mock.calls[0]![1] as string[];
-    const envPairs = args.filter((_, i, arr) => i > 0 && arr[i - 1] === '-e');
-    expect(envPairs.some((e) => e.startsWith('ANTHROPIC_API_KEY='))).toBe(true);
-    expect(envPairs.some((e) => e.startsWith('CLAUDE_TASK_JSON='))).toBe(true);
-
-    const taskJson = envPairs.find((e) => e.startsWith('CLAUDE_TASK_JSON='))!.slice('CLAUDE_TASK_JSON='.length);
-    const task = JSON.parse(taskJson);
-    expect(task.prompt).toBe('say hi');
-    expect(task.allowedTools).toEqual(['Bash', 'Write', 'Read']);
-    expect(task.model).toBe('claude-sonnet-4-6');
-    expect(task.maxTurns).toBe(5);
-    expect(task.maxBudgetUsd).toBe(2);
-    // sessionId 未提供时应不在 payload 中
-    expect(task.sessionId).toBeUndefined();
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    expect(existsSync(envFilePath)).toBe(false);
   });
 
-  it('提供 sessionId 时传入 CLAUDE_TASK_JSON', async () => {
+  it('提供 sessionId 时 CLAUDE_TASK_JSON payload 含 sessionId', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);
     const runner = new DockerWorkerRunner(spawner);
 
-    const promise = runner.run(makeOpts({ sessionId: 'sess-resume-001' }), {}, new AbortController());
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    }) as Spawner['spawn'];
+
+    const promise = runner.run(
+      makeOpts({ sessionId: 'sess-resume-001' }),
+      {},
+      new AbortController()
+    );
     child.emit('close', 0, null);
     await promise;
 
-    const args = spawner.spawn.mock.calls[0]![1] as string[];
-    const envPairs = args.filter((_, i, arr) => i > 0 && arr[i - 1] === '-e');
-    const taskJson = envPairs.find((e) => e.startsWith('CLAUDE_TASK_JSON='))!.slice('CLAUDE_TASK_JSON='.length);
-    expect(JSON.parse(taskJson).sessionId).toBe('sess-resume-001');
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    expect(JSON.parse(taskLine).sessionId).toBe('sess-resume-001');
   });
 });
 
@@ -181,7 +248,11 @@ describe('DockerWorkerRunner - NDJSON 流解析', () => {
     let result: { result: string; stopReason: string } | null = null;
     const promise = runner.run(
       makeOpts(),
-      { onResult: (r) => { result = r; } },
+      {
+        onResult: (r) => {
+          result = r;
+        },
+      },
       new AbortController()
     );
     child.stdout.write(

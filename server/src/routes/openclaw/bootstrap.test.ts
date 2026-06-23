@@ -34,10 +34,11 @@ describe('openclaw bootstrap routes', () => {
     expect(body.intent).toBeNull();
   });
 
-  it('POST /agent/execute calls runtime service when provided', async () => {
+  it('POST /agent/execute calls agentCore.harness.execute when provided', async () => {
     const repo = mockRepo();
-    const runtimeSvc = { execute: vi.fn().mockResolvedValue({ intent: 'greet' }) };
-    const app = createOpenclawBootstrapRoutes(repo as never, runtimeSvc as never);
+    const execute = vi.fn().mockResolvedValue({ intent: 'greet' });
+    const agentCore = { harness: { execute } } as never;
+    const app = createOpenclawBootstrapRoutes(repo as never, agentCore);
     const res = await app.request('/agent/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,13 +48,14 @@ describe('openclaw bootstrap routes', () => {
     const body = await res.json();
     expect(body.intent).toBe('greet');
     // 请求未带 tenantId → execute 第 4 参为 undefined（实现签名 execute(u, r, s, tenantId?)）
-    expect(runtimeSvc.execute).toHaveBeenCalledWith('hello', 'hi', 's1', undefined);
+    expect(execute).toHaveBeenCalledWith('hello', 'hi', 's1', undefined);
   });
 
-  it('POST /agent/execute forwards tenantId to runtime service when provided', async () => {
+  it('POST /agent/execute forwards tenantId to agentCore.harness.execute when provided', async () => {
     const repo = mockRepo();
-    const runtimeSvc = { execute: vi.fn().mockResolvedValue({ intent: 'greet' }) };
-    const app = createOpenclawBootstrapRoutes(repo as never, runtimeSvc as never);
+    const execute = vi.fn().mockResolvedValue({ intent: 'greet' });
+    const agentCore = { harness: { execute } } as never;
+    const app = createOpenclawBootstrapRoutes(repo as never, agentCore);
     const res = await app.request('/agent/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,7 +67,7 @@ describe('openclaw bootstrap routes', () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(runtimeSvc.execute).toHaveBeenCalledWith('hello', 'hi', 's1', 'tn_acme');
+    expect(execute).toHaveBeenCalledWith('hello', 'hi', 's1', 'tn_acme');
   });
 
   it('GET /knowledge/patterns returns patterns', async () => {

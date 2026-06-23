@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { openclawEntities } from '../schema/operational.js';
-import type { IMapStore } from '../../contexts/agent-core/domain/agent-simulator.js';
+import type { IMapStore } from '../../contexts/agent-core/session/domain/map-store.js';
 
 export class DbMapStore<V> implements IMapStore<V> {
   private cache = new Map<string, V>();

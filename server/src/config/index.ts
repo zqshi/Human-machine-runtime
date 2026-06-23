@@ -113,7 +113,6 @@ export const config = {
   },
 
   agent: {
-    simulatorEnabled: env.AGENT_SIMULATOR_ENABLED === 'true',
     /** Agent 默认 LLM 模型别名（经 LiteLLM 路由）。留空 → ILLMClient.isAvailable=false → AgentExecutor 走关键词降级；配真实模型后走 LLM。 */
     llmModel: optional('AGENT_LLM_MODEL', ''),
   },

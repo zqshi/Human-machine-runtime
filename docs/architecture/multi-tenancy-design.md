@@ -157,6 +157,12 @@
 | 实例运行时间 | Pod 小时 | 硬限：禁止创建新实例 |
 | API 调用 | 次数/天 | 软限：限速降级 |
 
+> **实现状态(v1.0 骨架)**：`contexts/billing/` 已建立记账骨架：
+> - 表：`billing_events`(事件流水) / `billing_accounts`(租户余额) / `billing_invoices`(预留)
+> - 服务：`BillingService.recordEvent` 仅记账,**不生成账单**(账单生成留作后续迭代)
+> - 埋点：`ClaudeAgentSdkAdapter.onTaskComplete` 成功分支记 `token_usage` 事件(按定价表估算 USD 成本),决策审批状态变更记 `decision_closed`(未触发)
+> - 暴露：`GET /platform/billing/events` / `GET /platform/billing/account` / `POST /platform/billing/events`
+
 ### 6.4 产品决策点
 
 - 超额处理：日级软限（告警+降级），月级硬限（禁止操作）

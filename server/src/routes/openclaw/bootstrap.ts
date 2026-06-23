@@ -4,14 +4,9 @@ import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { SSEEvent } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
-import type { AgentRuntimeService } from '../../contexts/agent-core/agent-runtime-service.js';
-import type { AgentRuntimeAdapterRegistry } from '../../contexts/agent-core/domain/agent-runtime-adapter.js';
+import type { AgentCore } from '../../contexts/agent-core/agent-core.js';
 
-export function createOpenclawBootstrapRoutes(
-  repo: OpenclawRepository,
-  agentRuntimeService?: AgentRuntimeService,
-  agentAdapterRegistry?: AgentRuntimeAdapterRegistry
-) {
+export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCore?: AgentCore) {
   const app = new Hono();
 
   app.get('/bootstrap', (c) => {
@@ -95,10 +90,10 @@ export function createOpenclawBootstrapRoutes(
       tenantId?: string;
     }>();
 
-    if (agentRuntimeService) {
+    if (agentCore) {
       // 传入 tenantId 激活 AgentExecutor 工具调用兜底（P3）：无 task/app/doc/board 意图时
       // 按消息匹配已注册工具并调用（registry.invoke 含租户隔离校验）。
-      const result = await agentRuntimeService.execute(userText, responseText, sessionId, tenantId);
+      const result = await agentCore.harness.execute(userText, responseText, sessionId, tenantId);
       return c.json(result);
     }
 
@@ -106,8 +101,8 @@ export function createOpenclawBootstrapRoutes(
   });
 
   app.post('/agent/dispatch', async (c) => {
-    if (!agentAdapterRegistry) {
-      return c.json({ error: 'agent adapter registry not available' }, 503);
+    if (!agentCore) {
+      return c.json({ error: 'agent core not available' }, 503);
     }
     const body = await c.req.json<{
       name: string;
@@ -124,16 +119,16 @@ export function createOpenclawBootstrapRoutes(
       priority: (body.priority as 'normal') ?? 'normal',
       input: body.input ?? {},
     };
-    const result = await agentAdapterRegistry.dispatchTask(task, body.framework as never);
+    const result = await agentCore.harness.dispatchTask(task, body.framework as never);
     return c.json(result);
   });
 
   app.get('/agent/adapters', async (c) => {
-    if (!agentAdapterRegistry) {
+    if (!agentCore) {
       return c.json({ adapters: [] });
     }
-    const frameworks = agentAdapterRegistry.listRegistered();
-    const health = await agentAdapterRegistry.healthCheckAll();
+    const frameworks = agentCore.sandbox.listRegistered();
+    const health = await agentCore.sandbox.healthCheckAll();
     return c.json({ adapters: health, frameworks });
   });
 

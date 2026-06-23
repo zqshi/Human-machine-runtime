@@ -95,3 +95,66 @@ describe('TokenUsageService', () => {
     });
   });
 });
+
+describe('TokenUsageService.recordUsage', () => {
+  it('store 未注入时 no-op', async () => {
+    const svc = new TokenUsageService(
+      mockProfileServiceClient() as never,
+      mockLitellmClient() as never
+    );
+    await expect(
+      svc.recordUsage({ tenantId: 'tn-1', inputTokens: 100, outputTokens: 50 })
+    ).resolves.toBeUndefined();
+  });
+
+  it('正确字段映射到 store.upsertSnapshot', async () => {
+    const store = mockStore();
+    const svc = new TokenUsageService(
+      mockProfileServiceClient() as never,
+      mockLitellmClient() as never,
+      store
+    );
+    await svc.recordUsage({
+      tenantId: 'tn-1',
+      model: 'claude-sonnet-4-6',
+      inputTokens: 1200,
+      outputTokens: 300,
+      source: 'claude-agent-sdk',
+    });
+    expect(store.upsertSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tn-1',
+        model: 'claude-sonnet-4-6',
+        promptTokens: 1200,
+        completionTokens: 300,
+        totalTokens: 1500,
+        requestCount: 1,
+        userUid: 'claude-agent-sdk',
+      })
+    );
+  });
+
+  it('inputTokens/outputTokens 均为 0 时跳过', async () => {
+    const store = mockStore();
+    const svc = new TokenUsageService(
+      mockProfileServiceClient() as never,
+      mockLitellmClient() as never,
+      store
+    );
+    await svc.recordUsage({ tenantId: 'tn-1', inputTokens: 0, outputTokens: 0 });
+    expect(store.upsertSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('store 抛错时不 re-throw(吞错,避免污染调用链)', async () => {
+    const store = mockStore();
+    store.upsertSnapshot.mockRejectedValue(new Error('db down'));
+    const svc = new TokenUsageService(
+      mockProfileServiceClient() as never,
+      mockLitellmClient() as never,
+      store
+    );
+    await expect(
+      svc.recordUsage({ tenantId: 'tn-1', inputTokens: 10, outputTokens: 5 })
+    ).resolves.toBeUndefined();
+  });
+});

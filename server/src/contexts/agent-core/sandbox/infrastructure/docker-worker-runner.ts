@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess, type SpawnOptions } from 'child_process';
 import { createInterface } from 'readline';
-import { mkdirSync } from 'fs';
+import { mkdirSync, writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 /**
  * Worker 进程单次执行的入参。所有字段都会被序列化为 env 传入容器。
@@ -34,7 +36,7 @@ export interface WorkerProgress {
 export interface WorkerResult {
   result: string;
   stopReason: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: { inputTokens: number; outputTokens: number; model?: string };
 }
 
 export interface WorkerCallbacks {
@@ -57,16 +59,7 @@ export interface IWorkerRunner {
   checkImageAvailable(image: string): Promise<boolean>;
 }
 
-const DEFAULT_TOOLS = [
-  'Bash',
-  'Write',
-  'Edit',
-  'Read',
-  'Glob',
-  'Grep',
-  'WebSearch',
-  'WebFetch',
-];
+const DEFAULT_TOOLS = ['Bash', 'Write', 'Edit', 'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'];
 
 /**
  * 用 `docker run` 启动 claude-worker 容器执行单次 Agent 任务。
@@ -90,7 +83,21 @@ export class DockerWorkerRunner implements IWorkerRunner {
       // 测试环境 cwd 可能是假路径;忽略失败,实际 docker run 会暴露错误
     }
 
-    const args = this.buildArgs(opts);
+    // 写 env file 到宿主 tmpdir(cwd 之外,避免被 -v 挂载进容器 /workspace)
+    // 文件权限 0600;apiKey 不再走命令行 -e(避免 ps/proc 暴露)
+    const envFile = join(tmpdir(), `hmr-task-${opts.taskId}.env`);
+    const payload = this.buildPayload(opts);
+    try {
+      writeFileSync(
+        envFile,
+        `ANTHROPIC_API_KEY=${opts.apiKey}\nCLAUDE_TASK_JSON=${JSON.stringify(payload)}\n`,
+        { mode: 0o600 }
+      );
+    } catch {
+      // tmpdir 不可写时让 docker run 暴露真实错误
+    }
+
+    const args = this.buildArgs(opts, envFile);
     const child = this.spawner.spawn('docker', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -137,6 +144,11 @@ export class DockerWorkerRunner implements IWorkerRunner {
       const finalize = () => {
         if (timeoutHandle) clearTimeout(timeoutHandle);
         abortCtl.signal.removeEventListener('abort', onAbort);
+        try {
+          unlinkSync(envFile);
+        } catch {
+          // 文件不存在/已清理:忽略
+        }
         resolve();
       };
 
@@ -181,9 +193,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
     });
   }
 
-  private buildArgs(opts: WorkerRunOptions): string[] {
+  private buildPayload(opts: WorkerRunOptions): Record<string, unknown> {
     const allowedTools = opts.allowedTools.length > 0 ? opts.allowedTools : DEFAULT_TOOLS;
-    const payload = {
+    return {
       prompt: opts.prompt,
       allowedTools,
       model: opts.model,
@@ -191,7 +203,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
       maxBudgetUsd: opts.maxBudgetUsd,
       ...(opts.sessionId ? { sessionId: opts.sessionId } : {}),
     };
+  }
 
+  private buildArgs(opts: WorkerRunOptions, envFile: string): string[] {
     return [
       'run',
       '--rm',
@@ -212,10 +226,8 @@ export class DockerWorkerRunner implements IWorkerRunner {
       '5',
       '-v',
       `${opts.cwd}:/workspace`,
-      '-e',
-      `ANTHROPIC_API_KEY=${opts.apiKey}`,
-      '-e',
-      `CLAUDE_TASK_JSON=${JSON.stringify(payload)}`,
+      '--env-file',
+      envFile,
       opts.workerImage,
     ];
   }
@@ -230,13 +242,29 @@ export class DockerWorkerRunner implements IWorkerRunner {
         message: typeof event.message === 'string' ? event.message : undefined,
       });
     } else if (type === 'result' && typeof event.result === 'string') {
+      const rawUsage = event.usage as Record<string, unknown> | undefined;
+      const usage =
+        rawUsage && typeof rawUsage === 'object'
+          ? {
+              inputTokens:
+                typeof rawUsage.inputTokens === 'number'
+                  ? rawUsage.inputTokens
+                  : typeof rawUsage.input_tokens === 'number'
+                    ? rawUsage.input_tokens
+                    : 0,
+              outputTokens:
+                typeof rawUsage.outputTokens === 'number'
+                  ? rawUsage.outputTokens
+                  : typeof rawUsage.output_tokens === 'number'
+                    ? rawUsage.output_tokens
+                    : 0,
+              ...(typeof rawUsage.model === 'string' ? { model: rawUsage.model } : {}),
+            }
+          : undefined;
       cbs.onResult?.({
         result: event.result,
         stopReason: typeof event.stopReason === 'string' ? event.stopReason : 'unknown',
-        usage:
-          event.usage && typeof event.usage === 'object'
-            ? (event.usage as { inputTokens: number; outputTokens: number })
-            : undefined,
+        usage,
       });
     } else if (type === 'error' && typeof event.message === 'string') {
       cbs.onError?.(new Error(String(event.message)));

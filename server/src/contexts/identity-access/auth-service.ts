@@ -237,23 +237,39 @@ export class AuthService {
     state: string,
     redirectUri: string,
     providerType: string,
-    options: SessionLoginOptions = {}
+    options: SessionLoginOptions & { codeVerifier?: string } = {}
   ): Promise<LoginResult> {
     const provider = this.registry.getProviderByType(providerType);
     if (!provider?.handleCallback) {
       throw new AppError('SSO not supported for this provider', 400, 'SSO_UNSUPPORTED');
     }
 
-    const authResult = await provider.handleCallback(code, state, redirectUri);
+    const authResult = await provider.handleCallback(
+      code,
+      state,
+      redirectUri,
+      options.codeVerifier
+    );
     return this.finalizeLogin(authResult, providerType, options);
   }
 
-  getSSOAuthorizationUrl(providerType: string, state: string, redirectUri: string): string {
+  /**
+   * 构造 SSO 授权 URL,并生成 PKCE code_verifier(RFC 7636)。
+   *
+   * 调用方必须持久化 codeVerifier(通过 IOAuthStateStore),在 callback 时回传。
+   * 若 provider 不支持 PKCE,可省略 codeChallenge 传参(见下方实现)。
+   */
+  getSSOAuthorizationUrl(
+    providerType: string,
+    state: string,
+    redirectUri: string,
+    codeChallenge?: string
+  ): string {
     const provider = this.registry.getProviderByType(providerType);
     if (!provider?.getAuthorizationUrl) {
       throw new AppError('SSO not supported for this provider', 400, 'SSO_UNSUPPORTED');
     }
-    return provider.getAuthorizationUrl(state, redirectUri);
+    return provider.getAuthorizationUrl(state, redirectUri, codeChallenge);
   }
 
   async validateSession(

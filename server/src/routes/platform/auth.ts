@@ -1,23 +1,20 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { z } from 'zod';
-import crypto from 'crypto';
 import { AuthService } from '../../contexts/identity-access/auth-service.js';
+import {
+  MemoryOAuthStateStore,
+  generateCodeVerifier,
+  computeCodeChallenge,
+  generateState,
+  OAUTH_STATE_DEFAULT_TTL_MS,
+  type IOAuthStateStore,
+} from '../../contexts/identity-access/oauth-state-store.js';
 import { authMiddleware, type Principal } from '../../middleware/auth.js';
 import { config } from '../../config/index.js';
 
 function getUser(c: Context): Principal {
   return c.get('user') as Principal;
-}
-
-const SSO_STATE_TTL_MS = 10 * 60 * 1000;
-const ssoStateStore = new Map<string, { provider: string; createdAt: number }>();
-
-function cleanExpiredStates(): void {
-  const now = Date.now();
-  for (const [key, val] of ssoStateStore) {
-    if (now - val.createdAt > SSO_STATE_TTL_MS) ssoStateStore.delete(key);
-  }
 }
 
 function buildCookieDomain(): string {
@@ -48,7 +45,8 @@ const ssoCallbackSchema = z.object({
   provider: z.string().optional(),
 });
 
-export function createAuthRoutes(authService: AuthService) {
+export function createAuthRoutes(authService: AuthService, oauthStateStore?: IOAuthStateStore) {
+  const stateStore: IOAuthStateStore = oauthStateStore ?? new MemoryOAuthStateStore();
   const app = new Hono();
 
   app.post('/login', async (c) => {
@@ -125,22 +123,36 @@ export function createAuthRoutes(authService: AuthService) {
     });
   });
 
-  app.get('/sso/authorize', (c) => {
+  app.get('/sso/authorize', async (c) => {
     const providerType = c.req.query('provider') ?? config.auth.defaultProvider;
     const redirectUri = c.req.query('redirect_uri') ?? config.auth.oidc.redirectUri;
     if (providerType === 'local') {
       return c.json({ error: 'SSO not applicable for local provider' }, 400);
     }
 
-    cleanExpiredStates();
-    const state = crypto.randomBytes(32).toString('hex');
-    ssoStateStore.set(state, { provider: providerType, createdAt: Date.now() });
+    // PKCE:生成 code_verifier + 计算 code_challenge(S256)
+    // 部分内部 IdP 可能不验 code_challenge,但加上无副作用(回调时 code_verifier 会被消费)
+    const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = computeCodeChallenge(codeVerifier);
+    const expiresAt = new Date(Date.now() + OAUTH_STATE_DEFAULT_TTL_MS);
 
     try {
-      const url = authService.getSSOAuthorizationUrl(providerType, state, redirectUri);
+      const url = authService.getSSOAuthorizationUrl(
+        providerType,
+        state,
+        redirectUri,
+        codeChallenge
+      );
+      await stateStore.save({
+        state,
+        providerCode: providerType,
+        redirectUri,
+        codeVerifier,
+        expiresAt,
+      });
       return c.json({ success: true, data: { url, state } });
     } catch (e) {
-      ssoStateStore.delete(state);
       return c.json({ error: (e as Error).message }, 400);
     }
   });
@@ -153,23 +165,20 @@ export function createAuthRoutes(authService: AuthService) {
     }
     const { code, state, redirect_uri, provider } = parsed.data;
 
-    const storedState = ssoStateStore.get(state);
-    if (!storedState) {
+    // 一次性消费 state(防 CSRF + 防 replay)
+    const stateRecord = await stateStore.consume(state);
+    if (!stateRecord) {
       return c.json({ error: 'invalid or expired SSO state (CSRF check failed)' }, 403);
     }
-    if (Date.now() - storedState.createdAt > SSO_STATE_TTL_MS) {
-      ssoStateStore.delete(state);
-      return c.json({ error: 'SSO state expired, please retry' }, 403);
-    }
-    ssoStateStore.delete(state);
 
-    const providerType = provider ?? storedState.provider ?? config.auth.defaultProvider;
-    const redirectUri = redirect_uri ?? config.auth.oidc.redirectUri;
+    const providerType = provider ?? stateRecord.providerCode ?? config.auth.defaultProvider;
+    const redirectUri = redirect_uri ?? stateRecord.redirectUri ?? config.auth.oidc.redirectUri;
 
     const result = await authService.handleSSOCallback(code, state, redirectUri, providerType, {
       createSession: true,
       ipAddress: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
       userAgent: c.req.header('user-agent'),
+      codeVerifier: stateRecord.codeVerifier,
     });
 
     const cookieDomain = buildCookieDomain();

@@ -33,7 +33,7 @@ export class OIDCAuthProvider implements IAuthProvider {
     );
   }
 
-  getAuthorizationUrl(state: string, redirectUri: string): string {
+  getAuthorizationUrl(state: string, redirectUri: string, codeChallenge?: string): string {
     const disc = this.discovery;
     if (!disc) {
       throw new Error('OIDC discovery not loaded — call ensureDiscovery() first');
@@ -47,14 +47,25 @@ export class OIDCAuthProvider implements IAuthProvider {
       state,
     });
 
+    // PKCE(RFC 7636 S256):IdP 收到 challenge 后,token 端点需 verifier 校验
+    if (codeChallenge) {
+      params.set('code_challenge', codeChallenge);
+      params.set('code_challenge_method', 'S256');
+    }
+
     return `${disc.authorization_endpoint}?${params.toString()}`;
   }
 
-  async handleCallback(code: string, _state: string, redirectUri: string): Promise<AuthResult> {
+  async handleCallback(
+    code: string,
+    _state: string,
+    redirectUri: string,
+    codeVerifier?: string
+  ): Promise<AuthResult> {
     await this.ensureDiscovery();
     const disc = this.discovery!;
 
-    const tokenRes = await this.exchangeCode(code, redirectUri, disc.token_endpoint);
+    const tokenRes = await this.exchangeCode(code, redirectUri, disc.token_endpoint, codeVerifier);
 
     let claims: Record<string, unknown> = {};
 
@@ -86,7 +97,8 @@ export class OIDCAuthProvider implements IAuthProvider {
   private async exchangeCode(
     code: string,
     redirectUri: string,
-    tokenEndpoint: string
+    tokenEndpoint: string,
+    codeVerifier?: string
   ): Promise<TokenResponse> {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -95,6 +107,10 @@ export class OIDCAuthProvider implements IAuthProvider {
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
     });
+
+    if (codeVerifier) {
+      body.set('code_verifier', codeVerifier);
+    }
 
     const res = await fetch(tokenEndpoint, {
       method: 'POST',

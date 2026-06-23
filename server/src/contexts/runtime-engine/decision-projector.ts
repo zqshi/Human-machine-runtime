@@ -12,12 +12,8 @@
 import { newId } from '../../shared/utils.js';
 import type { NormalizedMessage, MessageIntent } from './message-normalizer.js';
 import type { Recommendation } from './recommendation-engine.js';
-import type {
-  Decision,
-  DecisionOption,
-  RiskLevel,
-} from '../agent-core/domain/agent-simulator-types.js';
-import { URGENCY_DEADLINE_MINUTES } from '../agent-core/domain/agent-simulator-types.js';
+import type { Decision, DecisionOption, RiskLevel } from '../agent-core/session/domain/decision.js';
+import { URGENCY_DEADLINE_MINUTES } from '../agent-core/session/domain/decision.js';
 
 export interface ProjectDecisionInput {
   message: NormalizedMessage;

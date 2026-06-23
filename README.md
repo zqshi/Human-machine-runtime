@@ -347,13 +347,13 @@ interface IChannelAdapter {
 
 ## Agent 框架集成
 
-通过 `IAgentRuntimeAdapter` 标准接口对接任意 Agent 框架，`AgentRuntimeAdapterRegistry` 统一注册和调度。
+通过 `IAgentRuntimeAdapter` 标准接口对接任意 Agent 框架，`AgentCore` 外观统一组合 Session(状态) / Harness(编排) / Sandbox(执行) 三层，`AdapterRegistry` 在 Sandbox 层负责 adapter 注册与路由。
 
 ### 接口定义
 
 ```typescript
 interface IAgentRuntimeAdapter {
-  readonly framework: AgentFramework; // 'openclaw' | 'dify' | 'coze' | 'langchain' | 'custom'
+  readonly framework: AgentFramework; // 'openclaw' | 'dify' | 'coze' | 'langchain' | 'claude-agent-sdk' | 'custom'
   submitTask(task: AgentTaskInput): Promise<{ taskId: string; accepted: boolean }>;
   getTaskStatus(taskId: string): Promise<AgentTaskStatus>;
   cancelTask(taskId: string): Promise<{ cancelled: boolean }>;
@@ -367,7 +367,8 @@ interface IAgentRuntimeAdapter {
 
 | 框架 | 适配器 | 说明 |
 |------|--------|------|
-| **OpenClaw** | `OpenClawAdapter` | 默认 Agent 框架，对接实例管理服务管理实例 |
+| **Claude Agent SDK** | `ClaudeAgentSdkAdapter` | 主执行引擎。在 Docker 沙箱(`claude-worker`)内通过 Claude Agent SDK 执行真实 Agent 任务,支持预算熔断/会话续接/Token 用量入账 |
+| **OpenClaw** | `OpenClawAdapter` | 降级方案。对接实例管理服务管理实例,在 `ANTHROPIC_API_KEY` 未配置时自动启用 |
 
 ---
 

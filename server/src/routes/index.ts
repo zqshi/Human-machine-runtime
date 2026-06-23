@@ -11,6 +11,7 @@ import { createPlatformConfigRoutes } from './platform/config.js';
 import { createPlatformMonitoringRoutes } from './platform/monitoring.js';
 import { createPlatformRoleRoutes } from './platform/roles.js';
 import { createPlanRoutes } from './platform/plans.js';
+import { createBillingRoutes } from './platform/billing.js';
 import { createInstanceRoutes } from './control/instances.js';
 import { createDepartmentRoutes } from './control/departments.js';
 import { createSkillRoutes } from './control/skills.js';
@@ -70,7 +71,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
 
   app.route('/health', createHealthRoutes(ctx));
 
-  app.route('/api/auth', createAuthRoutes(ctx.authService));
+  app.route('/api/auth', createAuthRoutes(ctx.authService, ctx.oauthStateStore));
 
   /* ──── Platform (L1 运管) ──── */
 
@@ -87,6 +88,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   );
   secured.route('/roles', createPlatformRoleRoutes(ctx.userManagementService));
   secured.route('/plans', createPlanRoutes(ctx.planService));
+  secured.route('/billing', createBillingRoutes(ctx.billingService));
   app.route('/api/platform', secured);
 
   /* ──── Admin (L2 管理控制面) ──── */
@@ -223,14 +225,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   openclaw.route('/', createOpenclawSignalRoutes(ctx.openclawRepo));
   openclaw.route('/objectives', createOpenclawObjectiveRoutes(ctx.openclawRepo));
   openclaw.route('/', createOpenclawCollaborationRoutes(ctx.openclawRepo));
-  openclaw.route(
-    '/',
-    createOpenclawBootstrapRoutes(
-      ctx.openclawRepo,
-      ctx.agentRuntimeService,
-      ctx.agentAdapterRegistry
-    )
-  );
+  openclaw.route('/', createOpenclawBootstrapRoutes(ctx.openclawRepo, ctx.agentCore));
   openclaw.route('/', createOpenclawChannelRoutes(ctx.decisionConsole, ctx.channelService));
   openclaw.route('/', createOpenclawWorkspaceRoutes(ctx.workspaceService));
   openclaw.route('/', createOpenclawOrchestrationRoutes(ctx.openclawRepo));

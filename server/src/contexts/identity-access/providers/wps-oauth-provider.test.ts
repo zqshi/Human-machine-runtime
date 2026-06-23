@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WpsOAuthProvider } from './wps-oauth-provider.js';
+import { generateCodeVerifier, computeCodeChallenge } from '../oauth-state-store.js';
 
 const mockConfig = {
   clientId: 'wps-test-id',
@@ -113,5 +114,62 @@ describe('WpsOAuthProvider', () => {
     expect(result.expiresIn).toBe(7200);
 
     vi.unstubAllGlobals();
+  });
+
+  describe('PKCE', () => {
+    it('getAuthorizationUrl 默认不含 code_challenge', () => {
+      const url = provider.getAuthorizationUrl('s1', 'http://app/cb');
+      expect(url).not.toContain('code_challenge');
+    });
+
+    it('getAuthorizationUrl 收到 codeChallenge 时拼上 + S256', () => {
+      const v = generateCodeVerifier();
+      const c = computeCodeChallenge(v);
+      const url = provider.getAuthorizationUrl('s2', 'http://app/cb', c);
+      expect(url).toContain('code_challenge=');
+      expect(url).toContain('code_challenge_method=S256');
+      expect(url).toContain(c);
+    });
+
+    it('handleCallback 传 codeVerifier 时透传到 token 端点', async () => {
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: 'at', token_type: 'Bearer', expires_in: 3600 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ sub: 'wps-pkce', name: 'pkce-user' }),
+        });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const verifier = generateCodeVerifier();
+      await provider.handleCallback('code', 'state', 'http://app/cb', verifier);
+
+      const tokenBody = mockFetch.mock.calls[0]![1]?.body?.toString() ?? '';
+      expect(tokenBody).toContain(`code_verifier=${verifier}`);
+      vi.unstubAllGlobals();
+    });
+
+    it('handleCallback 不传 codeVerifier 时 body 不含 code_verifier', async () => {
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: 'at', token_type: 'Bearer', expires_in: 3600 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ sub: 'wps-nopkce' }),
+        });
+      vi.stubGlobal('fetch', mockFetch);
+
+      await provider.handleCallback('code', 'state', 'http://app/cb');
+
+      const tokenBody = mockFetch.mock.calls[0]![1]?.body?.toString() ?? '';
+      expect(tokenBody).not.toContain('code_verifier');
+      vi.unstubAllGlobals();
+    });
   });
 });
