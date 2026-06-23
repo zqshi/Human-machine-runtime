@@ -55,7 +55,7 @@ services:
       CONDUIT_CONFIG: /etc/conduit.toml
     volumes:
       - conduit_data:/var/lib/matrix-conduit
-      - ./runtime/conduit/conduit.toml:/etc/conduit.toml:ro
+      - ./docker/conduit/conduit.toml:/etc/conduit.toml:ro
 
   hmr-server:
     build:

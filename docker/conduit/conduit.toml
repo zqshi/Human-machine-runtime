@@ -1,0 +1,30 @@
+# Conduit Matrix homeserver —— HMR 开发期最小可用配置
+#
+# ⚠️ 生产部署务必:
+#   1. 改 server_name 为真实域名
+#   2. allow_registration 改 false(只保留 bot 注册后)
+#   3. 启用 TLS(反代或 [global.tls])
+#   4. 数据卷启用持久化备份
+
+[global]
+# Matrix 域名,决定 user_id 后缀(@hmr-bot:localhost)。需与 server config MATRIX_BOT_USER_ID 对齐
+server_name = "localhost"
+address = "0.0.0.0"
+port = 6167
+
+# 开发期开放注册,供 ensure-matrix-bot.sh 直接走 /register API
+# 生产环境必须关闭(改 false),只允许已注册的 bot 登录
+allow_registration = true
+allow_federation = false
+trusted_servers = []
+max_request_size = 20971520
+log = "info,rocket=off,_=off,sled=off"
+
+# 数据存储(由 docker-compose volume conduit_data 持久化)
+database_path = "/var/lib/matrix-conduit"
+database_backend = "sled"
+
+# 启用 TLS(开发期注释掉):
+# [global.tls]
+# certs = "/etc/conduit/cert.crt"
+# key = "/etc/conduit/key.key"

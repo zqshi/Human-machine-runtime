@@ -507,6 +507,20 @@ docker compose --profile weknora up -d   # WeKnora RAG 服务（端口 8088）
 docker compose --profile full up -d      # 全部服务（含 Matrix Conduit）
 ```
 
+### Matrix (Conduit) Bot 注册
+
+Conduit 配置已内置在 `docker/conduit/conduit.toml`(端口 6167,`server_name=localhost`,`allow_registration=true`)。容器启动后,跑一次 bot 注册脚本生成 `runtime/matrix-bot.{token,device}`:
+
+```bash
+docker compose up -d conduit                         # 启动 Conduit
+bash scripts/ensure-matrix-bot.sh                    # 注册 bot + 创建 factory room
+# 默认账号 @hmr-bot:localhost / 密码 hmr-bot-changeme(可用 MATRIX_BOT_PASSWORD 覆盖)
+```
+
+脚本流程:Conduit `/register` API(无 shared secret)→ 拿 access_token/device_id → 写 `runtime/matrix-bot.{token,device}` → 设置 displayname → 创建/加入 `#hmr-factory:localhost`。已注册用户会自动 fallback 到 `/login`,脚本幂等可重复执行。
+
+> ⚠️ `allow_registration=true` 仅供开发期 bot 注册使用,生产部署必须在 bot 注册完成后改 `false`,防止匿名注册。
+
 ---
 
 ## 技术栈
