@@ -258,6 +258,45 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(task.ragContext).toBe('【知识库参考】\n- 报销制度');
   });
 
+  it('resources 有值时 docker run 参数用转换后的 cpu/memory(v1.3 声明下沉)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const promise = runner.run(
+      makeOpts({ resources: { cpu: '1000m', memory: '512Mi' } }),
+      {},
+      new AbortController()
+    );
+    child.emit('close', 0, null);
+    await promise;
+
+    const args = spawner.spawn.mock.calls[0]![1] as string[];
+    // 1000m → cpus 1;512Mi → memory 512m
+    const cpusIdx = args.indexOf('--cpus');
+    expect(cpusIdx).toBeGreaterThan(-1);
+    expect(args[cpusIdx + 1]).toBe('1');
+    const memIdx = args.indexOf('--memory');
+    expect(memIdx).toBeGreaterThan(-1);
+    expect(args[memIdx + 1]).toBe('512m');
+  });
+
+  it('resources 缺省时 docker run 用 fallback 2g/1.0(向后兼容)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const promise = runner.run(makeOpts(), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    const args = spawner.spawn.mock.calls[0]![1] as string[];
+    const cpusIdx = args.indexOf('--cpus');
+    expect(args[cpusIdx + 1]).toBe('1.0');
+    const memIdx = args.indexOf('--memory');
+    expect(args[memIdx + 1]).toBe('2g');
+  });
+
   it('ragContext 缺省时 payload 不含 ragContext 字段', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);

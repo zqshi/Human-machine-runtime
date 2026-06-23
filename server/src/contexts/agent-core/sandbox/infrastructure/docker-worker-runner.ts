@@ -3,6 +3,7 @@ import { createInterface } from 'readline';
 import { mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { toDockerResourceArgs } from './resource-converter.js';
 
 /**
  * Worker 进程单次执行的入参。所有字段都会被序列化为 env 传入容器。
@@ -29,6 +30,8 @@ export interface WorkerRunOptions {
   anthropicBaseUrl?: string;
   /** D2:RAG 上下文块(知识库/记忆召回结果),worker 拼 prompt 时前置为 <context> 块 */
   ragContext?: string;
+  /** v1.3:资源限制(CPU '1000m'/memory '512Mi' K8s 风格),转换为 docker --cpus/--memory;缺省用 1.0/2g */
+  resources?: { cpu: string; memory: string };
   workerImage: string;
 }
 
@@ -218,6 +221,10 @@ export class DockerWorkerRunner implements IWorkerRunner {
   }
 
   private buildArgs(opts: WorkerRunOptions, envFile: string): string[] {
+    // v1.3:资源从 opts.resources 读(K8s 风格→docker 参数),缺省 fallback 1.0/2g 兼容旧行为
+    const res = opts.resources
+      ? toDockerResourceArgs(opts.resources)
+      : { cpus: '1.0', memory: '2g' };
     return [
       'run',
       '--rm',
@@ -225,9 +232,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
       '--name',
       `claude-worker-${opts.taskId}`,
       '--memory',
-      '2g',
+      res.memory,
       '--cpus',
-      '1.0',
+      res.cpus,
       '--network',
       'bridge',
       '--cap-drop',

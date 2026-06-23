@@ -21,3 +21,4 @@ export * from './eval-benchmark.js';
 export * from './employee-memory.js';
 export * from './scheduled-tasks.js';
 export * from './billing.js';
+export * from './agent-definition.js';

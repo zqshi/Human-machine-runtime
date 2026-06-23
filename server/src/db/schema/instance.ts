@@ -37,6 +37,10 @@ export const instances = pgTable(
     farmNamespace: varchar('farm_namespace', { length: 128 }),
     lastError: text('last_error'),
     version: integer('version').notNull().default(0),
+    /** v1.3:关联的 Agent 定义 CRD(声明式 spec;可空,旧实例不引用) */
+    agentDefinitionId: varchar('agent_definition_id', { length: 64 }),
+    /** v1.3:引用 Agent 定义时的 spec 世代(与 agent_definitions.generation 对齐) */
+    agentGeneration: integer('agent_generation'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -45,5 +49,6 @@ export const instances = pgTable(
     index('idx_instances_state').on(table.state),
     index('idx_instances_farm').on(table.farmInstanceId),
     index('idx_instances_department').on(table.departmentId),
+    index('idx_instances_agent_definition').on(table.agentDefinitionId),
   ]
 );

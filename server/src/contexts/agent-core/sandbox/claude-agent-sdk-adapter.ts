@@ -92,6 +92,19 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
     const prompt = typeof input.prompt === 'string' ? input.prompt : task.description;
     // D2:RAG 上下文(由 Harness 注入的知识库/记忆召回结果),透传给 worker 拼 prompt
     const ragContext = typeof input.ragContext === 'string' ? input.ragContext : undefined;
+    // v1.3:资源限制(K8s 风格 CPU/memory),透传给 docker-runner 转 docker 参数;缺省用 config 默认
+    const resources =
+      typeof input.resources === 'object' &&
+      input.resources !== null &&
+      typeof (input.resources as { cpu?: unknown }).cpu === 'string' &&
+      typeof (input.resources as { memory?: unknown }).memory === 'string'
+        ? (input.resources as { cpu: string; memory: string })
+        : undefined;
+    // v1.3:cwd 改 per-instance 持久目录(workspaceRoot/instanceId/taskId),实例级持久
+    // instanceId 缺省时回退 task 级目录(旧行为兼容)
+    const cwd = instanceId
+      ? `${this.config.workspaceRoot}/${instanceId}/${taskId}`
+      : `${this.config.workspaceRoot}/${taskId}`;
 
     // 查询 instanceId 是否已有 sessionId(用于 resume)
     const sessionId = instanceId ? await this.sessionStore.getSessionId(instanceId) : undefined;
@@ -124,7 +137,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       sessionId,
       instanceId,
       tenantId: task.tenantId,
-      cwd: `${this.config.workspaceRoot}/${taskId}`,
+      cwd,
       allowedTools: parseAllowedTools(input.allowedTools),
       model: typeof input.model === 'string' ? input.model : this.config.defaultModel,
       maxTurns: typeof input.maxTurns === 'number' ? input.maxTurns : this.config.defaultMaxTurns,
@@ -133,6 +146,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       apiKey: this.config.apiKey,
       anthropicBaseUrl: this.config.anthropicBaseUrl,
       ragContext,
+      resources,
       workerImage: this.config.workerImage,
     };
 

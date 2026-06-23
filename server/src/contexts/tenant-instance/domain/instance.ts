@@ -46,6 +46,10 @@ export interface Instance {
   lastError: string | null;
   /** 乐观锁版本号：每次 save 自增，CAS 防止并发覆写 */
   version: number;
+  /** v1.3:关联的 Agent 定义 CRD id(声明式 spec;可空,旧实例不引用) */
+  agentDefinitionId?: string | null;
+  /** v1.3:引用 Agent 定义时的 spec 世代(与 agent_definitions.generation 对齐) */
+  agentGeneration?: number | null;
 }
 
 /* ---------- Resource config ---------- */
