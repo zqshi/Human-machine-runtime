@@ -4,6 +4,14 @@ import { logger } from './logger.js';
 import { appEventBus } from '../shared/event-bus.js';
 import { encrypt, decrypt } from '../contexts/credential-vault/crypto.js';
 
+// 拆分出的子模块
+import type { AppContext } from './bootstrap/types.js';
+import { buildGatewayClients } from './bootstrap/gateway-clients.js';
+import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
+
+// 类型重新导出,保持现有 `import type { AppContext } from '../app/bootstrap.js'` 调用方不破坏
+export type { AppContext } from './bootstrap/types.js';
+
 import { UserRepository } from '../db/repositories/user-repository.js';
 import { TenantRepository } from '../db/repositories/tenant-repository.js';
 import { AuditRepository } from '../db/repositories/audit-repository.js';
@@ -24,7 +32,6 @@ import { TenantService } from '../contexts/tenant-management/tenant-service.js';
 import { AuditService } from '../contexts/audit-observability/audit-service.js';
 import { SkillService } from '../contexts/shared-assets/skill-service.js';
 import { InstanceService } from '../contexts/tenant-instance/instance-service.js';
-import type { Instance } from '../contexts/tenant-instance/domain/instance.js';
 import { ModelGrantChecker } from '../contexts/gateway/model-grant-checker.js';
 import { LlmKeySyncService } from '../contexts/gateway/llm-key-sync-service.js';
 import { DocumentService } from '../contexts/document/document-service.js';
@@ -46,26 +53,16 @@ import { ContainerOrchestratorProvisioner } from '../contexts/tenant-instance/pr
 import { CompositeProvisioner } from '../contexts/tenant-instance/provisioners/composite-provisioner.js';
 import type { IInstanceProvisioner } from '../contexts/tenant-instance/instance-service.js';
 import { MatrixBot } from '../integrations/matrix/matrix-bot.js';
-import type {
-  IInstanceService,
-  IDocumentService,
-  InstanceRow,
-} from '../integrations/matrix/matrix-bot-types.js';
 
 import { ContainerOrchestratorWsBridge } from '../contexts/gateway/clients/container-orchestrator-ws-bridge.js';
+// buildChannelService 函数签名需要 ContainerOrchestratorClient 类型注解,仅 type 导入
+import type { ContainerOrchestratorClient } from '../contexts/gateway/clients/container-orchestrator-client.js';
 
 import { WeKnoraClient } from '../contexts/gateway/clients/weknora-client.js';
 import { WkMappingRepository } from '../db/repositories/weknora-mapping-repository.js';
 import { KnowledgeBaseRepository } from '../db/repositories/knowledge-base-repository.js';
 import { KnowledgeEntryRepository } from '../db/repositories/knowledge-entry-repository.js';
 import { KnowledgeService } from '../contexts/knowledge/knowledge-service.js';
-
-import { MarketplaceClient } from '../contexts/gateway/clients/marketplace-client.js';
-import { ProfileServiceClient } from '../contexts/gateway/clients/profile-service-client.js';
-import { WorkspaceBackendClient } from '../contexts/gateway/clients/workspace-backend-client.js';
-import { ContainerOrchestratorClient } from '../contexts/gateway/clients/container-orchestrator-client.js';
-import { ClusterInstanceClient } from '../contexts/gateway/clients/cluster-instance-client.js';
-import { LiteLLMClient } from '../contexts/gateway/clients/litellm-client.js';
 
 import { MarketplaceService } from '../contexts/marketplace/marketplace-service.js';
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
@@ -135,7 +132,6 @@ import { InstanceHealthRepository } from '../db/repositories/instance-health-rep
 import { BillingRepository } from '../db/repositories/billing-repository.js';
 import { BillingService } from '../contexts/billing/billing-service.js';
 import { estimateCostUsd } from '../contexts/agent-core/domain/pricing.js';
-import type { ICronCalculator } from '../contexts/scheduler/domain/cron.js';
 
 import { MessageNormalizer } from '../contexts/runtime-engine/message-normalizer.js';
 import { PriorityScorer } from '../contexts/runtime-engine/priority-scorer.js';
@@ -147,74 +143,6 @@ import { OpenClawAdapter } from '../contexts/agent-core/sandbox/openclaw-adapter
 import { ClaudeAgentSdkAdapter } from '../contexts/agent-core/sandbox/claude-agent-sdk-adapter.js';
 import { DockerWorkerRunner } from '../contexts/agent-core/sandbox/infrastructure/docker-worker-runner.js';
 import { DbInstanceSessionStore } from '../contexts/agent-core/sandbox/infrastructure/instance-session-store.js';
-
-export interface AppContext {
-  db: Database;
-  authService: AuthService;
-  tenantService: TenantService;
-  auditService: AuditService;
-  skillService: SkillService;
-  instanceService: InstanceService;
-  departmentService: DepartmentService;
-  documentService: DocumentService;
-  credentialService: CredentialService;
-  leaseService: LeaseService;
-  channelService: ChannelService;
-  decisionConsole: DecisionConsole;
-  mcpService: McpService;
-  tokenUsageService: TokenUsageService;
-  openclawRepo: OpenclawRepository;
-  marketplaceService: MarketplaceService;
-  workspaceService: WorkspaceService;
-  agentProfileService: AgentProfileService;
-  agentProfileRepo: AgentProfileRepository;
-  aiGatewayRepo: AiGatewayRepository;
-  modelGrantChecker: ModelGrantChecker;
-  llmKeySyncService: LlmKeySyncService;
-  operationalRepo: OperationalRepository;
-  marketplaceClient: MarketplaceClient;
-  profileServiceClient: ProfileServiceClient;
-  workspaceBackendClient: WorkspaceBackendClient;
-  containerOrchestratorClient: ContainerOrchestratorClient;
-  clusterInstanceClient: ClusterInstanceClient;
-  litellmClient: LiteLLMClient;
-  matrixBot: MatrixBot | null;
-  containerOrchestratorWsBridge: ContainerOrchestratorWsBridge | null;
-  weKnoraClient: WeKnoraClient | null;
-  knowledgeService: KnowledgeService | null;
-  agentCore: AgentCore;
-  analyticsService: AnalyticsService;
-  userManagementService: UserManagementService;
-  systemConfigService: SystemConfigService;
-  configRepo: ConfigRepository;
-  notificationService: NotificationService;
-  toolManagementService: ToolManagementService;
-  toolRegistryService: ToolRegistryService;
-  pushChannelService: PushChannelService;
-  sharedAgentService: SharedAgentService;
-  gatewayHealth: GatewayHealth;
-  quotaService: QuotaService;
-  planService: PlanService;
-  quotaMonitor: QuotaMonitor;
-  traceSyncJob: TraceSyncJob;
-  evalBenchmarkRepo: EvalBenchmarkRepository;
-  evalEvaluatorRepo: EvalEvaluatorRepository;
-  evalService: EvalService;
-  memoryService: MemoryService;
-  scheduledTaskRepo: ScheduledTaskRepository;
-  schedulerService: SchedulerService;
-  jobHandlerRegistry: JobHandlerRegistry;
-  scheduledTaskCron: ICronCalculator;
-  messageNormalizer: MessageNormalizer;
-  priorityScorer: PriorityScorer;
-  dedupEngine: DedupEngine;
-  recommendationEngine: RecommendationEngine;
-  receiptManager: ReceiptManager;
-  /** @deprecated 用 ctx.agentCore.sandbox。下个版本删除。 */
-  agentAdapterRegistry: AgentRuntimeAdapterRegistry;
-  oauthStateStore: IOAuthStateStore;
-  billingService: BillingService;
-}
 
 function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegistry {
   const registry = new AuthProviderRegistry(config.auth.defaultProvider);
@@ -302,60 +230,15 @@ export function createAppContext(db: Database): AppContext {
   const credentialService = new CredentialService(config.credential.encryptionKey);
   const leaseService = new LeaseService(config.credential.leaseDefaultTtlSec);
 
-  const marketplaceClient = new MarketplaceClient('marketplace', config.gateway.marketplaceUrl, {
-    headers: config.gateway.marketplaceApiKey
-      ? { Authorization: `Bearer ${config.gateway.marketplaceApiKey}` }
-      : undefined,
-  });
-  const profileServiceClient = new ProfileServiceClient(
-    'profile-service',
-    config.gateway.profileServiceUrl,
-    {
-      headers: config.gateway.profileServiceApiToken
-        ? { Authorization: `Bearer ${config.gateway.profileServiceApiToken}` }
-        : undefined,
-    }
-  );
-  const workspaceBackendClient = new WorkspaceBackendClient(
-    'workspace-backend',
-    config.gateway.workspaceBackendUrl,
-    {
-      headers: config.gateway.workspaceBackendAppId
-        ? { 'X-App-Id': config.gateway.workspaceBackendAppId }
-        : undefined,
-    }
-  );
-  if (config.gateway.workspaceBackendSupabaseUrl && config.gateway.workspaceBackendSupabaseEmail) {
-    workspaceBackendClient.setSupabaseAuth({
-      url: config.gateway.workspaceBackendSupabaseUrl,
-      anonKey: config.gateway.workspaceBackendSupabaseAnonKey,
-      email: config.gateway.workspaceBackendSupabaseEmail,
-      password: config.gateway.workspaceBackendSupabasePassword,
-    });
-  }
-  const containerOrchestratorClient = new ContainerOrchestratorClient(
-    'container-orchestrator',
-    config.gateway.containerOrchestratorUrl,
-    {
-      headers: config.gateway.containerOrchestratorApiToken
-        ? { Authorization: `Bearer ${config.gateway.containerOrchestratorApiToken}` }
-        : undefined,
-    }
-  );
-  const litellmClient = new LiteLLMClient('litellm', config.litellm.baseUrl, {
-    headers: config.litellm.apiKey
-      ? { Authorization: `Bearer ${config.litellm.apiKey}` }
-      : undefined,
-  });
-  const clusterInstanceClient = new ClusterInstanceClient(
-    'cluster-instance',
-    config.gateway.clusterInstanceUrl,
-    {
-      headers: config.gateway.clusterInstanceAuthToken
-        ? { Authorization: `Bearer ${config.gateway.clusterInstanceAuthToken}` }
-        : undefined,
-    }
-  );
+  // 9 个外部服务 HTTP 客户端:统一从 buildGatewayClients 构造(见 bootstrap/gateway-clients.ts)
+  const {
+    marketplaceClient,
+    profileServiceClient,
+    workspaceBackendClient,
+    containerOrchestratorClient,
+    clusterInstanceClient,
+    litellmClient,
+  } = buildGatewayClients();
 
   /* ──── Provisioner: local + container-orchestrator composite ──── */
   const localProvisioner = new LocalProvisioner();
@@ -790,77 +673,15 @@ export function createAppContext(db: Database): AppContext {
   }
 
   /* ──── MatrixBot (条件启用) ──── */
-  const matrixBotLogger = {
-    info: (msg: string, meta?: Record<string, unknown>) =>
-      logger.info(meta ?? {}, `[MatrixBot] ${msg}`),
-    warn: (msg: string, meta?: Record<string, unknown>) =>
-      logger.warn(meta ?? {}, `[MatrixBot] ${msg}`),
-    error: (msg: string, meta?: Record<string, unknown>) =>
-      logger.error(meta ?? {}, `[MatrixBot] ${msg}`),
-  };
-
-  /*
-   * MatrixBot 期望的 IInstanceService / IDocumentService 是其自有窄契约
-   *（InstanceRow），与 domain InstanceService 的返回类型 Instance 存在结构性差异：
-   *   - Instance.matrixRoomId 为 `string | null`，InstanceRow.matrixRoomId 为 `string | undefined`
-   *   - Instance.runtime 为 `Record<string, unknown>`，InstanceRow.runtime 为 `{ endpoint?: string }`
-   * 此处用显式适配器把 domain service 适配为 MatrixBot 所需接口，消除原先 `as never`
-   * 的类型逃逸。运行时行为保持不变（原 `as never` 传入的也是同一 InstanceService 实例，
-   * MatrixBot 实际只读取 id / name / state / matrixRoomId / runtime.endpoint 字段）：
-   *   - list / get / start / stop → 委托 InstanceService，经 toInstanceRow 投影为 InstanceRow
-   *   - createFromMatrix / buildMatrixCard → 维持原 InstanceService 无对应实现的行为（抛错，
-   *     `!create_agent` / 自然语言创建路径本就会因签名错位失败）
-   *   - getProvisioningJob → 维持 undefined（commands.ts 已有守卫）
-   *   - document create / get → 委托 DocumentService，Document 是返回窄类型的超集
-   */
-  const toInstanceRow = (inst: Instance): InstanceRow => ({
-    id: inst.id,
-    name: inst.name,
-    state: inst.state,
-    matrixRoomId: inst.matrixRoomId ?? undefined,
-    runtime: {
-      endpoint: typeof inst.runtime?.endpoint === 'string' ? inst.runtime.endpoint : undefined,
-    },
+  // MatrixBot 适配器//logger 拆出到 bootstrap/matrix-adapters.ts;
+  // domain Instance → MatrixBot InstanceRow 的窄契约投影细节见该文件。
+  const matrixBotLogger = createMatrixBotLogger(logger);
+  const { matrixInstanceAdapter, matrixDocumentAdapter } = createMatrixBotDeps({
+    instanceService,
+    documentService,
+    auditService,
+    knowledgeService,
   });
-  const matrixInstanceAdapter: IInstanceService = {
-    list: async (tenantId?: string, resourceSource?: string) =>
-      (await instanceService.list(tenantId, resourceSource)).map(toInstanceRow),
-    get: async (id: string) => toInstanceRow(await instanceService.get(id)),
-    start: async (id: string) => toInstanceRow(await instanceService.start(id)),
-    stop: async (id: string) => toInstanceRow(await instanceService.stop(id)),
-    async createFromMatrix() {
-      throw new Error(
-        'createFromMatrix via MatrixBot is not wired to InstanceService; use the control-plane HTTP endpoint instead'
-      );
-    },
-    buildMatrixCard() {
-      throw new Error(
-        'buildMatrixCard via MatrixBot is not wired to InstanceService; use the control-plane HTTP endpoint instead'
-      );
-    },
-  };
-
-  const matrixDocumentAdapter: IDocumentService = {
-    create: async (params) => {
-      const doc = await documentService.create({
-        title: params.title,
-        roomId: params.roomId,
-        type: params.type,
-        createdBy: params.createdBy,
-        content: params.content,
-      });
-      return { id: doc.id, title: doc.title };
-    },
-    get: async (id: string) => {
-      const doc = await documentService.get(id);
-      return {
-        id: doc.id,
-        title: doc.title,
-        type: doc.type,
-        content: doc.content,
-      };
-    },
-  };
 
   const matrixBot = new MatrixBot(
     {
