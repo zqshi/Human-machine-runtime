@@ -123,9 +123,15 @@ import { AgentJobHandler } from '../contexts/scheduler/handlers/agent-handler.js
 import { LlmAgentInvoker } from '../contexts/scheduler/handlers/llm-agent-invoker.js';
 import { registerEmployeeCleanup } from '../contexts/scheduler/handlers/employee-cleanup.js';
 import { registerWeeklyReport } from '../contexts/scheduler/handlers/weekly-report.js';
+import { registerInstanceHealthMonitor } from '../contexts/scheduler/handlers/instance-health-monitor.js';
+import {
+  ensureSchedulerTasks,
+  BOOTSTRAP_SCHEDULER_TASKS,
+} from '../contexts/scheduler/bootstrap-tasks.js';
 import { DbOAuthStateRepository } from '../db/repositories/oauth-state-repository.js';
 import type { IOAuthStateStore } from '../contexts/identity-access/oauth-state-store.js';
 import { registerOAuthStateCleanup } from '../contexts/scheduler/handlers/oauth-state-cleanup.js';
+import { InstanceHealthRepository } from '../db/repositories/instance-health-repository.js';
 import { BillingRepository } from '../db/repositories/billing-repository.js';
 import { BillingService } from '../contexts/billing/billing-service.js';
 import { estimateCostUsd } from '../contexts/agent-core/domain/pricing.js';
@@ -712,11 +718,19 @@ export function createAppContext(db: Database): AppContext {
   const scheduledTaskCron = new CronExpressionCalculator();
   const scheduledTaskLock = new PgAdvisoryLockProvider(pool);
   const oauthStateStore: IOAuthStateStore = new DbOAuthStateRepository(db);
+  const instanceHealthRepo = new InstanceHealthRepository(db);
   const systemHandler = new SystemJobHandler();
   registerTraceCleanup(systemHandler, aiGatewayRepo);
   registerEmployeeCleanup(systemHandler, clusterInstanceClient, instanceService);
   registerWeeklyReport(systemHandler, analyticsService);
   registerOAuthStateCleanup(systemHandler, oauthStateStore);
+  registerInstanceHealthMonitor(
+    systemHandler,
+    instanceService,
+    instanceHealthRepo,
+    containerOrchestratorClient,
+    notificationService
+  );
   const jobHandlerRegistry = new JobHandlerRegistry();
   const agentInvoker = new LlmAgentInvoker(litellmClient, {});
   jobHandlerRegistry.register(new AgentJobHandler(agentInvoker));
@@ -727,7 +741,33 @@ export function createAppContext(db: Database): AppContext {
     jobHandlerRegistry,
     scheduledTaskCron,
     scheduledTaskLock,
-    schedulerInterval
+    schedulerInterval,
+    300_000,
+    (task, errorMessage) => {
+      // 死信告警:落 system 租户通知,等运维介入 reset(nextRunAt)
+      notificationService
+        .createAlert('system', {
+          type: 'scheduler_dead_letter',
+          severity: 'critical',
+          title: `定时任务「${task.name}」进入死信`,
+          message: `连续失败已达上限:${errorMessage}`,
+          sourceId: task.id,
+          sourceName: task.name,
+        })
+        .catch((err) => {
+          // scheduler 已 try/catch 包裹回调,此处仅日志兜底
+          logger.warn(
+            { taskId: task.id, err: String(err) },
+            'bootstrap: scheduler dead-letter alert failed'
+          );
+        });
+    }
+  );
+
+  // 启动前幂等 seed 关键调度任务(instance-health-monitor 等)。
+  // 不 await:不阻塞 app 启动;失败仅日志,schedulerService.start 仍会跑已存在任务。
+  ensureSchedulerTasks(scheduledTaskRepo, BOOTSTRAP_SCHEDULER_TASKS).catch((err) =>
+    logger.warn({ err: String(err) }, 'bootstrap: ensureSchedulerTasks failed')
   );
 
   /* ──── Document → WeKnora 发布同步钩子 ──── */

@@ -50,6 +50,22 @@ export async function migrateScheduledTasks(db: MigrateDb): Promise<void> {
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_job_type ON scheduled_tasks(job_type)`
   );
+  // 重试与死信字段(v1.1 投产可用性补强)
+  await db.execute(
+    sql`ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0`
+  );
+  await db.execute(
+    sql`ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS max_attempts INTEGER NOT NULL DEFAULT 3`
+  );
+  await db.execute(
+    sql`ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS dead_letter_at TIMESTAMPTZ`
+  );
+  await db.execute(
+    sql`ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS dead_letter_reason TEXT`
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_dead_letter ON scheduled_tasks(dead_letter_at)`
+  );
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS idx_scheduled_task_runs_task ON scheduled_task_runs(task_id)`
   );

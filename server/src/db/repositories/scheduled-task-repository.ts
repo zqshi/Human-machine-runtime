@@ -15,8 +15,13 @@ export interface ScheduledTaskRow {
   isEnabled: boolean;
   nextRunAt: Date | null;
   lastRunAt: Date | null;
+  /** completed | failed | timeout | dead_letter */
   lastRunStatus: string | null;
   lastError: string | null;
+  retryCount: number;
+  maxAttempts: number;
+  deadLetterAt: Date | null;
+  deadLetterReason: string | null;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -112,10 +117,14 @@ export class ScheduledTaskRepository {
       intervalSeconds: number;
       timezone: string;
       isEnabled: boolean;
-      nextRunAt: Date;
+      nextRunAt: Date | null;
       lastRunAt: Date;
       lastRunStatus: string;
       lastError: string | null;
+      retryCount: number;
+      maxAttempts: number;
+      deadLetterAt: Date | null;
+      deadLetterReason: string | null;
     }>
   ): Promise<ScheduledTaskRow | null> {
     const [row] = await this.db

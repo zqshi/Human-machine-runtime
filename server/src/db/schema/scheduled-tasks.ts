@@ -34,9 +34,16 @@ export const scheduledTasks = pgTable(
     /** 下次到期时间 —— 调度器据此判定 */
     nextRunAt: timestamp('next_run_at', { withTimezone: true }),
     lastRunAt: timestamp('last_run_at', { withTimezone: true }),
-    /** completed | failed | timeout */
+    /** completed | failed | timeout | dead_letter */
     lastRunStatus: varchar('last_run_status', { length: 16 }),
     lastError: text('last_error'),
+    /** 当前重试计数(成功后清零) */
+    retryCount: integer('retry_count').notNull().default(0),
+    /** 最大尝试次数(含首次) */
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    /** 进入死信队列时间(null=未死信) */
+    deadLetterAt: timestamp('dead_letter_at', { withTimezone: true }),
+    deadLetterReason: text('dead_letter_reason'),
     createdBy: varchar('created_by', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -45,6 +52,7 @@ export const scheduledTasks = pgTable(
     index('idx_scheduled_tasks_enabled').on(table.isEnabled),
     index('idx_scheduled_tasks_next_run').on(table.nextRunAt),
     index('idx_scheduled_tasks_job_type').on(table.jobType),
+    index('idx_scheduled_tasks_dead_letter').on(table.deadLetterAt),
   ]
 );
 

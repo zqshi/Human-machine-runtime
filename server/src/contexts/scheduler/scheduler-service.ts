@@ -6,8 +6,11 @@
  *   is_enabled=true AND next_run_at<=now 的到期任务，逐个执行。
  * - 分布式安全：每次执行前 LockProvider.tryLock（PG advisory lock），多副本下只一个执行。
  * - 单进程 in-flight 互斥：Set<taskId> 防止长任务被下一 tick 重入。
- * - run 生命周期：running → completed | failed | timeout（仿 eval_runs 状态机）。
+ * - run 生命周期：running → completed | failed | timeout | dead_letter（仿 eval_runs 状态机）。
  * - 仅 scheduled 触发推进 nextRunAt；manual 触发不改变既有节奏。
+ * - 失败重试：system 类任务默认可重试，超过 max_attempts 后入死信（nextRunAt=null 暂停）。
+ *   agent 类任务默认不重试（jobPayload.retryable=true 可显式开启）。
+ *   失败时不推进 nextRunAt（下次 tick 立即重试），成功后清零 retry_count。
  */
 
 import type { ScheduledTaskRepository, ScheduledTaskRow, ScheduledTaskRunRow } from '../../db/repositories/scheduled-task-repository.js';
@@ -27,6 +30,16 @@ export class TimeoutError extends Error {
   }
 }
 
+/**
+ * 死信回调：任务重试耗尽进入死信时触发。
+ * 由外层（bootstrap.ts）注入 NotificationService.createAlert 等具体实现，
+ * scheduler 自身不依赖 NotificationService（保持 DDD 分层）。
+ */
+export type SchedulerDeadLetterHandler = (
+  task: ScheduledTaskRow,
+  errorMessage: string
+) => void;
+
 export class SchedulerService {
   private timer: ReturnType<typeof setInterval> | null = null;
   private inflight = new Set<string>();
@@ -37,7 +50,8 @@ export class SchedulerService {
     private cron: ICronCalculator,
     private lock: LockProvider,
     private intervalMs = 60_000,
-    private timeoutMs = DEFAULT_TIMEOUT_MS
+    private timeoutMs = DEFAULT_TIMEOUT_MS,
+    private onDeadLetter?: SchedulerDeadLetterHandler
   ) {}
 
   start(): void {
@@ -115,6 +129,10 @@ export class SchedulerService {
       startedAt,
     });
 
+    // 仅"scheduled 触发 + 本次成功"才推进 nextRunAt;
+    // 失败时:重试分支保持 nextRunAt 不变(下 tick 立即重试),死信分支显式置 null。
+    let shouldAdvance = false;
+
     try {
       const handler = this.registry.resolve(task.jobType as JobType);
       const result = await this.withTimeout(
@@ -140,7 +158,9 @@ export class SchedulerService {
         lastRunAt: finishedAt,
         lastRunStatus: 'completed',
         lastError: null,
+        retryCount: 0, // 成功清零(可能经过若干次重试才成功)
       });
+      shouldAdvance = true;
       logger.info({ taskId: task.id, runId, durationMs }, 'scheduler: task completed');
       return await this.repo.getRun(runId);
     } catch (err) {
@@ -154,16 +174,59 @@ export class SchedulerService {
         durationMs,
         errorMessage: message,
       });
-      await this.repo.updateTask(task.id, {
-        lastRunAt: finishedAt,
-        lastRunStatus: status,
-        lastError: message,
-      });
-      logger.warn({ taskId: task.id, runId, status, message }, 'scheduler: task failed');
+
+      // 重试判定:system 类默认可重试,agent 类默认不可(jobPayload.retryable=true 可显式开启)
+      const payload = (task.jobPayload as Record<string, unknown>) ?? {};
+      const isRetryable =
+        task.jobType === 'system' || payload.retryable === true;
+      const maxAttempts = task.maxAttempts ?? 3;
+      const currentRetry = task.retryCount ?? 0;
+      const shouldRetry =
+        isRetryable && triggerType === 'scheduled' && currentRetry < maxAttempts - 1;
+
+      if (shouldRetry) {
+        // 重试:增加 retry_count,失败 run 已记录,lastRunStatus='failed',
+        // **不** advanceSchedule(保持 nextRunAt 不变,下次 tick 立即重试)
+        await this.repo.updateTask(task.id, {
+          lastRunAt: finishedAt,
+          lastRunStatus: status,
+          lastError: message,
+          retryCount: currentRetry + 1,
+        });
+        logger.warn(
+          { taskId: task.id, runId, status, message, retryCount: currentRetry + 1, maxAttempts },
+          'scheduler: task failed, will retry'
+        );
+      } else {
+        // 死信:lastRunStatus='dead_letter',暂停调度(nextRunAt=null),清零 retry_count
+        // (等待人工 reset:更新 nextRunAt 即可重新调度)
+        await this.repo.updateTask(task.id, {
+          lastRunAt: finishedAt,
+          lastRunStatus: 'dead_letter',
+          lastError: message,
+          retryCount: 0,
+          deadLetterAt: finishedAt,
+          deadLetterReason: message,
+          nextRunAt: null,
+        });
+        logger.error(
+          { taskId: task.id, runId, status, message, isRetryable, maxAttempts },
+          'scheduler: task moved to dead letter'
+        );
+        // 触发外层回调(NotificationService告警等);回调异常不影响调度
+        try {
+          this.onDeadLetter?.(task, message);
+        } catch (cbErr) {
+          logger.warn(
+            { taskId: task.id, err: String(cbErr) },
+            'scheduler: onDeadLetter callback threw'
+          );
+        }
+      }
       return await this.repo.getRun(runId);
     } finally {
       this.inflight.delete(task.id);
-      if (triggerType === 'scheduled') {
+      if (triggerType === 'scheduled' && shouldAdvance) {
         await this.advanceSchedule(task).catch((err) =>
           logger.warn({ taskId: task.id, err: String(err) }, 'scheduler: advanceSchedule failed')
         );
