@@ -131,6 +131,94 @@ describe('InstanceService', () => {
     });
   });
 
+  describe('quota enforcement on create', () => {
+    /**
+     * 构造一个已有 N 个实例的 repo,模拟租户当前实例数。
+     * makeInstance 默认 tenantId='tn_1',与 STANDARD_QUOTAS.maxInstances=10 对齐。
+     */
+    function makeRepoWith(count: number): IInstanceRepository {
+      const instances = Array.from({ length: count }, (_, i) =>
+        makeInstance({ id: `inst-${i}`, tenantId: 'tn_1' })
+      );
+      return makeRepo(instances);
+    }
+
+    it('create throws QUOTA_EXCEEDED when at limit', async () => {
+      const repo = makeRepoWith(10); // 已达上限 10
+      const svc = new InstanceService(repo, undefined, undefined, makeQuotaLookup());
+      await expect(
+        svc.create({
+          tenantId: 'tn_1',
+          name: '新员工',
+          source: 'manual',
+          matrixRoomId: null,
+          creator: 'admin',
+          enterpriseUserId: null,
+        })
+      ).rejects.toThrow('quota exceeded: maxInstances');
+    });
+
+    it('create succeeds when one slot remains (boundary)', async () => {
+      const repo = makeRepoWith(9); // 9 < 10,可创建
+      const svc = new InstanceService(repo, undefined, undefined, makeQuotaLookup());
+      const result = await svc.create({
+        tenantId: 'tn_1',
+        name: '新员工',
+        source: 'manual',
+        matrixRoomId: null,
+        creator: 'admin',
+        enterpriseUserId: null,
+      });
+      expect(result.id).toBeDefined();
+      expect(repo.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('createFromMatrix throws QUOTA_EXCEEDED when at limit', async () => {
+      const repo = makeRepoWith(10);
+      const svc = new InstanceService(repo, undefined, undefined, makeQuotaLookup());
+      await expect(
+        svc.createFromMatrix({
+          tenantId: 'tn_1',
+          matrixUserId: '@new:matrix.org',
+          creator: 'admin',
+        })
+      ).rejects.toThrow('quota exceeded: maxInstances');
+    });
+
+    it('create skips quota check when tenantQuotaLookup not injected (backward compat)', async () => {
+      // 不注入 quotaLookup,即使预填 100 个实例也应放行
+      const repo = makeRepoWith(100);
+      const svc = new InstanceService(repo); // 无 quotaLookup
+      const result = await svc.create({
+        tenantId: 'tn_1',
+        name: '新员工',
+        source: 'manual',
+        matrixRoomId: null,
+        creator: 'admin',
+        enterpriseUserId: null,
+      });
+      expect(result.id).toBeDefined();
+    });
+
+    it('create allowed when maxInstances = 0 (unlimited)', async () => {
+      const repo = makeRepoWith(100);
+      const unlimitedQuotas: TenantQuotas = { ...STANDARD_QUOTAS, maxInstances: 0 };
+      const lookup: ITenantQuotaLookup = {
+        getQuotas: vi.fn(async () => unlimitedQuotas),
+      };
+      const svc = new InstanceService(repo, undefined, undefined, lookup);
+      const result = await svc.create({
+        tenantId: 'tn_1',
+        name: '新员工',
+        source: 'manual',
+        matrixRoomId: null,
+        creator: 'admin',
+        enterpriseUserId: null,
+      });
+      expect(result.id).toBeDefined();
+    });
+  });
+
   describe('start', () => {
     it('transitions requested → running without provisioner', async () => {
       const inst = makeInstance({ state: STATE.REQUESTED });

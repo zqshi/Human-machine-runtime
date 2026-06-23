@@ -85,6 +85,7 @@ export class InstanceService {
   /* ---- create ---- */
 
   async create(input: CreateInstanceInput): Promise<Instance> {
+    await this.assertWithinInstanceQuota(input.tenantId);
     const inst = createInstance(input);
     inst.version = await this.repo.save(inst);
     this.emitAudit('instance.created', inst, input.creator);
@@ -108,6 +109,8 @@ export class InstanceService {
     if (!localpart) {
       throw new AppError('matrixUserId is required', 400, 'INVALID_INPUT');
     }
+
+    await this.assertWithinInstanceQuota(input.tenantId);
 
     const createInput: CreateInstanceInput = {
       tenantId: input.tenantId,
@@ -361,6 +364,29 @@ export class InstanceService {
     updated.version = await this.repo.save(updated);
     this.emitAudit('instance.resources.reset', updated, actor);
     return updated;
+  }
+
+  /* ---- quota helper ---- */
+
+  /**
+   * 创建实例前置校验:租户实例数不得超过 maxInstances。
+   * - tenantQuotaLookup 未注入时跳过(向后兼容)
+   * - maxInstances <= 0 视为不限制
+   * - 已达上限抛 QUOTA_EXCEEDED(400)
+   */
+  private async assertWithinInstanceQuota(tenantId: string): Promise<void> {
+    if (!this.tenantQuotaLookup) return;
+    const quotas = await this.tenantQuotaLookup.getQuotas(tenantId);
+    const limit = quotas.maxInstances;
+    if (limit <= 0) return;
+    const siblings = await this.repo.findAll(tenantId);
+    if (siblings.length >= limit) {
+      throw new AppError(
+        `quota exceeded: maxInstances (current=${siblings.length}, limit=${limit})`,
+        400,
+        'QUOTA_EXCEEDED'
+      );
+    }
   }
 
   /* ---- audit helper ---- */
