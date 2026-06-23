@@ -32,7 +32,11 @@ function makeRepo(opts?: {
     async listEvents(tenantId: string, filter?: ListEventsFilter): Promise<BillingEvent[]> {
       let result = events.filter((e) => e.tenantId === tenantId);
       if (filter?.type) result = result.filter((e) => e.type === filter.type);
-      return result;
+      // 与生产 repository 行为对齐:应用 limit+offset(默认 limit 100,offset 0)。
+      // 之前 mock 完全忽略 filter.limit 是测试漂移,掩盖了 §7.2.1 规则 2 违规。
+      const limit = filter?.limit ?? 100;
+      const offset = filter?.offset ?? 0;
+      return result.slice(offset, offset + limit);
     },
     async getAccount() {
       return account;
@@ -165,5 +169,45 @@ describe('BillingService', () => {
     const service = new BillingService(repo);
     const events = await service.listEvents('t-2');
     expect(events).toEqual([]);
+  });
+
+  it('listEvents 默认 limit=100(避免无限制全量返回)', async () => {
+    // 复现 §7.2.1 规则 2:不传 limit 时必须默认限制,禁止全量返回
+    const many = Array.from({ length: 150 }, (_, i) => ({
+      id: i + 1,
+      tenantId: 't-1',
+      type: 'token_usage' as const,
+      amount: 0.01,
+      currency: 'USD',
+      metadata: {},
+      createdAt: `2026-06-22T00:00:${String(i % 60).padStart(2, '0')}.000Z`,
+    }));
+    const repo = makeRepo({ events: many });
+    const service = new BillingService(repo);
+    const result = await service.listEvents('t-1');
+    expect(result).toHaveLength(100);
+  });
+
+  it('listEvents 支持 offset 翻页(limit+offset)', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      tenantId: 't-1',
+      type: 'token_usage' as const,
+      amount: 0.01,
+      currency: 'USD',
+      metadata: {},
+      createdAt: `2026-06-22T00:00:${String(i % 60).padStart(2, '0')}.000Z`,
+    }));
+    const repo = makeRepo({ events: many });
+    const service = new BillingService(repo);
+    const page1 = await service.listEvents('t-1', { limit: 10, offset: 0 });
+    const page2 = await service.listEvents('t-1', { limit: 10, offset: 10 });
+    const page3 = await service.listEvents('t-1', { limit: 10, offset: 20 });
+    expect(page1).toHaveLength(10);
+    expect(page2).toHaveLength(10);
+    expect(page3).toHaveLength(5);
+    // 三页合起来应覆盖全部 25 条,且 id 不重叠
+    const allIds = [...page1, ...page2, ...page3].map((e) => e.id);
+    expect(new Set(allIds).size).toBe(25);
   });
 });

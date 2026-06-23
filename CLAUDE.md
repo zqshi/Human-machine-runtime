@@ -35,7 +35,7 @@ domain/  →  infrastructure/  →  application/  →  presentation/
 
 ```
 src/
-  contexts/            # 限界上下文 ×28（agent-core/、runtime-engine/、channel/、tenant-management/…）
+  contexts/            # 限界上下文 ×29（agent-core/、runtime-engine/、channel/、tenant-management/、billing/…）
   routes/              # 路由层（薄层）：参数提取 → 校验 → 调用服务 → 返回
   app/                 # 启动入口、中间件链、依赖组装
   db/                  # Drizzle schema + migrations + seed
@@ -186,6 +186,35 @@ test       → vitest run
 - 只记录**不能从代码推断的信息**：决策原因、架构约束、外部依赖关系。
 - 禁止在文档中写过程性内容（"今天修了 xxx"）——这是 git log 的事。
 
+### 6.3 文档分类与状态标注
+
+**三分法**:
+
+| 类别 | 位置 | 规则 |
+| ---- | ---- | ---- |
+| 自动生成类 | API 文档（OpenAPI）、前端 `types/api.ts` | 不手写，由 schema 驱动 |
+| 设计态文档 | `docs/` 目录（PRD、愿景、模块拆解、版本规划） | 允许超前于代码，但**必须标注实现状态** |
+| 实现态文档 | README、CLAUDE.md、`.env.example`、docker-compose | 必须与代码同步，过期即修正 |
+
+**设计态文档的状态标注**（每节/每条顶部）:
+
+- `[IMPLEMENTED]` — 已在代码中实现
+- `[PLANNED]` — 尚未实现，属于规划中
+- `[DEPRECATED]` — 设计已废弃，代码已移除或方向已变
+
+### 6.4 PR 文档对齐必检清单
+
+| 变动路径 | 必须同步更新 |
+| -------- | ------------ |
+| `server/src/contexts/*/domain/` | 对应设计态文档标注 + 若新增 context 更新 §8 文件组织清单 |
+| `server/src/routes/` | README 如涉及新 API 模块 |
+| `server/src/config/` 新增字段 | `.env.example` 添加对应变量和注释 |
+| `server/src/db/schema.ts` 加表/加列 | 新增 Drizzle migration 文件（见 §7.2.1 第 3 条） |
+| `client-suite/.../types/api.ts` | 与后端 schema 字段名/类型完全对齐 |
+| `package.json` / `pyproject.toml` 依赖变动 | README 前置要求章节 |
+| `docker-compose.yml` / `Dockerfile` | README 部署章节 |
+| 合并到 main 的功能性变更 | `CHANGELOG.md` Unreleased 区域（若存在 CHANGELOG） |
+
 ---
 
 ## 七、技术栈约束
@@ -214,6 +243,17 @@ test       → vitest run
 | 认证   | JWT + SSO 预留           | bcrypt 密码，SSO 开关在 system_configs   |
 | 测试   | vitest                   | —                                        |
 
+### 7.2.1 后端 API 四条硬规则
+
+任何新增 API 必须满足:
+
+1. **新路由必须挂 auth 中间件** — 除非显式属于公开端点（登录/健康检查/ webhook 回调），且公开端点须在 PR 中说明理由。
+2. **列表 API 必须支持分页** — `skip`/`limit` 或游标分页，默认非空，禁止无限制全量返回。
+3. **DB schema 变更必须有 Drizzle migration** — 加列改列必须同步到 `server/src/db/migrations/*.ts`，仅改 `schema.ts` 不够（见 memory: `migrate.ts 不跑 .sql`）。`tsc`/`vitest` 测不出缺列，只有真请求暴露。
+4. **新表必须添加必要索引** — 外键字段、常用于 `where`/`orderBy` 的字段、唯一约束字段。migration review 必检。
+
+> 违反任一条 = PR 不予合并。这是 §12 信号 6（route 逻辑泄漏）之外的硬性纪律。
+
 ### 7.3 认证策略
 
 | 阶段 | 方式 | 说明 |
@@ -237,7 +277,7 @@ human-machine-runtime/
       routes/                         # Hono 路由注册
         platform/                     # L1 运管平台路由
         control/                      # L2 管理控制面路由
-      contexts/                       # 28 个限界上下文（§1.3：内部按需划分 domain/application/adapters）
+      contexts/                       # 29 个限界上下文（§1.3：内部按需划分 domain/application/adapters）
         identity-access/              # 认证鉴权 + RBAC
         tenant-management/            # 租户生命周期 + 套餐
         tenant-instance/              # 数字员工实例
@@ -260,6 +300,7 @@ human-machine-runtime/
         push-channel/                 # 推送通道
         channel/                      # 通道抽象（IM/WebSocket）
         quota-management/             # 配额管理
+        billing/                      # 计费骨架（事件 + 账户累加；invoice/对账/充值待 v1.3+）
         system-config/                # 系统配置
         eval-benchmark/               # 评测基准
         gateway/                      # API 网关 → 外部服务（clawhub/portal/xspace/claw-farm/LiteLLM，均可替换为企业自有同类系统）
@@ -297,3 +338,182 @@ human-machine-runtime/
 8. **不留垃圾**：删除即彻底删除，不注释保留，不留 TODO 桩。
 9. **中文回复**：所有对话输出使用中文。
 10. **专业审视**：不谄媚，发现问题直说，给出专业建议。
+
+---
+
+## 十、上下文加载协议
+
+> **每次新会话开始开发任务前，必须执行以下步骤。** 这是 §1-§9 静态纪律之外的动态纪律——确保 Agent 拿到正确的"当前版本上下文"再动手。
+
+### 10.1 会话启动三步
+
+1. **读当前版本**: 读取 `docs/versions/` 目录下以 `-current.md` 结尾的文件（**有且仅有一个**），了解当前版本的目标、范围、约束、任务依赖图、进行中的任务。
+2. **检查任务依赖**: 在 current.md 的任务依赖表中定位要做的工作，确认状态不是 `blocked`；若 `blocked`，先列出未完成的前置依赖，建议执行顺序。
+3. **范围校验**: 如果用户要求做的功能不在当前版本范围，主动提示并建议查看 `backlog.md` 或将其加入当前版本（经用户确认）。
+
+### 10.2 依赖检查规则
+
+| 任务状态 | 处理方式 |
+| -------- | -------- |
+| `pending` + 无依赖 | 可直接开始 |
+| `pending` + 依赖已 `done` | 可开始（依赖图自动解锁） |
+| `blocked`（依赖未完成） | 列出前置，建议先做前置；前置 < 30min 则同会话内先做完前置 |
+| 不在任务表 | 评估是否属于当前版本；不属于 → 提示用户看 backlog |
+
+### 10.3 并行任务识别
+
+- 检查依赖图中是否有互不依赖且都 `pending` 的任务 → 主动建议并行: "T1 和 T3 互不依赖，可在本次会话一起完成"。
+- 标注**关键路径**（最长依赖链）上的任务，优先推进关键路径。
+
+### 10.4 任务完成与状态更新
+
+- 完成一个任务 → **立即** 把 current.md 中该任务状态改为 `done`。
+- 检查是否有因此解锁的下游任务，把状态从 `blocked` 改为 `pending`。
+- 若所有任务完成 → 提醒用户执行版本切换（见 §11）。
+
+### 10.5 计划外工作
+
+开发中发现需要新增任务（如发现前置 bug）:
+1. 加入 current.md 任务表
+2. 分配 ID（现有最大 ID 递增）
+3. 评估对依赖图的影响，更新关键路径
+
+---
+
+## 十一、版本管理协议
+
+### 11.1 版本文件四态
+
+| 后缀 | 含义 | 数量约束 |
+| ---- | ---- | -------- |
+| `vX.Y.Z-current.md` | 当前活跃版本 | **有且仅有一个** |
+| `vX.Y.Z-next.md` | 下一版本规划（可选） | 0 或 1 个 |
+| `vX.Y.Z-snapshot.md` | 已完成版本决策存档 | 任意 |
+| `backlog.md` | 未排期版本与长期债务 | 唯一 |
+
+模板见 `docs/versions/TEMPLATE.md`。
+
+### 11.2 版本切换流程
+
+当 current.md 所有任务标记 `done` 时:
+
+0. **先执行版本完成质量门禁**（见 §14），全部必修项通过后才能归档。
+1. 把 `vX.Y.Z-current.md` 精简为 snapshot 格式（删除执行细节，只保留: 目标 / 交付摘要 / 决策表 / 遗留 / 约束 / 质量检测摘要）。
+2. 重命名为 `vX.Y.Z-snapshot.md`。
+3. 把 `vNext-next.md` 重命名为 `vNext-current.md`（激活下一版本）；若不存在，从 `backlog.md` 取下一版本规划基于 `TEMPLATE.md` 创建。
+4. 更新 `CHANGELOG.md`（若存在）和 `backlog.md`（移除已启动的版本）。
+5. 为再下一个版本创建 `vX.Y.Z-next.md`（可选，有规划时提前建）。
+
+### 11.3 snapshot 不可改
+
+归档后的 snapshot 文件**只读**。发现历史决策错误 → 在当前版本的任务中处置，不回改 snapshot（git 有历史）。
+
+---
+
+## 十二、领域模型健康度审计
+
+> HMR 有 29 个限界上下文（§8），是贫血模型与 Service 膨胀的高发区。本节定义 6 个腐烂信号，用于周期性巡检（§13）与版本完成门禁（§14）。
+
+### 12.1 六大腐烂信号
+
+| # | 信号 | 判定标准 | 优先级 |
+| - | ---- | -------- | ------ |
+| 1 | **贫血模型** | `server/src/contexts/*/domain/` 下的 entity 只有数据字段，行为方法挂在 application service | P1 |
+| 2 | **Service 膨胀** | application service 单文件 > 500 行，或单方法 > 80 行 | P1 |
+| 3 | **接口漂移** | domain 定义的 repository 接口方法，在 `adapters/` 缺少对应实现 | P2 |
+| 4 | **值对象缺失** | 应为值对象（带不变式）的字段用了裸 `string` / `number` / `Record<...>` | P2 |
+| 5 | **跨聚合直接访问** | application service 直接操作**其他 context** 的 repository（绕过本聚合边界） | P1 |
+| 6 | **route 逻辑泄漏** | `routes/` 文件出现业务判断（`if/for` 含领域语义），而非纯参数校验+转发 | P3 |
+
+### 12.2 处置规则
+
+- **P1**（贫血模型 / Service 膨胀 / 跨聚合访问）→ 下一版本必修，记入当前 snapshot 的 `## 遗留`。
+- **P2**（接口漂移 / 值对象缺失）→ 两版本内修复。
+- **P3**（route 轻微逻辑）→ 顺手修复，不单独立任务。
+
+### 12.3 检测方法
+
+```bash
+# 信号 1 贫血模型: domain 下只有 type/interface 无 function 的文件
+grep -rL "function\|method" server/src/contexts/*/domain/*.ts
+
+# 信号 2 Service 膨胀: 超限文件清单
+find server/src/contexts/*/application -name "*.ts" | xargs wc -l | sort -rn | head
+
+# 信号 5 跨聚合访问: service 引用其他 context 的 repository
+grep -rn "from.*contexts/[^/]*/domain.*repository" server/src/contexts/*/application/
+
+# 信号 6 route 逻辑泄漏: routes 下含业务语义的分支
+grep -rn "if.*status\|if.*quota\|if.*role" server/src/routes/
+```
+
+> 检测脚本非权威，是发现起点。命中后人工判定真伪腐烂（false positive 常见于合法的参数分支）。
+
+---
+
+## 十三、周期性质量巡检
+
+> 防止领域模型腐烂、架构约束被渐进侵蚀、技术债务无声积累。不依赖版本完成这一个时间点，在日常开发中持续守护。
+
+### 13.1 会话级巡检（每次会话启动，§10 之后追加）
+
+| # | 检测项 | 方法 | 耗时 |
+| - | ------ | ---- | ---- |
+| 1 | DDD 层级依赖 | 扫描 `server/src/contexts/*/domain/` 下 import，验证无 application/adapters/routes 依赖 | < 10s |
+| 2 | 循环依赖 | 检测模块间 import 环（madge 或等效工具） | < 10s |
+| 3 | 文件超限 | 扫描所有源文件行数，报告 > 800 行的文件 | < 10s |
+
+- 发现违规 → 在开始任务前先修复，或记入 current.md 任务表。
+- 未发现问题 → 静默通过，不输出。
+
+### 13.2 任务级巡检（每个任务完成、更新 current.md 状态前）
+
+| # | 检测项 | 方法 |
+| - | ------ | ---- |
+| 1 | 本次变更文件是否超限 | 检查本次修改/新增文件行数 |
+| 2 | 本次变更是否引入层级违规 | 检查本次修改文件的 import |
+| 3 | 本次新增代码是否有配套测试 | 按 §2.2 测试规范核查 |
+| 4 | 本次变更是否影响配置一致性 | 改了 `config/` → 检查 `.env.example`；改了 DB schema → 检查 migration（见 memory: migrate.ts 不跑 .sql） |
+
+- 发现问题 → **当场修复后再标记任务 done**。不通过不得标记完成。
+
+### 13.3 月度/每 3 版本深度审计
+
+执行 §12 领域模型健康度 6 项完整审计，发现腐烂信号按 §12.2 处置规则记入 `backlog.md` 长期技术债务表。
+
+---
+
+## 十四、版本完成质量门禁
+
+> **触发时机**: current.md 所有任务标记 `done` → 执行检测 → 全部必修项通过后才归档 snapshot（§11.2 步骤 0）。
+> 这是 §2.3"提交前三重验证"的升级版——提交门禁是**每次 commit** 的，版本门禁是**版本归档前**的全量审计。
+
+### 14.1 必修项（全部通过才能归档）
+
+| # | 类别 | 检测对象 | 方法 | 不通过 = |
+| - | ---- | -------- | ---- | -------- |
+| 1 | 死代码 | 前端组件/hooks/脚本 | 检查是否被 import 或有 npm script 入口 | 删除 |
+| 2 | 死代码 | 后端模块 | 检查是否在 routes/service/app 调用链上 | 删除 |
+| 3 | 依赖卫生 | `package.json` dependencies | 每个包在 src/ 中有 import | 移除 |
+| 4 | 配置一致性 | `config/` ↔ `.env.example` | Settings 字段与 env key 双向对齐 | 补齐 |
+| 5 | 配置一致性 | `docker-compose` ↔ `Dockerfile` | 端口/镜像名/环境变量一致 | 修正 |
+| 6 | 文档对齐 | CLAUDE.md 文档索引路径 | 验证路径实际存在 | 更新索引 |
+| 7 | 文档对齐 | `docs/versions/` | 有且仅有一个 `*-current.md` | 修正 |
+| 8 | 架构合规 | DDD 层级依赖 | 扫描 import 验证不违反 §1 分层方向 | 立即修复 |
+| 9 | 架构合规 | 循环依赖 | 检测模块间 import 环 | 立即修复 |
+| 10 | 架构合规 | 文件行数 | 扫描所有源文件 | > 1000 行本版本必修；800-1000 行记入技术债务 |
+| 11 | 仓库卫生 | `.gitignore` 完备性 | untracked 不应有构建产物/缓存 | 补 gitignore |
+| 12 | 仓库卫生 | 敏感文件 | `.env` / credentials 不被 git track | 从历史移除 |
+
+### 14.2 记录项（不阻断归档，记入 backlog）
+
+| # | 检测对象 | 方法 | 不通过 = |
+| - | -------- | ---- | -------- |
+| 1 | domain 层各 context | 检查 `*.test.ts` 是否存在 | 记入下版本技术债务 |
+| 2 | application 层各 context | 检查 `*.test.ts` 是否存在 | 记入下版本技术债务 |
+| 3 | 本版本新增 entity/service/endpoint | 是否有测试覆盖 | 记入下版本技术债务 |
+| 4 | §12 领域模型健康度 P2 项 | 接口漂移 / 值对象缺失 | 记入两版本内修复 |
+
+### 14.3 执行产出
+
+在 snapshot 文件中新增 `## 质量检测` 小节，记录本次检测结果摘要（通过项数 / 未通过处置 / 记入债务数）。

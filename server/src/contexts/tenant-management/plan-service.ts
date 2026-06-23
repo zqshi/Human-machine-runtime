@@ -18,8 +18,8 @@ export class PlanService {
     private tenantChecker?: IPlanTenantChecker
   ) {}
 
-  async list(): Promise<Plan[]> {
-    return this.repo.listPlans();
+  async list(opts?: { limit?: number; offset?: number }): Promise<Plan[]> {
+    return this.repo.listPlans(opts);
   }
 
   async getById(id: string): Promise<Plan> {

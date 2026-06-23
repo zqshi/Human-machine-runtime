@@ -57,5 +57,8 @@ export interface ListEventsFilter {
   since?: string;
   /** ISO date string,查询 createdAt < until */
   until?: string;
+  /** 返回行数上限。不传时由调用方默认（路由层 default 100） */
   limit?: number;
+  /** 跳过行数,用于分页翻页(与 limit 配合) */
+  offset?: number;
 }

@@ -24,7 +24,9 @@ const listEventsQuerySchema = z.object({
     .optional(),
   since: z.string().datetime().optional(),
   until: z.string().datetime().optional(),
-  limit: z.coerce.number().int().min(1).max(500).optional(),
+  // §7.2.1 规则 2:列表 API 必须支持分页,默认非空。默认 100 条,最大 500。
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 /**

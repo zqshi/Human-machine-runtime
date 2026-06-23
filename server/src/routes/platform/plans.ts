@@ -12,11 +12,21 @@ const planSchema = z.object({
   featureTemplate: z.record(z.boolean()).optional(),
 });
 
+// §7.2.1 规则 2:列表 API 必须支持分页,默认非空。
+// plan 数量天然少(套餐枚举),默认 100 足以覆盖,但仍强制分页以保持规则一致性。
+const listPlansQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 export function createPlanRoutes(planService: PlanService) {
   const app = new Hono();
 
   app.get('/', async (c) => {
-    const plans = await planService.list();
+    const parsed = listPlansQuerySchema.safeParse(c.req.query());
+    if (!parsed.success)
+      return c.json({ error: 'invalid query', details: parsed.error.flatten() }, 400);
+    const plans = await planService.list(parsed.data);
     return c.json({ plans });
   });
 

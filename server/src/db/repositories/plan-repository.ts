@@ -4,7 +4,7 @@ import { servicePlans } from '../schema/plan.js';
 import type { Plan } from '../../contexts/tenant-management/domain/plan.js';
 
 export interface IPlanRepository {
-  listPlans(): Promise<Plan[]>;
+  listPlans(opts?: { limit?: number; offset?: number }): Promise<Plan[]>;
   getPlan(id: string): Promise<Plan | null>;
   getPlanBySlug(slug: string): Promise<Plan | null>;
   savePlan(plan: Plan): Promise<void>;
@@ -14,8 +14,17 @@ export interface IPlanRepository {
 export class PlanRepository implements IPlanRepository {
   constructor(private db: Database) {}
 
-  async listPlans(): Promise<Plan[]> {
-    const rows = await this.db.select().from(servicePlans).orderBy(servicePlans.displayOrder);
+  async listPlans(opts?: { limit?: number; offset?: number }): Promise<Plan[]> {
+    // §7.2.1 规则 2:列表 API 必须支持分页。plan 虽数量少,仍遵循规则统一。
+    // 默认值由路由层 schema 提供,repository 层不做兜底,避免双重默认导致行为模糊。
+    const limit = opts?.limit ?? 100;
+    const offset = opts?.offset ?? 0;
+    const rows = await this.db
+      .select()
+      .from(servicePlans)
+      .orderBy(servicePlans.displayOrder)
+      .limit(limit)
+      .offset(offset);
     return rows.map(toPlanDomain);
   }
 

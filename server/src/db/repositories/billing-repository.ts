@@ -45,7 +45,8 @@ export class BillingRepository {
       .from(billingEvents)
       .where(and(...conditions))
       .orderBy(desc(billingEvents.createdAt))
-      .limit(filter?.limit ?? 100);
+      .limit(filter?.limit ?? 100)
+      .offset(filter?.offset ?? 0);
     return rows.map(toEventDomain);
   }
 
