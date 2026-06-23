@@ -9,8 +9,12 @@
 | v1.0.x | 投产工程 4 阶段 | done | 见 `memory/MEMORY.md` 与 git log |
 | v1.1.x | 流程可用性补强（Conduit/配额/调度重试/实例自愈） | done | 见 `memory/MEMORY.md` |
 | v1.2.1 | 投产外部契约收尾 + 私有化前置 | done | snapshot 已归档；claude-worker 双路径 + 配置修复 + credential 后端 + 集成测试端到端实测通过 |
-| v1.2.2 | 商业模式闭环（计费/套餐/用量报表） | current | 已激活但非立即启动（内部推广暂不计费，用户决策推迟）；T4/T6/T7/T8/T10/T11 |
-| v1.3.x | （待规划） | backlog | 候选: SSO 接入、真实支付网关、可观测性增强、知识库 RAG 深化、credential 前端、eval 真实化 |
+| v1.2.2 | 商业模式闭环（计费/套餐/用量报表） | next | 内部推广暂不计费，退回 backlog 待启动；T4/T6/T7/T8/T10/T11 |
+| v1.3 | 声明→执行下沉通路 + Agent 定义 CRD | current | 云原生解耦第一版；架构总纲见 `docs/architecture/cloud-native-platform-design.md` |
+| v1.4 | 可组装层（沙箱模板 + 工具/skill 自动组装） | backlog | 依赖 v1.3 Agent 定义 |
+| v1.5 | 声明/运行 reconcile 解耦 | backlog | 依赖 v1.3 spec；desiredStatus+generation+spec-diff 调和 |
+| v1.6 | 全链路 trace 闭环 | backlog | 独立可并行；复用 OTel 级 span 模型 |
+| v1.7 | eval 评测真实化 | backlog | 依赖 v1.4 真实组装；注入 AgentInvoker |
 
 ## 长期技术债务
 
