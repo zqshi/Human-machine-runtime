@@ -8,6 +8,7 @@ import { encrypt, decrypt } from '../contexts/credential-vault/crypto.js';
 import type { AppContext } from './bootstrap/types.js';
 import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
+import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
 // 类型重新导出,保持现有 `import type { AppContext } from '../app/bootstrap.js'` 调用方不破坏
@@ -596,6 +597,9 @@ export function createAppContext(db: Database): AppContext {
     mem0Client,
     instanceRepo
   );
+
+  // D2:激活 RAG 上下文召回(knowledge + memory + LLM 判断)。knowledgeService null 时只召回 memory 侧。
+  agentHarness.setRagProvider(buildRagProvider(knowledgeService, memoryService, agentLlmClient));
 
   /* ──── Scheduled Tasks (定时任务调度) ──── */
   const scheduledTaskRepo = new ScheduledTaskRepository(db);

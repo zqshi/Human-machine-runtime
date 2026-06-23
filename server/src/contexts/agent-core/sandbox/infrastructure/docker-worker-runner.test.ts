@@ -191,7 +191,7 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(captured!).toContain('CLAUDE_TASK_JSON=');
   });
 
-  it('anthropicBaseUrl 缺省时 env file 不含 ANTHROPIC_BASE_URL(SDK 直连 api.anthropic.com)', async () => {
+  it('anthropicBaseUrl 缺省时 env file 不含 ANTHROPIC_BASE_URL(SDK 直连)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);
     const runner = new DockerWorkerRunner(spawner);
@@ -221,6 +221,72 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(captured).not.toBeNull();
     expect(captured!).toContain('ANTHROPIC_API_KEY=sk-ant-test');
     expect(captured!).not.toContain('ANTHROPIC_BASE_URL');
+  });
+
+  it('ragContext 有值时 CLAUDE_TASK_JSON payload 含 ragContext(D2 知识/记忆召回透传)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(
+      makeOpts({ ragContext: '【知识库参考】\n- 报销制度' }),
+      {},
+      new AbortController()
+    );
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.ragContext).toBe('【知识库参考】\n- 报销制度');
+  });
+
+  it('ragContext 缺省时 payload 不含 ragContext 字段', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(makeOpts(), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.ragContext).toBeUndefined();
   });
 
   it('任务完成后清理 env file(不留 apiKey 残留)', async () => {

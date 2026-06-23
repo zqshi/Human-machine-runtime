@@ -27,6 +27,8 @@ export interface WorkerRunOptions {
   apiKey: string;
   /** 私有化:Anthropic API 基址;有值则注入容器 ANTHROPIC_BASE_URL,让 SDK 经企业代理转发(空则 SDK 直连) */
   anthropicBaseUrl?: string;
+  /** D2:RAG 上下文块(知识库/记忆召回结果),worker 拼 prompt 时前置为 <context> 块 */
+  ragContext?: string;
   workerImage: string;
 }
 
@@ -199,14 +201,20 @@ export class DockerWorkerRunner implements IWorkerRunner {
 
   private buildPayload(opts: WorkerRunOptions): Record<string, unknown> {
     const allowedTools = opts.allowedTools.length > 0 ? opts.allowedTools : DEFAULT_TOOLS;
-    return {
+    const payload: Record<string, unknown> = {
       prompt: opts.prompt,
       allowedTools,
       model: opts.model,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: opts.maxBudgetUsd,
-      ...(opts.sessionId ? { sessionId: opts.sessionId } : {}),
     };
+    if (opts.ragContext) {
+      payload.ragContext = opts.ragContext;
+    }
+    if (opts.sessionId) {
+      payload.sessionId = opts.sessionId;
+    }
+    return payload;
   }
 
   private buildArgs(opts: WorkerRunOptions, envFile: string): string[] {

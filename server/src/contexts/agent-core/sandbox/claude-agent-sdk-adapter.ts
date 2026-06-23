@@ -90,6 +90,8 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
     const input = (task.input ?? {}) as Record<string, unknown>;
     const instanceId = typeof input.instanceId === 'string' ? input.instanceId : undefined;
     const prompt = typeof input.prompt === 'string' ? input.prompt : task.description;
+    // D2:RAG 上下文(由 Harness 注入的知识库/记忆召回结果),透传给 worker 拼 prompt
+    const ragContext = typeof input.ragContext === 'string' ? input.ragContext : undefined;
 
     // 查询 instanceId 是否已有 sessionId(用于 resume)
     const sessionId = instanceId ? await this.sessionStore.getSessionId(instanceId) : undefined;
@@ -130,6 +132,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       timeoutMs: typeof task.timeout === 'number' ? task.timeout : this.config.workerTimeoutMs,
       apiKey: this.config.apiKey,
       anthropicBaseUrl: this.config.anthropicBaseUrl,
+      ragContext,
       workerImage: this.config.workerImage,
     };
 

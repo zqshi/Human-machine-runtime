@@ -11,6 +11,7 @@ import type {
   AgentFramework,
   AgentTaskResult,
 } from '../sandbox/agent-runtime-adapter.js';
+import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
 import type { IToolRegistry } from '../../tool-management/tool-registry.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 
@@ -31,18 +32,21 @@ import { appEventBus } from '../../../shared/event-bus.js';
 export class AgentHarness {
   private readonly executor: AgentExecutor;
   private readonly broadcast: BroadcastFn;
+  private ragProvider: IRagContextProvider | null;
 
   constructor(
     llmClient: ILLMClient | null,
     session: SessionStore,
     private readonly sandbox: AdapterRegistry,
-    broadcast?: BroadcastFn
+    broadcast?: BroadcastFn,
+    ragProvider?: IRagContextProvider | null
   ) {
     this.broadcast =
       broadcast ??
       ((event, data) => {
         appEventBus.publish(event, data as Record<string, unknown>);
       });
+    this.ragProvider = ragProvider ?? null;
     const execStores: AgentExecutorStores = { tasks: session.taskArtifactStore };
     this.executor = new AgentExecutor(llmClient, execStores, this.broadcast);
   }
@@ -66,6 +70,33 @@ export class AgentHarness {
     task: AgentTaskInput,
     preferredFramework?: AgentFramework
   ): Promise<{ taskId: string; framework: AgentFramework }> {
+    // D2:执行前召回 RAG 上下文(知识库 + 员工记忆),注入到 task.input.ragContext。
+    // provider 缺省或召回跳过(skipped)则不改 task,主链路不受影响。
+    if (this.ragProvider) {
+      const input = (task.input ?? {}) as Record<string, unknown>;
+      // 已显式传入 ragContext 则不覆盖(调用方优先)
+      if (input.ragContext === undefined) {
+        const recallReq: RagRecallRequest = {
+          tenantId: task.tenantId,
+          instanceId: typeof input.instanceId === 'string' ? input.instanceId : undefined,
+          prompt: typeof input.prompt === 'string' ? input.prompt : task.description,
+        };
+        try {
+          const rag = await this.ragProvider.getRagContext(recallReq);
+          if (rag.context) {
+            input.ragContext = rag.context;
+            task.input = input;
+          }
+        } catch (err) {
+          // 召回失败不阻断主链路(provider 内部已容错,此处双保险)
+          appEventBus.publish('harness:rag:failed', {
+            taskId: task.id,
+            err: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
+
     appEventBus.publish('sandbox:task:dispatched', {
       taskId: task.id,
       tenantId: task.tenantId,
@@ -91,6 +122,15 @@ export class AgentHarness {
   /** 注入工具注册中心,激活 Agent 工具调用兜底。 */
   setToolRegistry(registry: IToolRegistry): void {
     this.executor.setToolRegistry(registry);
+  }
+
+  /**
+   * 注入 RAG 上下文召回器,激活 dispatchTask 前的知识库/记忆召回(D2)。
+   * 延后注入:knowledgeService/memoryService 在 bootstrap 中晚于 AgentHarness 实例化,
+   * 故用 setter(模式同 setToolRegistry)而非构造注入。
+   */
+  setRagProvider(provider: IRagContextProvider | null): void {
+    this.ragProvider = provider;
   }
 
   /** 测试/关停用:清理 executor 的所有 progress timer。 */

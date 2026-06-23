@@ -26,6 +26,8 @@ interface TaskPayload {
   model?: string;
   maxTurns?: number;
   maxBudgetUsd?: number;
+  /** D2:RAG 上下文块(Harness 召回的知识库/记忆),拼 prompt 时前置为 <context> 块 */
+  ragContext?: string;
 }
 
 function emit(obj: unknown): void {
@@ -76,10 +78,16 @@ async function main(): Promise<void> {
     options.resume = task.sessionId;
   }
 
+  // D2:RAG 上下文作为 <context> 块前置注入 prompt(SDK 0.1.0 query 只收单 prompt 字符串,
+  // 无 systemPrompt 选项,故拼进 prompt。context 块用 XML 标签隔离,降低对原 prompt 的干扰)
+  const finalPrompt = task.ragContext
+    ? `<context>\n${task.ragContext}\n</context>\n\n${task.prompt}`
+    : task.prompt;
+
   let capturedSessionId: string | undefined = task.sessionId;
 
   try {
-    const stream = query({ prompt: task.prompt, options });
+    const stream = query({ prompt: finalPrompt, options });
 
     for await (const message of stream as AsyncIterable<SDKMessage>) {
       const m = message as Record<string, unknown>;
