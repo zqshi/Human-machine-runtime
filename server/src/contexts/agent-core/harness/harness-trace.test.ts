@@ -51,7 +51,11 @@ function makeTask(overrides: Partial<AgentTaskInput> = {}): AgentTaskInput {
 describe('AgentHarness - trace 埋点(v1.6)', () => {
   it('dispatchTask 写根 trace + 3 span(rag/assembly/sandbox)+ 收尾', async () => {
     const captured = { task: null };
-    const calls = { roots: [] as Array<{ traceId: string; rootOperation?: string }>, spans: [] as SpanWriteData[], updates: [] as Array<{ traceId: string; patch: unknown }> };
+    const calls = {
+      roots: [] as Array<{ traceId: string; rootOperation?: string }>,
+      spans: [] as SpanWriteData[],
+      updates: [] as Array<{ traceId: string; patch: unknown }>,
+    };
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     harness.setTraceRecorder(makeRecorder(calls));
 
@@ -75,7 +79,11 @@ describe('AgentHarness - trace 埋点(v1.6)', () => {
 
   it('所有 span 的 distTraceId 指向同一根 traceId', async () => {
     const captured = { task: null };
-    const calls = { roots: [] as Array<{ traceId: string }>, spans: [] as SpanWriteData[], updates: [] as Array<{ traceId: string }> };
+    const calls = {
+      roots: [] as Array<{ traceId: string }>,
+      spans: [] as SpanWriteData[],
+      updates: [] as Array<{ traceId: string }>,
+    };
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     harness.setTraceRecorder(makeRecorder(calls));
 
@@ -90,7 +98,11 @@ describe('AgentHarness - trace 埋点(v1.6)', () => {
 
   it('生成的 traceId 写回 task.input(让 adapter/worker 透传)', async () => {
     const captured = { task: null };
-    const calls = { roots: [] as Array<{ traceId: string }>, spans: [] as SpanWriteData[], updates: [] as Array<{ traceId: string }> };
+    const calls = {
+      roots: [] as Array<{ traceId: string }>,
+      spans: [] as SpanWriteData[],
+      updates: [] as Array<{ traceId: string }>,
+    };
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     harness.setTraceRecorder(makeRecorder(calls));
 
@@ -101,7 +113,11 @@ describe('AgentHarness - trace 埋点(v1.6)', () => {
 
   it('调用方显式传 traceId → 复用不新建', async () => {
     const captured = { task: null };
-    const calls = { roots: [] as Array<{ traceId: string }>, spans: [] as SpanWriteData[], updates: [] as Array<{ traceId: string }> };
+    const calls = {
+      roots: [] as Array<{ traceId: string }>,
+      spans: [] as SpanWriteData[],
+      updates: [] as Array<{ traceId: string }>,
+    };
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     harness.setTraceRecorder(makeRecorder(calls));
 

@@ -22,7 +22,10 @@ export function buildTraceRecorder(repo: AiGatewayRepository): ITraceRecorder {
       try {
         await repo.insertDistributedTrace(data);
       } catch (err) {
-        logger.warn({ err: String(err), traceId: data.traceId }, 'trace insertDistributedTrace failed');
+        logger.warn(
+          { err: String(err), traceId: data.traceId },
+          'trace insertDistributedTrace failed'
+        );
       }
     },
 
@@ -37,8 +40,8 @@ export function buildTraceRecorder(repo: AiGatewayRepository): ITraceRecorder {
           spanKind: data.spanKind,
           startTime: data.startTime,
           // 必填占位(agent 编排 span 非 LLM 调用,无 session/request/model/tokens 语义)
-          sessionId: data.metadata?.sessionId as string ?? 'agent-orchestration',
-          requestId: data.metadata?.taskId as string ?? data.spanId,
+          sessionId: (data.metadata?.sessionId as string) ?? 'agent-orchestration',
+          requestId: (data.metadata?.taskId as string) ?? data.spanId,
           requestedModel: 'n/a',
           status: data.status,
           promptTokens: 0,

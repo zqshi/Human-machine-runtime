@@ -81,8 +81,7 @@ export class AgentHarness {
     // 三段(RAG/assembly/sandbox)各开 child span(扁平挂根 parentSpanId=undefined);
     // 完成收尾 updateDistributedTrace。trace 失败不阻断主链路。
     const input0 = (task.input ?? {}) as Record<string, unknown>;
-    const traceId =
-      typeof input0.traceId === 'string' ? input0.traceId : newId('trc');
+    const traceId = typeof input0.traceId === 'string' ? input0.traceId : newId('trc');
     // 把 traceId 写回 input(若原无),让 adapter/worker payload 能透传(协议预留)
     if (input0.traceId === undefined) {
       input0.traceId = traceId;
