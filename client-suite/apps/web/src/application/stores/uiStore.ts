@@ -27,6 +27,8 @@ interface UIState {
   selectedAgentId: string | null;
   /** Contacts: department filter */
   contactsDept: string;
+  /** IM 模式内共享 Agent 对话：当前打开的 agent id（null=显示 Agent Team 列表） */
+  imChatAgentId: string | null;
 
   reset(): void;
   setDock(tab: DockTab): void;
@@ -40,6 +42,7 @@ interface UIState {
   setSubView(view: SubView): void;
   setSelectedAgentId(id: string | null): void;
   setContactsDept(dept: string): void;
+  setImChatAgentId(id: string | null): void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -53,6 +56,7 @@ export const useUIStore = create<UIState>((set) => ({
   subView: null,
   selectedAgentId: 'sa-1',
   contactsDept: 'all',
+  imChatAgentId: null,
 
   reset() {
     set({
@@ -66,16 +70,34 @@ export const useUIStore = create<UIState>((set) => ({
       subView: null,
       selectedAgentId: 'sa-1',
       contactsDept: 'all',
+      imChatAgentId: null,
     });
   },
 
   setDock(tab) {
-    set({ currentDock: tab, subView: null, drawerOpen: false, drawerContent: null });
+    // 模式专属 dock 强制对齐 appMode，防止 currentDock 与 appMode 分裂（IM/Almighty 双模式混乱根因）。
+    // 跨模式 dock（knowledge/apps/contacts/tasks/calendar/agents/studio/marketplace/settings）
+    // 不动 appMode，保持当前模式主题（OC 模式点知识库仍留 OC 主题）。
+    const alignedMode: AppMode | null =
+      tab === 'openclaw' ? 'openclaw' : tab === 'messages' ? 'im' : null;
+    set({
+      currentDock: tab,
+      subView: null,
+      drawerOpen: false,
+      drawerContent: null,
+      ...(alignedMode ? { appMode: alignedMode } : {}),
+    });
   },
 
   setAppMode(mode) {
     const dock: DockTab = mode === 'openclaw' ? 'openclaw' : 'messages';
-    set({ appMode: mode, currentDock: dock, subView: null, drawerOpen: false, drawerContent: null });
+    set({
+      appMode: mode,
+      currentDock: dock,
+      subView: null,
+      drawerOpen: false,
+      drawerContent: null,
+    });
   },
 
   openDrawer(content) {
@@ -114,5 +136,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setContactsDept(dept) {
     set({ contactsDept: dept });
+  },
+
+  setImChatAgentId(id) {
+    set({ imChatAgentId: id });
   },
 }));

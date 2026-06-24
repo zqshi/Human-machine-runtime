@@ -15,6 +15,8 @@ import { getMatrixClient, globalSelectRoom } from '../../../application/hooks/us
 import { useUIStore } from '../../../application/stores/uiStore';
 import { useChatStore } from '../../../application/stores/chatStore';
 import { useToastStore } from '../../../application/stores/toastStore';
+import { SharedAgentChatView } from './SharedAgentChatView';
+import { sharedAgentChatService } from '../../../application/services/sharedAgentChatService';
 
 type Scope = 'all' | 'personal' | 'department';
 
@@ -31,6 +33,7 @@ export function AgentsHub() {
   const loadPersistedAgents = useAgentStore((s) => s.loadPersistedAgents);
   const setDock = useUIStore((s) => s.setDock);
   const appMode = useUIStore((s) => s.appMode);
+  const imChatAgentId = useUIStore((s) => s.imChatAgentId);
   const isOC = appMode === 'openclaw';
 
   useEffect(() => {
@@ -39,7 +42,15 @@ export function AgentsHub() {
 
   const handleChat = useCallback(
     (agentId: string, agentUserId?: string, agentName?: string) => {
-      // 直接跳转消息页打开 bot room
+      // Almighty 模式：留 Almighty 内置对话，不跳 IM 消息
+      if (appMode === 'openclaw') {
+        useOpenClawStore.getState().setSharedAgentMeta(agentId, agentName ?? 'Agent');
+        useOpenClawStore.getState().startSharedAgentChat(agentId);
+        setDock('openclaw');
+        return;
+      }
+
+      // IM 模式 + 有 Matrix 账号：走 IM 消息 DM（打开 bot room）
       if (agentUserId) {
         const rooms = useChatStore.getState().rooms;
         const localpart = agentUserId.split(':')[0].slice(1);
@@ -72,13 +83,11 @@ export function AgentsHub() {
         }
       }
 
-      // fallback: 使用 OpenClaw 内置对话
-      useOpenClawStore.getState().setSharedAgentMeta(agentId, agentName ?? 'Agent');
-      useOpenClawStore.getState().startSharedAgentChat(agentId);
-      setDock('openclaw');
-      useToastStore.getState().addToast(`与「${agentName ?? 'Agent'}」的对话已打开`, 'info');
+      // IM 模式 + 无 Matrix 账号：IM 内本地对话（不跳 Almighty 工作面板）
+      sharedAgentChatService.open(agentId, agentName ?? 'Agent');
+      useToastStore.getState().addToast(`已打开与「${agentName ?? 'Agent'}」的对话`, 'info');
     },
-    [setDock]
+    [setDock, appMode]
   );
 
   const filtered = sharedAgents.filter((a) => {
@@ -177,6 +186,11 @@ export function AgentsHub() {
         </div>
       </div>
     );
+  }
+
+  // IM 模式下打开共享 Agent 对话视图（无 Matrix 账号的 Agent）
+  if (!isOC && imChatAgentId) {
+    return <SharedAgentChatView />;
   }
 
   // ─── IM 模式（浅色） ───

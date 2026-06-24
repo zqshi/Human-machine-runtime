@@ -26,6 +26,9 @@
 | D5 | tool-management db 连接解锁接入（credentialManagementService.getCredentialSecret 已提供，需注入 ToolManagementService） | v1.2.1 | P2 | v1.3+ |
 | D6 | credential-repository 集成测试（DB 层，mock Database） | v1.2.1 | P3 | v1.3+ |
 | D7 | bootstrap.ts 832 行装配 god-file（§14.1 第 10 项 800-1000 行技术债） | v1.8 质量检测 | P2 | ✅ 已清 2026-06-24：拆 8 个 bundle 到 `app/bootstrap/`，832→542 行；type-check + 1455 单测 + 真实 dev 启动验证全过 |
+| D8 | **openclaw 运行时可替换 / Agent 定义与运行分离**：`useAgentChat`→`weKnoraApi`/`openclawApiAdapter`/`/api/openclaw/chat` 与 `openclawStore` 会话状态机硬绑 openclaw 运行时；需抽象 `AgentRuntimePort` 接口以支持替换为 Hermes 等框架。2026-06-24 双模式修复已在 IM 内对话入口（`sharedAgentChatService.ts`）预埋最小 seams 并标 `TODO(runtime-port)`，但 `useAgentChat` 仍直接 import `openclawStore`，完整 Port 抽象未做。 | 双模式修复(计划外) | P1 | 未排期 |
+| D9 | **marketplace「对话」半成品**：`MarketplacePage.tsx` 两处点 Agent「对话」仅 `setDock` 跳转、不建对话上下文。根因：`marketplaceStore.agents`(id `mk-*`，市场模板) 与 `agentStore.sharedAgents`(id `sa-*`，组织共享 Agent) id 体系不兼容，无法直接 `startSharedAgentChat`。需产品决策（先安装为共享 Agent 再对话？还是独立入口？）后实现。2026-06-24 排查后主动回退了误改，治本(`setDock` 对齐 `appMode`)已防撕裂，完整实现留此条。 | 双模式修复(计划外) | P2 | 未排期 |
+| D10 | **openclawStore 跨模式自举真请求验证缺口**：IM 模式内共享 Agent 对话复用 `useAgentChat`+`openclawStore`，`sharedAgentChatService.open` 已调幂等 `initConversation()` 准备状态机，但 IM 模式未走 `appMode==='openclaw'` 的 `initialize()`(拉通知/事件等 OC 专属数据)。逻辑自举由 `conversationActions`(initConversation 幂等 + switchConversation 自建空对话) 保证，但真请求流式回包未经浏览器验证（tsc/vitest 测不出，类 `migrate.ts 不跑 .sql` 风险）。需 IM 模式实际发一条消息确认。 | 双模式修复(计划外) | P2 | 待浏览器验证 |
 
 ## 候选方向（未排期）
 

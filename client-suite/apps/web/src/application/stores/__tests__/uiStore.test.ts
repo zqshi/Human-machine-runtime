@@ -29,6 +29,29 @@ describe('uiStore', () => {
       expect(s.subView).toBeNull();
       expect(s.drawerOpen).toBe(false);
     });
+
+    it("setDock('openclaw') aligns appMode to openclaw (防撕裂)", () => {
+      useUIStore.getState().setDock('openclaw');
+      const s = useUIStore.getState();
+      expect(s.currentDock).toBe('openclaw');
+      expect(s.appMode).toBe('openclaw');
+    });
+
+    it("setDock('messages') aligns appMode to im (防反向撕裂)", () => {
+      useUIStore.getState().setAppMode('openclaw');
+      useUIStore.getState().setDock('messages');
+      const s = useUIStore.getState();
+      expect(s.currentDock).toBe('messages');
+      expect(s.appMode).toBe('im');
+    });
+
+    it('setDock(跨模式 dock) 不改变 appMode', () => {
+      useUIStore.getState().setAppMode('openclaw');
+      useUIStore.getState().setDock('knowledge');
+      const s = useUIStore.getState();
+      expect(s.currentDock).toBe('knowledge');
+      expect(s.appMode).toBe('openclaw');
+    });
   });
 
   describe('setAppMode', () => {
@@ -91,12 +114,27 @@ describe('uiStore', () => {
       useUIStore.getState().setAppMode('openclaw');
       useUIStore.getState().setSidebarWidth(400);
       useUIStore.getState().setContactsDept('engineering');
+      useUIStore.getState().setImChatAgentId('sa-1');
       useUIStore.getState().reset();
       const s = useUIStore.getState();
       expect(s.currentDock).toBe('messages');
       expect(s.appMode).toBe('im');
       expect(s.sidebarWidth).toBe(320);
       expect(s.contactsDept).toBe('all');
+      expect(s.imChatAgentId).toBeNull();
+    });
+  });
+
+  describe('imChatAgentId', () => {
+    it('defaults to null', () => {
+      expect(useUIStore.getState().imChatAgentId).toBeNull();
+    });
+
+    it('setImChatAgentId sets/clears value', () => {
+      useUIStore.getState().setImChatAgentId('sa-1');
+      expect(useUIStore.getState().imChatAgentId).toBe('sa-1');
+      useUIStore.getState().setImChatAgentId(null);
+      expect(useUIStore.getState().imChatAgentId).toBeNull();
     });
   });
 });
