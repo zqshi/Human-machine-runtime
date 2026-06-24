@@ -33,10 +33,7 @@ export class ApprovalPolicyService {
    * @param approvalPolicy 实例审批策略(null=未配置,不审批)
    * @returns true=需审批(进队列),false=直接执行
    */
-  shouldApprove(
-    toolRiskLevel: RiskLevel,
-    approvalPolicy: InstanceApprovalPolicy | null
-  ): boolean {
+  shouldApprove(toolRiskLevel: RiskLevel, approvalPolicy: InstanceApprovalPolicy | null): boolean {
     if (!approvalPolicy || approvalPolicy.enabled === false) return false;
     const required = approvalPolicy.requireApprovalLevels ?? ['high'];
     return required.includes(toolRiskLevel);

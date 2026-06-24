@@ -104,9 +104,7 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
 
   it('persona 缺失报错', () => {
     const spec = { ...defaultAgentDefinitionSpec(), persona: undefined as unknown as never };
-    expect(
-      validateAgentDefinitionSpec(spec).some((e) => e.field === 'persona')
-    ).toBe(true);
+    expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'persona')).toBe(true);
   });
 
   it('guardrail type 非法报错', () => {
@@ -130,9 +128,7 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
       ...defaultAgentDefinitionSpec(),
       persona: {
         systemPrompt: '',
-        guardrails: [
-          { id: '', type: 'keyword', pattern: '', action: 'block', reason: 'r' },
-        ],
+        guardrails: [{ id: '', type: 'keyword', pattern: '', action: 'block', reason: 'r' }],
         refusalResponse: '',
       },
     };
@@ -162,17 +158,17 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
       ...defaultAgentDefinitionSpec(),
       runtime: { runtimeType: 'unknown' as never },
     };
-    expect(
-      validateAgentDefinitionSpec(spec).some((e) => e.field === 'runtime.runtimeType')
-    ).toBe(true);
+    expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'runtime.runtimeType')).toBe(
+      true
+    );
   });
 
   it('runtime.runtimeType 合法值(claude/openclaw/hermes)通过', () => {
     for (const rt of ['claude', 'openclaw', 'hermes'] as const) {
       const spec = { ...defaultAgentDefinitionSpec(), runtime: { runtimeType: rt } };
-      expect(
-        validateAgentDefinitionSpec(spec).some((e) => e.field === 'runtime.runtimeType')
-      ).toBe(false);
+      expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'runtime.runtimeType')).toBe(
+        false
+      );
     }
   });
 
@@ -181,9 +177,7 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
       ...defaultAgentDefinitionSpec(),
       boundKnowledge: 'not-array' as unknown as never,
     };
-    expect(
-      validateAgentDefinitionSpec(spec).some((e) => e.field === 'boundKnowledge')
-    ).toBe(true);
+    expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'boundKnowledge')).toBe(true);
   });
 
   it('完整 persona 声明通过校验并落 CRD', () => {
@@ -195,8 +189,20 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
         persona: {
           systemPrompt: '你是企业客服助手,只回答产品相关问题。',
           guardrails: [
-            { id: 'g1', type: 'keyword', pattern: 'api key', action: 'block', reason: '禁止泄露密钥' },
-            { id: 'g2', type: 'regex', pattern: '\\b\\d{16,19}\\b', action: 'review', reason: '疑似卡号' },
+            {
+              id: 'g1',
+              type: 'keyword',
+              pattern: 'api key',
+              action: 'block',
+              reason: '禁止泄露密钥',
+            },
+            {
+              id: 'g2',
+              type: 'regex',
+              pattern: '\\b\\d{16,19}\\b',
+              action: 'review',
+              reason: '疑似卡号',
+            },
           ],
           refusalResponse: '抱歉,该请求超出我的处理范围。',
         },

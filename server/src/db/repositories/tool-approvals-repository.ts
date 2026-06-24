@@ -67,11 +67,7 @@ export class ToolApprovalRepository {
     return row ? toRow(row) : null;
   }
 
-  async findPending(
-    tenantId?: string,
-    limit = 50,
-    offset = 0
-  ): Promise<ToolApprovalRow[]> {
+  async findPending(tenantId?: string, limit = 50, offset = 0): Promise<ToolApprovalRow[]> {
     const conditions = [eq(toolApprovals.status, 'pending')];
     if (tenantId) conditions.push(eq(toolApprovals.tenantId, tenantId));
     const rows = await this.db

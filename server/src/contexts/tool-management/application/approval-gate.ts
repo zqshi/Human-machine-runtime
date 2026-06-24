@@ -1,7 +1,4 @@
-import {
-  ApprovalPolicyService,
-  type InstanceApprovalPolicy,
-} from './approval-policy-service.js';
+import { ApprovalPolicyService, type InstanceApprovalPolicy } from './approval-policy-service.js';
 import type { ToolApprovalRepository } from '../../../db/repositories/tool-approvals-repository.js';
 import type { RiskLevel } from '../types.js';
 import type { SystemConfigService } from '../../system-config/system-config-service.js';
@@ -62,9 +59,7 @@ export class ApprovalGate {
     // 查实例审批策略(无 instanceId 或未配 → null → shouldApprove=false 不拦截)
     let policy: InstanceApprovalPolicy | null = null;
     if (input.instanceId && this.instancePolicyPort) {
-      policy = await this.instancePolicyPort
-        .getApprovalPolicy(input.instanceId)
-        .catch(() => null);
+      policy = await this.instancePolicyPort.getApprovalPolicy(input.instanceId).catch(() => null);
     }
     if (!this.policyService.shouldApprove(input.toolRiskLevel, policy)) {
       return PASS;

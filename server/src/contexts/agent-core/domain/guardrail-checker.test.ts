@@ -34,7 +34,9 @@ describe('checkGuardrails', () => {
   });
 
   it('regex 命中 block(卡号)', () => {
-    const rules = [mkRule({ id: 'g1', type: 'regex', pattern: '\\b\\d{16,19}\\b', action: 'block' })];
+    const rules = [
+      mkRule({ id: 'g1', type: 'regex', pattern: '\\b\\d{16,19}\\b', action: 'block' }),
+    ];
     expect(checkGuardrails('卡号 4111111111111111', rules).blocked).toBe(true);
   });
 
