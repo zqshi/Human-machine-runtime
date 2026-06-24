@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { RuntimeRegistry, BUILTIN_SANDBOX_TEMPLATES, DEFAULT_SANDBOX_TEMPLATE } from './runtime-registry.js';
+import {
+  RuntimeRegistry,
+  BUILTIN_SANDBOX_TEMPLATES,
+  DEFAULT_SANDBOX_TEMPLATE,
+} from './runtime-registry.js';
 
 describe('RuntimeRegistry', () => {
   const registry = new RuntimeRegistry();
