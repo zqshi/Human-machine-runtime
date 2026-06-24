@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { newId } from '../../shared/utils.js';
+import { newId, AppError } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { SSEEvent } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
@@ -119,8 +119,16 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
       priority: (body.priority as 'normal') ?? 'normal',
       input: body.input ?? {},
     };
-    const result = await agentCore.harness.dispatchTask(task, body.framework as never);
-    return c.json(result);
+    try {
+      const result = await agentCore.harness.dispatchTask(task, body.framework as never);
+      return c.json(result);
+    } catch (err) {
+      // v1.9:guardrail block 拦截(#1)→ 返回拒答回复,不冒泡为 500
+      if (err instanceof AppError && err.code === 'GUARDRAIL_BLOCKED') {
+        return c.json({ blocked: true, reply: err.message }, 403);
+      }
+      throw err;
+    }
   });
 
   app.get('/agent/adapters', async (c) => {

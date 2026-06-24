@@ -8,6 +8,8 @@ export type SourceStatus = 'active' | 'syncing' | 'error' | 'archived';
 export type DefinitionStatus = 'active' | 'deprecated' | 'draft';
 export type GatewayType = 'higress' | 'kong' | 'apisix' | 'custom';
 export type DbType = 'postgresql' | 'mysql';
+/** v1.9:工具风险等级(#7 执行时 Human Review,决定是否需人工审批) */
+export type RiskLevel = 'low' | 'medium' | 'high';
 
 /* ──── Source Creation Inputs ──── */
 

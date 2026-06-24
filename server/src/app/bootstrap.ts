@@ -8,6 +8,7 @@ import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
+import { buildPersonaProvider } from './bootstrap/persona-provider.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
 import { buildEvalBundle } from './bootstrap/eval-bundle.js';
 import { buildMemoryBundle } from './bootstrap/memory-bundle.js';
@@ -74,6 +75,7 @@ import { NotificationService } from '../contexts/notification/notification-servi
 import { ToolDefinitionRepository } from '../db/repositories/tool-registry-repository.js';
 import { PushChannelService } from '../contexts/push-channel/push-channel-service.js';
 import { SharedAgentService } from '../contexts/shared-agent/shared-agent-service.js';
+import { AgentDefinitionService } from '../contexts/agent-core/application/agent-definition-service.js';
 import { GatewayHealth } from '../contexts/gateway/gateway-health.js';
 import { TraceSyncJob } from '../contexts/observability/trace-sync-job.js';
 import { DepartmentRepository } from '../db/repositories/department-repository.js';
@@ -214,6 +216,10 @@ export function createAppContext(db: Database): AppContext {
   };
   const instanceService = new InstanceService(instanceRepo, provisioner, auditLogger);
 
+  // v1.9:Agent 定义 CRD service(声明式 spec 管理;供 admin 路由 + assembly/persona provider 共用 repo)
+  const agentDefinitionRepo = new AgentDefinitionRepository(db);
+  const agentDefinitionService = new AgentDefinitionService(agentDefinitionRepo, auditService);
+
   /* ──── Runtime Engine: 消息管线 + 用量/计费(含 inboundPipeline 闭包) ──── */
   const {
     channelService,
@@ -281,11 +287,13 @@ export function createAppContext(db: Database): AppContext {
     litellmClient,
   });
   const notificationService = new NotificationService(operationalRepo);
-  const { toolManagementService, toolRegistryService } = buildToolBundle(
+  const { toolManagementService, toolRegistryService, toolApprovalRepo } = buildToolBundle(
     db,
     credentialService,
     notificationService,
-    agentHarness
+    agentHarness,
+    systemConfigService,
+    instanceRepo
   );
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
@@ -337,6 +345,9 @@ export function createAppContext(db: Database): AppContext {
       skillRepo
     )
   );
+
+  // v1.9:激活 PersonaProvider(人设注入 + guardrail 拦截,#1)。复用 createAppContext 顶层 agentDefinitionRepo(T2)。
+  agentHarness.setPersonaProvider(buildPersonaProvider(instanceRepo, agentDefinitionRepo));
 
   // v1.6:激活 trace 记录器(dispatchTask 全链路 trace 串联)。aiGatewayRepo 早实例化。
   agentHarness.setTraceRecorder(buildTraceRecorder(aiGatewayRepo));
@@ -508,6 +519,7 @@ export function createAppContext(db: Database): AppContext {
     notificationService,
     toolManagementService,
     toolRegistryService,
+    toolApprovalRepo,
     pushChannelService,
     sharedAgentService,
     quotaService,
@@ -530,6 +542,7 @@ export function createAppContext(db: Database): AppContext {
     agentAdapterRegistry,
     oauthStateStore,
     billingService,
+    agentDefinitionService,
     gatewayHealth: new GatewayHealth([
       marketplaceClient,
       profileServiceClient,

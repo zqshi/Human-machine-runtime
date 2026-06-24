@@ -88,6 +88,8 @@ export const toolDefinitions = pgTable(
     version: varchar('version', { length: 32 }).default('1.0.0'),
     enabled: boolean('enabled').notNull().default(true),
     status: varchar('status', { length: 32 }).notNull().default('active'),
+    /** v1.9:风险等级(#7 执行时 Human Review,决定是否需人工审批) */
+    riskLevel: varchar('risk_level', { length: 16 }).notNull().default('medium'),
     callCount: integer('call_count').notNull().default(0),
     lastCalledAt: timestamp('last_called_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -146,5 +148,47 @@ export const toolCallLogs = pgTable(
     index('idx_tool_call_logs_tenant').on(table.tenantId),
     index('idx_tool_call_logs_called_at').on(table.calledAt),
     index('idx_tool_call_logs_status').on(table.status),
+  ]
+);
+
+/* ──── v1.9: Tool Approvals(#7 执行时 Human Review 审批队列) ──── */
+
+/**
+ * tool_approvals — 高风险工具调用的人工审批队列。
+ *
+ * gate 拦截需审批的工具调用 → 创建 pending 记录(存 toolId/params/context 快照)。
+ * admin approve → 触发实际 executeTool,结果存 result;reject → 标记拒绝。
+ * 复刻 marketplace IApprovalStore 的 pending/approved/rejected 语义。
+ */
+export type ToolApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export const toolApprovals = pgTable(
+  'tool_approvals',
+  {
+    id: varchar('id', { length: 64 }).primaryKey(),
+    tenantId: varchar('tenant_id', { length: 64 }).notNull(),
+    toolId: varchar('tool_id', { length: 64 }).notNull(),
+    toolName: varchar('tool_name', { length: 256 }).notNull(),
+    /** 触发审批时的风险等级 */
+    riskLevel: varchar('risk_level', { length: 16 }).notNull(),
+    /** 实例 id(可空,工具调用未必绑定实例) */
+    instanceId: varchar('instance_id', { length: 64 }),
+    /** 调用参数快照(审批后续执行用) */
+    params: jsonb('params').$type<Record<string, unknown>>().notNull(),
+    /** 执行上下文快照(tenantId/callerId/instanceId/timeout) */
+    context: jsonb('context').$type<Record<string, unknown>>().notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('pending'),
+    requestedBy: varchar('requested_by', { length: 128 }),
+    reviewedBy: varchar('reviewed_by', { length: 128 }),
+    reviewNote: text('review_note'),
+    /** 审批通过后实际执行的返回结果快照 */
+    result: jsonb('result').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('idx_tool_approvals_tenant').on(table.tenantId),
+    index('idx_tool_approvals_status').on(table.status),
+    index('idx_tool_approvals_instance').on(table.instanceId),
   ]
 );

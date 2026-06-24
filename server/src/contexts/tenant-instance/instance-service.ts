@@ -130,6 +130,7 @@ export class InstanceService {
     permissionTemplateId?: string;
     permissionTemplate?: Record<string, unknown> | null;
     requestId?: string | null;
+    agentDefinitionId?: string | null;
   }): Promise<Instance> {
     const localpart = normalizeMatrixLocalpart(input.matrixUserId);
     if (!localpart) {
@@ -152,6 +153,7 @@ export class InstanceService {
       permissionTemplateId: input.permissionTemplateId,
       permissionTemplate: input.permissionTemplate,
       requestId: input.requestId,
+      agentDefinitionId: input.agentDefinitionId ?? null,
     };
 
     const inst = createInstance(createInput, { defaultSource: 'matrix' });

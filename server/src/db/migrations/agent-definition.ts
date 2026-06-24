@@ -48,4 +48,17 @@ export async function migrateAgentDefinition(db: MigrateDb): Promise<void> {
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS idx_instances_agent_definition ON instances(agent_definition_id)`
   );
+
+  /* ③ v1.9:agent_definitions 声明态扩展(persona/bound_knowledge/runtime),幂等加列。
+   *    旧数据无此列 → 加列后 persona={}、bound_knowledge=[]、runtime={"runtimeType":"claude"},
+   *    旧实例未关联 CRD 走默认,不阻断(向后兼容)。 */
+  await db.execute(
+    sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS persona JSONB NOT NULL DEFAULT '{}'::jsonb`
+  );
+  await db.execute(
+    sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS bound_knowledge JSONB NOT NULL DEFAULT '[]'::jsonb`
+  );
+  await db.execute(
+    sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS runtime JSONB NOT NULL DEFAULT '{"runtimeType":"claude"}'::jsonb`
+  );
 }

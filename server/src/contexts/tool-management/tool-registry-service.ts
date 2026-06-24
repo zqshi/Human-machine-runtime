@@ -27,7 +27,8 @@ import type {
 } from '../../db/repositories/tool-registry-repository.js';
 import { McpClientPool } from './mcp-client.js';
 import { logger } from '../../app/logger.js';
-import type { CreateSourceInput, ExecutionType } from './types.js';
+import type { CreateSourceInput, ExecutionType, RiskLevel } from './types.js';
+import type { ApprovalGate } from './application/approval-gate.js';
 import type { NotificationService } from '../notification/notification-service.js';
 import type { LockProvider } from '../scheduler/domain/lock.js';
 
@@ -74,7 +75,9 @@ export class ToolRegistryService implements IToolRegistry {
     /** 可选：转 down 时发站内告警。不注入则仅 logger（向后兼容） */
     private notifier?: NotificationService,
     /** 可选：advisory lock 防多实例并发探活。不注入则无锁（单实例/测试场景） */
-    private lock?: LockProvider
+    private lock?: LockProvider,
+    /** v1.9:可选审批 gate(#7)。不注入则不拦截(向后兼容) */
+    private approvalGate?: ApprovalGate | null
   ) {}
 
   async registerSource(
@@ -117,6 +120,31 @@ export class ToolRegistryService implements IToolRegistry {
     }
     if (!def.enabled) {
       return { success: false, error: 'tool is disabled', durationMs: 0, logId: '' };
+    }
+    // v1.9:#7 审批 gate。gate 未注入或未启用则直通 executeTool(向后兼容)。
+    if (this.approvalGate) {
+      const gateResult = await this.approvalGate.checkAndMaybeBlock({
+        toolRiskLevel: (def.riskLevel ?? 'medium') as RiskLevel,
+        instanceId: req.context.instanceId,
+        tenantId: req.context.tenantId,
+        toolId: req.toolId,
+        toolName: def.name,
+        params: req.params,
+        context: req.context as unknown as Record<string, unknown>,
+        requestedBy: req.context.callerId,
+      });
+      if (gateResult.blocked) {
+        return {
+          success: false,
+          error: gateResult.reason ?? 'pending approval',
+          durationMs: 0,
+          logId: '',
+          pendingApproval: {
+            approvalId: gateResult.approvalId!,
+            reason: gateResult.reason ?? '',
+          },
+        };
+      }
     }
     return this.mgmt.executeTool(req.toolId, req.params, req.context);
   }

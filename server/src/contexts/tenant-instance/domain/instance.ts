@@ -270,6 +270,8 @@ export interface CreateInstanceInput {
   permissionTemplateId?: string;
   permissionTemplate?: Record<string, unknown> | null;
   requestId?: string | null;
+  /** v1.9:关联的 Agent 定义 CRD id(声明式 spec;可空,旧实例不引用) */
+  agentDefinitionId?: string | null;
 }
 
 export interface CreateInstanceConfig {
@@ -306,6 +308,8 @@ export function createInstance(input: CreateInstanceInput, cfg?: CreateInstanceC
     policy: {},
     approvalPolicy: {},
     requestId: input.requestId ?? null,
+    agentDefinitionId: input.agentDefinitionId ?? null,
+    agentGeneration: null,
     version: 0,
     desiredState: STATE.REQUESTED,
     specGeneration: 0,

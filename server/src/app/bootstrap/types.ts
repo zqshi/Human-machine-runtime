@@ -47,6 +47,7 @@ import type { SystemConfigService } from '../../contexts/system-config/system-co
 import type { NotificationService } from '../../contexts/notification/notification-service.js';
 import type { ToolManagementService } from '../../contexts/tool-management/tool-management-service.js';
 import type { ToolRegistryService } from '../../contexts/tool-management/tool-registry-service.js';
+import type { ToolApprovalRepository } from '../../db/repositories/tool-approvals-repository.js';
 import type { PushChannelService } from '../../contexts/push-channel/push-channel-service.js';
 import type { SharedAgentService } from '../../contexts/shared-agent/shared-agent-service.js';
 import type { QuotaService } from '../../contexts/quota-management/quota-service.js';
@@ -63,6 +64,7 @@ import type { RecommendationEngine } from '../../contexts/runtime-engine/recomme
 import type { ReceiptManager } from '../../contexts/runtime-engine/receipt-manager.js';
 import type { IOAuthStateStore } from '../../contexts/identity-access/oauth-state-store.js';
 import type { BillingService } from '../../contexts/billing/billing-service.js';
+import type { AgentDefinitionService } from '../../contexts/agent-core/application/agent-definition-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -117,6 +119,7 @@ export interface AppContext {
   notificationService: NotificationService;
   toolManagementService: ToolManagementService;
   toolRegistryService: ToolRegistryService;
+  toolApprovalRepo: ToolApprovalRepository;
   pushChannelService: PushChannelService;
   sharedAgentService: SharedAgentService;
   gatewayHealth: GatewayHealth;
@@ -141,4 +144,5 @@ export interface AppContext {
   agentAdapterRegistry: AgentRuntimeAdapterRegistry;
   oauthStateStore: IOAuthStateStore;
   billingService: BillingService;
+  agentDefinitionService: AgentDefinitionService;
 }

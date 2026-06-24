@@ -147,4 +147,39 @@ export async function migrateToolRegistry(db: MigrateDb): Promise<void> {
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS idx_tool_call_logs_status ON tool_call_logs(status)`
   );
+
+  /* v1.9:#7 执行时 Human Review。
+   * ① tool_definitions 加 risk_level(幂等,默认 medium,旧数据兼容)。
+   * ② 新表 tool_approvals(审批队列,复刻 marketplace IApprovalStore 语义)。 */
+  await db.execute(
+    sql`ALTER TABLE tool_definitions ADD COLUMN IF NOT EXISTS risk_level VARCHAR(16) NOT NULL DEFAULT 'medium'`
+  );
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS tool_approvals (
+      id VARCHAR(64) PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      tool_id VARCHAR(64) NOT NULL,
+      tool_name VARCHAR(256) NOT NULL,
+      risk_level VARCHAR(16) NOT NULL,
+      instance_id VARCHAR(64),
+      params JSONB NOT NULL,
+      context JSONB NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'pending',
+      requested_by VARCHAR(128),
+      reviewed_by VARCHAR(128),
+      review_note TEXT,
+      result JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      reviewed_at TIMESTAMPTZ
+    )
+  `);
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS idx_tool_approvals_tenant ON tool_approvals(tenant_id)`
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS idx_tool_approvals_status ON tool_approvals(status)`
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS idx_tool_approvals_instance ON tool_approvals(instance_id)`
+  );
 }

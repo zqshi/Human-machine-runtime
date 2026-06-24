@@ -100,6 +100,8 @@ export interface ToolInvocationRequest {
 export interface ToolInvocationResult extends ExecutionResult {
   /** tool_call_logs 行 id */
   logId: string;
+  /** v1.9:#7 审批 gate 拦截时返回(需人工审批后续执行,见 ApprovalGate) */
+  pendingApproval?: { approvalId: string; reason: string };
 }
 
 /** 端点当前是否可调用：须启用且非 down（domain 纯逻辑）。 */

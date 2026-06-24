@@ -18,6 +18,7 @@ const createInstanceSchema = z.object({
   permissionTemplateId: z.string().optional(),
   permissionTemplate: z.record(z.unknown()).optional(),
   requestId: z.string().optional(),
+  agentDefinitionId: z.string().optional(),
 });
 
 export function createInstanceRoutes(

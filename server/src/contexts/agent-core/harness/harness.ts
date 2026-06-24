@@ -13,8 +13,10 @@ import type {
 } from '../sandbox/agent-runtime-adapter.js';
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
 import type { IAssemblyProvider, AssemblyRequest } from '../domain/assembly-provider.js';
+import type { IPersonaProvider, PersonaResult } from '../domain/persona-provider.js';
+import { checkGuardrails } from '../domain/guardrail-checker.js';
 import type { ITraceRecorder } from '../domain/trace-recorder.js';
-import { newId } from '../../../shared/utils.js';
+import { newId, AppError } from '../../../shared/utils.js';
 import type { IToolRegistry } from '../../tool-management/tool-registry.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 
@@ -37,6 +39,7 @@ export class AgentHarness {
   private readonly broadcast: BroadcastFn;
   private ragProvider: IRagContextProvider | null;
   private assemblyProvider: IAssemblyProvider | null;
+  private personaProvider: IPersonaProvider | null;
   private traceRecorder: ITraceRecorder | null;
 
   constructor(
@@ -53,6 +56,7 @@ export class AgentHarness {
       });
     this.ragProvider = ragProvider ?? null;
     this.assemblyProvider = null;
+    this.personaProvider = null;
     this.traceRecorder = null;
     const execStores: AgentExecutorStores = { tasks: session.taskArtifactStore };
     this.executor = new AgentExecutor(llmClient, execStores, this.broadcast);
@@ -208,6 +212,46 @@ export class AgentHarness {
       }
     }
 
+    // v1.9:persona 注入 + guardrail 拦截(#1)。provider 缺省或无 persona 则不改 task(兼容旧实例)。
+    // block 命中 → 抛 GUARDRAIL_BLOCKED(含 refusalResponse),不 dispatch;调用方 catch 返回拒答。
+    if (this.personaProvider && instanceId) {
+      const persona = await traceStep<PersonaResult | null>(
+        'persona.recall',
+        'internal',
+        async () => {
+          const p = await this.personaProvider!.getPersona(instanceId);
+          if (p.hasPersona && p.systemPrompt && input0.systemPrompt === undefined) {
+            input0.systemPrompt = p.systemPrompt;
+            task.input = input0;
+          }
+          return p;
+        }
+      ).catch((err) => {
+        appEventBus.publish('harness:persona:failed', {
+          taskId: task.id,
+          err: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      });
+      // guardrail 检查(纯逻辑,同步,不阻断 trace)。block 直接拒答;review 暂标记留后续 LLM 复核。
+      if (persona?.hasPersona && persona.guardrails.length > 0) {
+        const promptText = typeof input0.prompt === 'string' ? input0.prompt : task.description;
+        const guardResult = checkGuardrails(promptText, persona.guardrails);
+        if (guardResult.blocked) {
+          appEventBus.publish('harness:guardrail:blocked', {
+            taskId: task.id,
+            tenantId: task.tenantId,
+            ruleId: guardResult.matchedRule?.id,
+          });
+          throw new AppError(
+            persona.refusalResponse || '该请求超出我的处理范围。',
+            403,
+            'GUARDRAIL_BLOCKED'
+          );
+        }
+      }
+    }
+
     appEventBus.publish('sandbox:task:dispatched', {
       taskId: task.id,
       tenantId: task.tenantId,
@@ -269,6 +313,14 @@ export class AgentHarness {
    */
   setAssemblyProvider(provider: IAssemblyProvider | null): void {
     this.assemblyProvider = provider;
+  }
+
+  /**
+   * 注入 PersonaProvider,激活 dispatchTask 前的人设注入 + guardrail 拦截(v1.9,#1)。
+   * 延后注入(模式同 setRagProvider/setAssemblyProvider)。
+   */
+  setPersonaProvider(provider: IPersonaProvider | null): void {
+    this.personaProvider = provider;
   }
 
   /**

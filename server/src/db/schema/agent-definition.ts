@@ -43,6 +43,15 @@ export const agentDefinitions = pgTable(
     boundSkills: jsonb('bound_skills').$type<string[]>().notNull().default([]),
     /** 模型配置:{ primaryModel, fallbackModels, maxConcurrency } */
     modelConfig: jsonb('model_config').$type<Record<string, unknown>>().notNull().default({}),
+    /** v1.9:人设与拒答声明(AgentPersonaSpec,见 domain/agent-definition.ts) */
+    persona: jsonb('persona').$type<Record<string, unknown>>().notNull().default({}),
+    /** v1.9:绑定知识库 id 列表(RAG 召回范围约束) */
+    boundKnowledge: jsonb('bound_knowledge').$type<string[]>().notNull().default([]),
+    /** v1.9:运行时声明(RuntimeDeclaration,治本 D8) */
+    runtime: jsonb('runtime')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({ runtimeType: 'claude' }),
     description: varchar('description', { length: 512 }),
     status: varchar('status', { length: 32 }).notNull().default('active'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

@@ -35,6 +35,9 @@ export class AgentDefinitionRepository {
         boundTools: input.spec.boundTools,
         boundSkills: input.spec.boundSkills,
         modelConfig: input.spec.modelConfig as unknown as Record<string, unknown>,
+        persona: input.spec.persona as unknown as Record<string, unknown>,
+        boundKnowledge: input.spec.boundKnowledge,
+        runtime: input.spec.runtime as unknown as Record<string, unknown>,
         description: input.description,
       })
       .returning();
@@ -78,6 +81,9 @@ export class AgentDefinitionRepository {
         boundTools: spec.boundTools,
         boundSkills: spec.boundSkills,
         modelConfig: spec.modelConfig as unknown as Record<string, unknown>,
+        persona: spec.persona as unknown as Record<string, unknown>,
+        boundKnowledge: spec.boundKnowledge,
+        runtime: spec.runtime as unknown as Record<string, unknown>,
         // spec 变更 generation 递增(世代)
         generation: sql`generation + 1`,
         updatedAt: new Date(),
@@ -112,6 +118,9 @@ function toDomain(row: typeof agentDefinitions.$inferSelect): AgentDefinition {
       boundTools: row.boundTools,
       boundSkills: row.boundSkills,
       modelConfig: row.modelConfig as unknown as AgentDefinition['spec']['modelConfig'],
+      persona: row.persona as unknown as AgentDefinition['spec']['persona'],
+      boundKnowledge: row.boundKnowledge,
+      runtime: row.runtime as unknown as AgentDefinition['spec']['runtime'],
     },
     description: row.description,
     status: row.status as 'active' | 'archived',

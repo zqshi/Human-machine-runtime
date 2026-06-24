@@ -22,7 +22,7 @@ import type { ToolDefinitionRepository } from '../../db/repositories/tool-regist
 import type { SkillRepository } from '../../db/repositories/skill-repository.js';
 
 /** InstanceRepository → IInstanceLookupPort(只暴露 getAgentDefinitionId) */
-function adaptInstanceLookup(repo: InstanceRepository): IInstanceLookupPort {
+export function adaptInstanceLookup(repo: InstanceRepository): IInstanceLookupPort {
   return {
     async getAgentDefinitionId(instanceId) {
       // InstanceRepository.findById 返回 Instance(含 agentDefinitionId,v1.3 加)
@@ -33,7 +33,7 @@ function adaptInstanceLookup(repo: InstanceRepository): IInstanceLookupPort {
 }
 
 /** AgentDefinitionRepository → IAgentDefinitionPort */
-function adaptAgentDefinition(repo: AgentDefinitionRepository): IAgentDefinitionPort {
+export function adaptAgentDefinition(repo: AgentDefinitionRepository): IAgentDefinitionPort {
   return { getById: (id) => repo.getById(id) };
 }
 
