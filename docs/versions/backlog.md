@@ -25,6 +25,7 @@
 | D4 | credential-vault 前端管理面（后端 API 已就绪，T10） | v1.2.1 | P2 | v1.3+ |
 | D5 | tool-management db 连接解锁接入（credentialManagementService.getCredentialSecret 已提供，需注入 ToolManagementService） | v1.2.1 | P2 | v1.3+ |
 | D6 | credential-repository 集成测试（DB 层，mock Database） | v1.2.1 | P3 | v1.3+ |
+| D7 | bootstrap.ts 832 行装配 god-file（§14.1 第 10 项 800-1000 行技术债） | v1.8 质量检测 | P2 | ✅ 已清 2026-06-24：拆 8 个 bundle 到 `app/bootstrap/`，832→542 行；type-check + 1455 单测 + 真实 dev 启动验证全过 |
 
 ## 候选方向（未排期）
 

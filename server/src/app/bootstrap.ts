@@ -1,8 +1,6 @@
 import { pool, type Database } from '../db/client.js';
 import { config } from '../config/index.js';
 import { logger } from './logger.js';
-import { appEventBus } from '../shared/event-bus.js';
-import { encrypt, decrypt } from '../contexts/credential-vault/crypto.js';
 
 // 拆分出的子模块
 import type { AppContext } from './bootstrap/types.js';
@@ -11,7 +9,13 @@ import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
-import { EvalAgentInvoker } from './bootstrap/eval-agent-invoker.js';
+import { buildEvalBundle } from './bootstrap/eval-bundle.js';
+import { buildMemoryBundle } from './bootstrap/memory-bundle.js';
+import { buildKnowledgeBundle } from './bootstrap/knowledge-bundle.js';
+import { buildQuotaBundle } from './bootstrap/quota-bundle.js';
+import { buildToolBundle } from './bootstrap/tool-bundle.js';
+import { buildRuntimeEngine } from './bootstrap/runtime-engine.js';
+import { buildAgentAdapters } from './bootstrap/agent-adapters.js';
 import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
@@ -34,23 +38,16 @@ import { OIDCAuthProvider } from '../contexts/identity-access/providers/oidc-pro
 import { PlatformBeProxyProvider } from '../contexts/identity-access/providers/platform-be-proxy-provider.js';
 import { WpsOAuthProvider } from '../contexts/identity-access/providers/wps-oauth-provider.js';
 import { DrizzleSessionStore } from '../contexts/identity-access/session-store.js';
-import { TenantService } from '../contexts/tenant-management/tenant-service.js';
 import { AuditService } from '../contexts/audit-observability/audit-service.js';
 import { SkillService } from '../contexts/shared-assets/skill-service.js';
 import { InstanceService } from '../contexts/tenant-instance/instance-service.js';
 import { ModelGrantChecker } from '../contexts/gateway/model-grant-checker.js';
 import { LlmKeySyncService } from '../contexts/gateway/llm-key-sync-service.js';
 import { DocumentService } from '../contexts/document/document-service.js';
-import { ChannelService } from '../contexts/channel/channel-service.js';
-import { MatrixChannelAdapter } from '../contexts/channel/adapters/matrix-adapter.js';
-import { WpsChannelAdapter } from '../contexts/channel/adapters/wps-adapter.js';
-import { WebSocketChannelAdapter } from '../contexts/channel/adapters/websocket-adapter.js';
 import { DecisionConsole } from '../contexts/channel/decision-console.js';
 import { ChannelRouter } from '../contexts/channel/channel-router.js';
 import { ChannelRoutingRepository } from '../db/repositories/channel-routing-repository.js';
-import { InboundPipeline } from '../contexts/channel/inbound-pipeline.js';
 import { McpService } from '../contexts/mcp-management/mcp-service.js';
-import { TokenUsageService } from '../contexts/observability/token-usage-service.js';
 
 import { LocalProvisioner } from '../contexts/tenant-instance/provisioners/local-provisioner.js';
 import { ContainerOrchestratorProvisioner } from '../contexts/tenant-instance/provisioners/container-orchestrator-provisioner.js';
@@ -59,14 +56,6 @@ import type { IInstanceProvisioner } from '../contexts/tenant-instance/instance-
 import { MatrixBot } from '../integrations/matrix/matrix-bot.js';
 
 import { ContainerOrchestratorWsBridge } from '../contexts/gateway/clients/container-orchestrator-ws-bridge.js';
-// buildChannelService 函数签名需要 ContainerOrchestratorClient 类型注解,仅 type 导入
-import type { ContainerOrchestratorClient } from '../contexts/gateway/clients/container-orchestrator-client.js';
-
-import { WeKnoraClient } from '../contexts/gateway/clients/weknora-client.js';
-import { WkMappingRepository } from '../db/repositories/weknora-mapping-repository.js';
-import { KnowledgeBaseRepository } from '../db/repositories/knowledge-base-repository.js';
-import { KnowledgeEntryRepository } from '../db/repositories/knowledge-entry-repository.js';
-import { KnowledgeService } from '../contexts/knowledge/knowledge-service.js';
 
 import { MarketplaceService } from '../contexts/marketplace/marketplace-service.js';
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
@@ -77,38 +66,16 @@ import { WorkspaceRepository } from '../db/repositories/workspace-repository.js'
 import { AgentProfileRepository } from '../db/repositories/agent-profile-repository.js';
 import { TokenUsageRepository } from '../db/repositories/token-usage-repository.js';
 import { AgentCore } from '../contexts/agent-core/agent-core.js';
-import { SessionStore } from '../contexts/agent-core/session/session-store.js';
 import { AgentHarness } from '../contexts/agent-core/harness/harness.js';
-import { LiteLlmClientAdapter } from '../contexts/agent-core/harness/litellm-llm-client.js';
-import { projectDecision } from '../contexts/runtime-engine/decision-projector.js';
 import { AnalyticsService } from '../contexts/analytics/analytics-service.js';
 import { UserManagementService } from '../contexts/identity-access/user-management-service.js';
 import { SystemConfigService } from '../contexts/system-config/system-config-service.js';
 import { NotificationService } from '../contexts/notification/notification-service.js';
-import { ToolManagementService } from '../contexts/tool-management/tool-management-service.js';
-import { ToolRegistryService } from '../contexts/tool-management/tool-registry-service.js';
-import { McpClientPool } from '../contexts/tool-management/mcp-client.js';
-import {
-  ToolSourceRepository,
-  ToolDefinitionRepository,
-  ToolInstanceRepository,
-  ToolCallLogRepository,
-} from '../db/repositories/tool-registry-repository.js';
+import { ToolDefinitionRepository } from '../db/repositories/tool-registry-repository.js';
 import { PushChannelService } from '../contexts/push-channel/push-channel-service.js';
 import { SharedAgentService } from '../contexts/shared-agent/shared-agent-service.js';
 import { GatewayHealth } from '../contexts/gateway/gateway-health.js';
-import { QuotaRepository } from '../db/repositories/quota-repository.js';
-import { PlanRepository } from '../db/repositories/plan-repository.js';
-import { QuotaService } from '../contexts/quota-management/quota-service.js';
-import { PlanService } from '../contexts/tenant-management/plan-service.js';
-import { QuotaMonitor } from '../contexts/quota-management/quota-monitor.js';
 import { TraceSyncJob } from '../contexts/observability/trace-sync-job.js';
-import { EvalBenchmarkRepository } from '../db/repositories/eval-benchmark-repository.js';
-import { EvalEvaluatorRepository } from '../db/repositories/eval-evaluator-repository.js';
-import { EvalService } from '../contexts/eval-benchmark/eval-service.js';
-import { EmployeeMemoryRepository } from '../db/repositories/employee-memory-repository.js';
-import { MemoryService } from '../contexts/employee-memory/memory-service.js';
-import { Mem0Client } from '../contexts/employee-memory/mem0-client.js';
 import { DepartmentRepository } from '../db/repositories/department-repository.js';
 import { DepartmentService } from '../contexts/department/department-service.js';
 import { ScheduledTaskRepository } from '../db/repositories/scheduled-task-repository.js';
@@ -134,20 +101,6 @@ import { DbOAuthStateRepository } from '../db/repositories/oauth-state-repositor
 import type { IOAuthStateStore } from '../contexts/identity-access/oauth-state-store.js';
 import { registerOAuthStateCleanup } from '../contexts/scheduler/handlers/oauth-state-cleanup.js';
 import { InstanceHealthRepository } from '../db/repositories/instance-health-repository.js';
-import { BillingRepository } from '../db/repositories/billing-repository.js';
-import { BillingService } from '../contexts/billing/billing-service.js';
-import { estimateCostUsd } from '../contexts/agent-core/domain/pricing.js';
-
-import { MessageNormalizer } from '../contexts/runtime-engine/message-normalizer.js';
-import { PriorityScorer } from '../contexts/runtime-engine/priority-scorer.js';
-import { DedupEngine } from '../contexts/runtime-engine/dedup-engine.js';
-import { RecommendationEngine } from '../contexts/runtime-engine/recommendation-engine.js';
-import { ReceiptManager } from '../contexts/runtime-engine/receipt-manager.js';
-import { AgentRuntimeAdapterRegistry } from '../contexts/agent-core/sandbox/adapter-registry.js';
-import { OpenClawAdapter } from '../contexts/agent-core/sandbox/openclaw-adapter.js';
-import { ClaudeAgentSdkAdapter } from '../contexts/agent-core/sandbox/claude-agent-sdk-adapter.js';
-import { DockerWorkerRunner } from '../contexts/agent-core/sandbox/infrastructure/docker-worker-runner.js';
-import { DbInstanceSessionStore } from '../contexts/agent-core/sandbox/infrastructure/instance-session-store.js';
 
 function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegistry {
   const registry = new AuthProviderRegistry(config.auth.defaultProvider);
@@ -190,18 +143,6 @@ function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegist
   }
 
   return registry;
-}
-
-function buildChannelService(
-  containerOrchestratorClient: ContainerOrchestratorClient,
-  pipeline?: InboundPipeline
-): ChannelService {
-  const channelService = new ChannelService();
-  if (pipeline) channelService.setInboundPipeline(pipeline);
-  channelService.registerAdapter(new MatrixChannelAdapter());
-  channelService.registerAdapter(new WpsChannelAdapter(containerOrchestratorClient));
-  channelService.registerAdapter(new WebSocketChannelAdapter());
-  return channelService;
 }
 
 export function createAppContext(db: Database): AppContext {
@@ -273,177 +214,34 @@ export function createAppContext(db: Database): AppContext {
   };
   const instanceService = new InstanceService(instanceRepo, provisioner, auditLogger);
 
-  const inboundPipeline = new InboundPipeline();
-
-  /* ──── Runtime Engine: 消息处理管线 ──── */
-  const messageNormalizer = new MessageNormalizer();
-  const dedupEngine = new DedupEngine();
-  const priorityScorer = new PriorityScorer();
-  // agent-core 三层重构(D2-D5):Session(状态)/Harness(编排)/Sandbox(执行)。
-  // agentSession 提前实例化,inboundPipeline 闭包需引用 recordDecision。
-  // agentHarness / agentCore 在 agentAdapterRegistry 构造完成后组装(下方)。
-  const agentSession = new SessionStore(db);
-  // 提前实例化 agentLlmClient,供 RecommendationEngine + agentHarness 共享。
-  // recentDecisionsProvider 暂不接入(provider 需要 agentSession 已构造,
-  // 避免循环依赖,留待后续按需补齐)
-  const agentLlmClient = new LiteLlmClientAdapter(litellmClient, config.agent.llmModel);
-  const recommendationEngine = new RecommendationEngine(agentLlmClient);
-
-  inboundPipeline.use(async (msg) => {
-    const normalized = messageNormalizer.normalize(msg);
-    const dedupResult = dedupEngine.check(normalized);
-    if (dedupResult.isDuplicate) {
-      logger.debug({ msgId: msg.id, originalId: dedupResult.originalMessageId }, 'message deduped');
-      return;
-    }
-    const priority = priorityScorer.score(normalized);
-    appEventBus.publish('runtime:message-scored', {
-      messageId: normalized.id,
-      intent: normalized.intent,
-      urgency: normalized.urgency,
-      score: priority.score,
-      channelType: normalized.channelType,
-    });
-
-    if (priority.score >= 60) {
-      const recResult = await recommendationEngine.generateRecommendations({
-        triggeredBy: normalized,
-        relatedMessages: [],
-        historicalDecisions: [],
-        dataPoints: [],
-      });
-      appEventBus.publish('runtime:recommendation', {
-        messageId: normalized.id,
-        recommendations: recResult.recommendations,
-      });
-      // 把首选推荐投影为待确认 Decision 落库（消息→决策运行时闭环）
-      const primary = recResult.recommendations[0];
-      if (primary) {
-        const decision = projectDecision(
-          { message: normalized, recommendation: primary },
-          Date.now()
-        );
-        agentSession.recordDecision(decision);
-      }
-    }
-  });
-
-  const channelService = buildChannelService(containerOrchestratorClient, inboundPipeline);
-  const receiptManager = new ReceiptManager(channelService);
-
-  /* tokenUsageService 提前实例化:claudeAdapter.onTaskComplete 回调闭包需要捕获它 */
-  const tokenUsageService = new TokenUsageService(
-    profileServiceClient,
+  /* ──── Runtime Engine: 消息管线 + 用量/计费(含 inboundPipeline 闭包) ──── */
+  const {
+    channelService,
+    receiptManager,
+    tokenUsageService,
+    billingService,
+    agentSession,
+    agentLlmClient,
+    recommendationEngine,
+    messageNormalizer,
+    dedupEngine,
+    priorityScorer,
+  } = buildRuntimeEngine(
+    db,
+    containerOrchestratorClient,
     litellmClient,
+    profileServiceClient,
     tokenUsageRepo
   );
 
-  /* billingService 提前实例化:claudeAdapter.onTaskComplete 记账闭包需要捕获它 */
-  const billingRepo = new BillingRepository(db);
-  const billingService = new BillingService(billingRepo);
-
-  /* ──── AgentRuntimeAdapter Registry ──── */
-  const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
-  const openClawAdapter = new OpenClawAdapter(clusterInstanceClient);
-  agentAdapterRegistry.register(openClawAdapter);
-
-  // Claude Agent SDK adapter(主执行引擎)。env 不配 ANTHROPIC_API_KEY 时跳过,
-  // 系统降级到只有 OpenClaw 的旧行为。
-  if (config.claude.apiKey) {
-    const claudeSessionStore = new DbInstanceSessionStore(db);
-    const claudeWorkerRunner = new DockerWorkerRunner();
-    const claudeAdapter = new ClaudeAgentSdkAdapter(claudeWorkerRunner, claudeSessionStore, {
-      apiKey: config.claude.apiKey,
-      anthropicBaseUrl: config.claude.anthropicBaseUrl,
-      workerImage: config.claude.workerImage,
-      workerTimeoutMs: config.claude.workerTimeoutMs,
-      workspaceRoot: config.claude.workspaceRoot,
-      defaultModel: config.claude.defaultModel,
-      defaultMaxTurns: config.claude.defaultMaxTurns,
-      defaultBudgetUsd: config.claude.defaultBudgetUsd,
-    });
-    agentAdapterRegistry.register(claudeAdapter);
-
-    claudeAdapter.onTaskComplete((result) => {
-      const receipt = receiptManager.getReceipt(result.taskId);
-      // token 用量入账(无论 receipt 是否存在,usage 都是真实 LLM 消耗)
-      if (result.success && result.tokenUsage) {
-        const tenantIdForUsage = receipt?.tenantId ?? 'unknown';
-        tokenUsageService
-          .recordUsage({
-            tenantId: tenantIdForUsage,
-            model: result.tokenUsage.model,
-            inputTokens: result.tokenUsage.prompt,
-            outputTokens: result.tokenUsage.completion,
-            source: 'claude-agent-sdk',
-          })
-          .catch((err) => logger.warn({ err: String(err) }, 'claude token usage record failed'));
-        // billing 记账:按定价表估算 USD 成本,落入 billing_events + 累加账户余额
-        const costUsd = estimateCostUsd(
-          result.tokenUsage.model,
-          result.tokenUsage.prompt,
-          result.tokenUsage.completion
-        );
-        if (costUsd > 0) {
-          billingService
-            .recordEvent({
-              tenantId: tenantIdForUsage,
-              type: 'token_usage',
-              amount: costUsd,
-              metadata: {
-                model: result.tokenUsage.model,
-                inputTokens: result.tokenUsage.prompt,
-                outputTokens: result.tokenUsage.completion,
-                taskId: result.taskId,
-                source: 'claude-agent-sdk',
-              },
-            })
-            .catch((err) => logger.warn({ err: String(err) }, 'claude billing record failed'));
-        }
-      }
-      if (!receipt) return;
-      if (result.success) {
-        receiptManager
-          .sendSuccessReceipt(receipt.id, receipt.summary, JSON.stringify(result.output))
-          .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
-      } else {
-        receiptManager
-          .sendFailureReceipt(receipt.id, receipt.summary, result.error ?? 'claude task failed')
-          .catch((err) => logger.warn({ err: String(err) }, 'claude receipt send failed'));
-      }
-      appEventBus.publish('receipt:sent', {
-        receiptId: result.taskId,
-        taskId: result.taskId,
-        channel: receipt.originChannel ?? 'unknown',
-        success: result.success,
-      });
-    });
-  }
-
-  openClawAdapter.onTaskComplete((result) => {
-    const receipt = receiptManager.getReceipt(result.taskId);
-    if (receipt) {
-      if (result.success) {
-        receiptManager
-          .sendSuccessReceipt(receipt.id, receipt.summary, JSON.stringify(result.output))
-          .catch((err) => logger.warn({ err: String(err) }, 'receipt send failed'));
-      } else {
-        receiptManager
-          .sendFailureReceipt(
-            receipt.id,
-            receipt.summary,
-            (result.output?.error as string) ?? 'unknown error'
-          )
-          .catch((err) => logger.warn({ err: String(err) }, 'receipt send failed'));
-      }
-    }
-    appEventBus.publish('receipt:sent', {
-      receiptId: result.taskId,
-      taskId: result.taskId,
-      channel: receipt?.originChannel ?? 'unknown',
-      success: result.success,
-    });
-  });
+  /* ──── Agent Adapters (执行引擎 + onTaskComplete 闭包) ──── */
+  const { agentAdapterRegistry } = buildAgentAdapters(
+    db,
+    receiptManager,
+    tokenUsageService,
+    billingService,
+    clusterInstanceClient
+  );
   const channelRoutingRepo = new ChannelRoutingRepository(db);
   const channelRouter = new ChannelRouter(channelService, channelRoutingRepo);
   const decisionConsole = new DecisionConsole(channelService, channelRouter);
@@ -483,32 +281,11 @@ export function createAppContext(db: Database): AppContext {
     litellmClient,
   });
   const notificationService = new NotificationService(operationalRepo);
-  const toolManagementService = new ToolManagementService(
-    new ToolSourceRepository(db),
-    new ToolDefinitionRepository(db),
-    new ToolInstanceRepository(db),
-    new ToolCallLogRepository(db),
-    credentialService
-  );
-  const toolRegistryService = new ToolRegistryService(
-    toolManagementService,
-    new ToolSourceRepository(db),
-    new McpClientPool(),
+  const { toolManagementService, toolRegistryService } = buildToolBundle(
+    db,
+    credentialService,
     notificationService,
-    new PgAdvisoryLockProvider(pool)
-  );
-  // 激活 Agent 工具调用兜底（解决 toolRegistry 晚于 agentHarness 实例化的顺序问题）
-  agentHarness.setToolRegistry(toolRegistryService);
-  // P4: 定时工具健康检查（每 5 分钟探活各 source、维护 healthStatus、转 down 告警）。
-  // 多实例并发已由 advisory lock（PgAdvisoryLockProvider, key=tool-health-check）兜底：
-  // 同一时刻只有一个实例实际探活，其余跳过。
-  setInterval(
-    () => {
-      void toolRegistryService.healthCheckAll().catch((err) => {
-        logger.warn({ err: String(err) }, 'tool health check failed');
-      });
-    },
-    5 * 60 * 1000
+    agentHarness
   );
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
@@ -517,71 +294,20 @@ export function createAppContext(db: Database): AppContext {
     marketplaceClient
   );
 
-  /* ──── WeKnora Knowledge Service (条件启用) ──── */
-  const wkMappingRepo = new WkMappingRepository(db);
-  const weKnoraClient = config.weknora.enabled ? new WeKnoraClient() : null;
-
-  const wkEncryption = {
-    encrypt: (s: string) => encrypt(s, config.weknora.encryptionKey),
-    decrypt: (s: string) => decrypt(s, config.weknora.encryptionKey),
-  };
-
-  const kbRepo = new KnowledgeBaseRepository(db);
-  const entryRepo = new KnowledgeEntryRepository(db);
-
-  const knowledgeService = weKnoraClient
-    ? new KnowledgeService({
-        client: weKnoraClient,
-        mappingRepo: wkMappingRepo,
-        kbRepo,
-        entryRepo,
-        encryption: wkEncryption,
-      })
-    : null;
-
-  const tenantService = new TenantService(tenantRepo, knowledgeService ?? undefined);
-
-  const planRepo = new PlanRepository(db);
-  const planTenantChecker = {
-    async countByPlan(planSlug: string) {
-      const all = await tenantRepo.listTenants();
-      return all.filter((t) => t.plan === planSlug).length;
-    },
-  };
-  const planService = new PlanService(planRepo, planTenantChecker);
-
-  const quotaRepo = new QuotaRepository(db);
-  const quotaService = new QuotaService(
-    quotaRepo,
-    { getById: async (id: string) => tenantService.getById(id) },
-    { list: async (tid?: string) => instanceService.list(tid) },
-    {
-      getUsageSummary: async (tid: string, period?: string) =>
-        tokenUsageService.getUsageSummary(tid, period),
-    }
+  /* ──── Knowledge (WeKnora RAG,条件启用) ──── */
+  const { knowledgeService, wkMappingRepo, weKnoraClient, tenantService } = buildKnowledgeBundle(
+    db,
+    tenantRepo
   );
 
-  /* ──── QuotaMonitor (定时配额评估) ──── */
-  const quotaMonitorNotifier = {
-    async notifyAlert(
-      tenantId: string,
-      alert: { resourceType: string; currentPct: number; thresholdPct: number; severity: string }
-    ) {
-      await notificationService.createFromAlert(tenantId, alert);
-    },
-  };
-  const quotaMonitorTenantSource = {
-    async listActiveTenantIds() {
-      const tenants = await tenantService.list({ status: 'active' });
-      return tenants.map((t) => t.id);
-    },
-  };
-  const quotaMonitorInterval = config.env === 'development' ? 60_000 : 300_000;
-  const quotaMonitor = new QuotaMonitor(
-    quotaService,
-    quotaMonitorTenantSource,
-    quotaMonitorNotifier,
-    quotaMonitorInterval
+  /* ──── Plan & Quota (套餐 + 配额 + 定时评估) ──── */
+  const { quotaService, planService, quotaMonitor } = buildQuotaBundle(
+    db,
+    tenantRepo,
+    tenantService,
+    instanceService,
+    tokenUsageService,
+    notificationService
   );
 
   /* ──── TraceSyncJob (LiteLLM Spend Logs → ai_traces) ──── */
@@ -589,30 +315,14 @@ export function createAppContext(db: Database): AppContext {
   const traceSyncJob = new TraceSyncJob(litellmClient, aiGatewayRepo, traceSyncInterval);
 
   /* ──── Eval Benchmark ──── */
-  const evalBenchmarkRepo = new EvalBenchmarkRepository(db);
-  const evalEvaluatorRepo = new EvalEvaluatorRepository(db);
-  // v1.7:eval 真实 Agent 执行(litellm + toolMgmt + toolDefRepo 多轮工具循环)。toolMgmt 已早实例化。
-  const evalAgentPort = new EvalAgentInvoker(
+  const { evalService, evalBenchmarkRepo, evalEvaluatorRepo } = buildEvalBundle(
+    db,
     litellmClient,
-    toolManagementService,
-    new ToolDefinitionRepository(db)
-  );
-  const evalService = new EvalService(
-    evalBenchmarkRepo,
-    evalEvaluatorRepo,
-    litellmClient,
-    evalAgentPort
+    toolManagementService
   );
 
   /* ──── Employee Memory ──── */
-  const employeeMemoryRepo = new EmployeeMemoryRepository(db);
-  const mem0Client = new Mem0Client();
-  const memoryService = new MemoryService(
-    employeeMemoryRepo,
-    knowledgeService,
-    mem0Client,
-    instanceRepo
-  );
+  const { memoryService } = buildMemoryBundle(db, knowledgeService, instanceRepo);
 
   // D2:激活 RAG 上下文召回(knowledge + memory + LLM 判断)。knowledgeService null 时只召回 memory 侧。
   agentHarness.setRagProvider(buildRagProvider(knowledgeService, memoryService, agentLlmClient));
