@@ -123,10 +123,7 @@ export class ToolDefinitionRepository {
   /** v1.4:批量按 id 查(组装层 boundTools→allowedTools 用)。空数组返回空,不报错。repo 纯持久化不过滤,enabled/tenantId 校验留 domain 层。 */
   async findByIds(ids: string[]): Promise<ToolDefinitionRow[]> {
     if (ids.length === 0) return [];
-    return this.db
-      .select()
-      .from(toolDefinitions)
-      .where(inArray(toolDefinitions.id, ids));
+    return this.db.select().from(toolDefinitions).where(inArray(toolDefinitions.id, ids));
   }
 
   async findEnabledByTenant(tenantId: string): Promise<ToolDefinitionRow[]> {

@@ -110,10 +110,7 @@ export class SkillRepository implements ISkillRepository {
   /** v1.4:批量按 id 查 SharedAsset 元数据(组装层 skillsContext 拼名字+描述用)。 */
   async getSharedAssetsByIds(ids: string[]): Promise<SharedAsset[]> {
     if (ids.length === 0) return [];
-    const rows = await this.db
-      .select()
-      .from(sharedAssets)
-      .where(inArray(sharedAssets.id, ids));
+    const rows = await this.db.select().from(sharedAssets).where(inArray(sharedAssets.id, ids));
     return rows.map(toSharedDomain);
   }
 

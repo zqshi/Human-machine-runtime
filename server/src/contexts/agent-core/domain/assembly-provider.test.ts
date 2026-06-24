@@ -23,7 +23,13 @@ function makeBoundToolsPort(
 }
 
 function makeContentPort(
-  rows: Array<{ id: string; name: string; description: string; content: string | null; contentRef: string | null }>
+  rows: Array<{
+    id: string;
+    name: string;
+    description: string;
+    content: string | null;
+    contentRef: string | null;
+  }>
 ): IContentStorePort {
   return { getByIds: vi.fn().mockResolvedValue(rows) };
 }
@@ -32,7 +38,9 @@ function makeLogger() {
   return { warn: vi.fn() };
 }
 
-function makeDef(overrides: { boundTools?: string[]; boundSkills?: string[] } = {}): AgentDefinition {
+function makeDef(
+  overrides: { boundTools?: string[]; boundSkills?: string[] } = {}
+): AgentDefinition {
   return {
     id: 'adef_1',
     tenantId: 'tn_demo',
@@ -148,7 +156,9 @@ describe('AssemblyProvider', () => {
     const svc = new AssemblyProvider(
       makeInstanceLookup('adef_1'),
       makeAgentDefPort(def),
-      makeBoundToolsPort([{ id: 'tdef_1', name: 'Bash', enabled: true, status: 'active', tenantId: 'tn_demo' }]),
+      makeBoundToolsPort([
+        { id: 'tdef_1', name: 'Bash', enabled: true, status: 'active', tenantId: 'tn_demo' },
+      ]),
       makeContentPort([{ id: 'sk_1', name: 'S', description: 'd', content: 'c' }]),
       makeLogger()
     );
@@ -162,7 +172,9 @@ describe('AssemblyProvider', () => {
     const svc = new AssemblyProvider(
       makeInstanceLookup('adef_1'),
       makeAgentDefPort(def),
-      makeBoundToolsPort([{ id: 'tdef_1', name: 'Bash', enabled: true, status: 'active', tenantId: 'tn_other' }]),
+      makeBoundToolsPort([
+        { id: 'tdef_1', name: 'Bash', enabled: true, status: 'active', tenantId: 'tn_other' },
+      ]),
       null,
       makeLogger()
     );
@@ -176,7 +188,9 @@ describe('AssemblyProvider', () => {
     const svc = new AssemblyProvider(
       makeInstanceLookup('adef_1'),
       makeAgentDefPort(def),
-      makeBoundToolsPort([{ id: 'tdef_1', name: 'Bash', enabled: false, status: 'active', tenantId: 'tn_demo' }]),
+      makeBoundToolsPort([
+        { id: 'tdef_1', name: 'Bash', enabled: false, status: 'active', tenantId: 'tn_demo' },
+      ]),
       null,
       makeLogger()
     );
@@ -253,7 +267,9 @@ describe('AssemblyProvider', () => {
       makeInstanceLookup('adef_1'),
       makeAgentDefPort(def),
       null,
-      makeContentPort([{ id: 'sk_1', name: 'S', description: 'd', content: null, contentRef: '历史内容文本' }]),
+      makeContentPort([
+        { id: 'sk_1', name: 'S', description: 'd', content: null, contentRef: '历史内容文本' },
+      ]),
       makeLogger()
     );
     const r = await svc.assemble(REQ);
@@ -266,7 +282,15 @@ describe('AssemblyProvider', () => {
       makeInstanceLookup('adef_1'),
       makeAgentDefPort(def),
       null,
-      makeContentPort([{ id: 'sk_1', name: 'S', description: 'd', content: null, contentRef: 'https://x.com/s.md' }]),
+      makeContentPort([
+        {
+          id: 'sk_1',
+          name: 'S',
+          description: 'd',
+          content: null,
+          contentRef: 'https://x.com/s.md',
+        },
+      ]),
       makeLogger()
     );
     const r = await svc.assemble(REQ);

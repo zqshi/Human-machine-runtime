@@ -62,7 +62,10 @@ describe('AgentHarness - assembly 注入(v1.4)', () => {
     harness.setAssemblyProvider({
       assemble: vi.fn().mockResolvedValue({
         allowedTools: ['Bash'],
-        sources: { tools: { bound: 1, resolved: 1, skipped: 0 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+        sources: {
+          tools: { bound: 1, resolved: 1, skipped: 0 },
+          skills: { bound: 0, resolved: 0, skipped: 0 },
+        },
         skipped: false,
         degraded: false,
       }),
@@ -78,7 +81,10 @@ describe('AgentHarness - assembly 注入(v1.4)', () => {
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     harness.setAssemblyProvider({
       assemble: vi.fn().mockResolvedValue({
-        sources: { tools: { bound: 0, resolved: 0, skipped: 0 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+        sources: {
+          tools: { bound: 0, resolved: 0, skipped: 0 },
+          skills: { bound: 0, resolved: 0, skipped: 0 },
+        },
         skipped: true,
         degraded: false,
       }),
@@ -100,7 +106,10 @@ describe('AgentHarness - assembly 注入(v1.4)', () => {
     harness.setAssemblyProvider({
       assemble: vi.fn().mockResolvedValue({
         allowedTools: undefined, // 全失效
-        sources: { tools: { bound: 1, resolved: 0, skipped: 1 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+        sources: {
+          tools: { bound: 1, resolved: 0, skipped: 1 },
+          skills: { bound: 0, resolved: 0, skipped: 0 },
+        },
         skipped: false,
         degraded: true,
       }),

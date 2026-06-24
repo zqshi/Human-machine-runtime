@@ -12,10 +12,7 @@ import type {
   AgentTaskResult,
 } from '../sandbox/agent-runtime-adapter.js';
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
-import type {
-  IAssemblyProvider,
-  AssemblyRequest,
-} from '../domain/assembly-provider.js';
+import type { IAssemblyProvider, AssemblyRequest } from '../domain/assembly-provider.js';
 import type { IToolRegistry } from '../../tool-management/tool-registry.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 

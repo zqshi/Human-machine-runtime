@@ -23,7 +23,9 @@ export interface IAgentDefinitionPort {
 export interface IBoundToolsPort {
   findByIds(
     ids: string[]
-  ): Promise<Array<{ id: string; name: string; enabled: boolean; status: string; tenantId: string }>>;
+  ): Promise<
+    Array<{ id: string; name: string; enabled: boolean; status: string; tenantId: string }>
+  >;
 }
 
 /** skill 内容 store port */
@@ -31,7 +33,15 @@ export interface IContentStorePort {
   /** 批量查 skill 元数据 + content(组装 skillsContext) */
   getByIds(
     ids: string[]
-  ): Promise<Array<{ id: string; name: string; description: string; content: string | null; contentRef: string | null }>>;
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      description: string;
+      content: string | null;
+      contentRef: string | null;
+    }>
+  >;
 }
 
 export interface AssemblyRequest {
@@ -55,7 +65,10 @@ export interface AssemblyResult {
 }
 
 const NO_ASSEMBLY: AssemblyResult = {
-  sources: { tools: { bound: 0, resolved: 0, skipped: 0 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+  sources: {
+    tools: { bound: 0, resolved: 0, skipped: 0 },
+    skills: { bound: 0, resolved: 0, skipped: 0 },
+  },
   skipped: true,
   degraded: false,
 };
@@ -94,7 +107,9 @@ export class AssemblyProvider implements IAssemblyProvider {
     }
 
     // instanceId → agentDefinitionId → AgentDefinition
-    const agentDefinitionId = await this.instanceLookup.getAgentDefinitionId(req.instanceId).catch(() => null);
+    const agentDefinitionId = await this.instanceLookup
+      .getAgentDefinitionId(req.instanceId)
+      .catch(() => null);
     if (!agentDefinitionId) {
       return NO_ASSEMBLY; // 实例未关联定义,走默认
     }
@@ -130,8 +145,16 @@ export class AssemblyProvider implements IAssemblyProvider {
       allowedTools: toolsResult.allowedTools,
       skillsContext: skillsResult.skillsContext,
       sources: {
-        tools: { bound: toolsResult.bound, resolved: toolsResult.resolved, skipped: toolsResult.skipped },
-        skills: { bound: skillsResult.bound, resolved: skillsResult.resolved, skipped: skillsResult.skipped },
+        tools: {
+          bound: toolsResult.bound,
+          resolved: toolsResult.resolved,
+          skipped: toolsResult.skipped,
+        },
+        skills: {
+          bound: skillsResult.bound,
+          resolved: skillsResult.resolved,
+          skipped: skillsResult.skipped,
+        },
       },
       skipped: false,
       degraded,
@@ -181,9 +204,7 @@ export class AssemblyProvider implements IAssemblyProvider {
     };
   }
 
-  private async assembleSkills(
-    boundSkills: string[]
-  ): Promise<{
+  private async assembleSkills(boundSkills: string[]): Promise<{
     skillsContext: string | undefined;
     bound: number;
     resolved: number;
