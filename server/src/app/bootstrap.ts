@@ -9,6 +9,8 @@ import type { AppContext } from './bootstrap/types.js';
 import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
+import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
+import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
 // 类型重新导出,保持现有 `import type { AppContext } from '../app/bootstrap.js'` 调用方不破坏
@@ -600,6 +602,17 @@ export function createAppContext(db: Database): AppContext {
 
   // D2:激活 RAG 上下文召回(knowledge + memory + LLM 判断)。knowledgeService null 时只召回 memory 侧。
   agentHarness.setRagProvider(buildRagProvider(knowledgeService, memoryService, agentLlmClient));
+
+  // v1.4:激活组装层(按 Agent 定义自动组装 allowedTools + skillsContext)。
+  // instanceRepo/skillRepo 早实例化;AgentDefinitionRepository/ToolDefinitionRepository 此处独立 new(assembly 专用)。
+  agentHarness.setAssemblyProvider(
+    buildAssemblyProvider(
+      instanceRepo,
+      new AgentDefinitionRepository(db),
+      new ToolDefinitionRepository(db),
+      skillRepo
+    )
+  );
 
   /* ──── Scheduled Tasks (定时任务调度) ──── */
   const scheduledTaskRepo = new ScheduledTaskRepository(db);

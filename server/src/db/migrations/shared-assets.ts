@@ -112,6 +112,9 @@ export async function migrateSharedAssets(db: MigrateDb): Promise<void> {
     )
   `);
 
+  // v1.4:shared_assets 加 content 列(skill 内联内容,组装层注入 prompt;IF NOT EXISTS 幂等)
+  await db.execute(sql`ALTER TABLE shared_assets ADD COLUMN IF NOT EXISTS content TEXT`);
+
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS app_reviews (
       id SERIAL PRIMARY KEY,

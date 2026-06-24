@@ -17,6 +17,10 @@ export interface ISkillRepository {
   listAssetReports(): Promise<SkillReport[]>;
   listSharedAssets(assetType?: string): Promise<SharedAsset[]>;
   getSharedAsset(assetId: string): Promise<SharedAsset | null>;
+  /** v1.4:批量按 id 查 content(组装层 skillsContext 用) */
+  getContentsByIds(ids: string[]): Promise<Map<string, string>>;
+  /** v1.4:批量按 id 查 SharedAsset 元数据(组装层拼 skillsContext 名字+描述用) */
+  getSharedAssetsByIds(ids: string[]): Promise<SharedAsset[]>;
   addSharedAsset(asset: SharedAsset): Promise<void>;
   updateSharedAsset(asset: SharedAsset): Promise<void>;
   deleteSharedAsset(assetId: string): Promise<boolean>;

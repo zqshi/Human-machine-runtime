@@ -328,6 +328,76 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(task.ragContext).toBeUndefined();
   });
 
+  it('skillsContext 有值时 payload 含 skillsContext(v1.4 组装层 skill 召回透传)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(
+      makeOpts({ skillsContext: '## 报销技能\n步骤1' }),
+      {},
+      new AbortController()
+    );
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.skillsContext).toBe('## 报销技能\n步骤1');
+  });
+
+  it('skillsContext + ragContext 同时有值时 payload 两者都含', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(
+      makeOpts({ skillsContext: 'skill-block', ragContext: 'rag-block' }),
+      {},
+      new AbortController()
+    );
+    child.emit('close', 0, null);
+    await promise;
+
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.skillsContext).toBe('skill-block');
+    expect(task.ragContext).toBe('rag-block');
+  });
+
   it('任务完成后清理 env file(不留 apiKey 残留)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);

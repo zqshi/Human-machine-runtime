@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, sql, count, inArray } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import {
   toolSources,
@@ -118,6 +118,15 @@ export class ToolDefinitionRepository {
   async findById(id: string): Promise<ToolDefinitionRow | null> {
     const [row] = await this.db.select().from(toolDefinitions).where(eq(toolDefinitions.id, id));
     return row ?? null;
+  }
+
+  /** v1.4:批量按 id 查(组装层 boundTools→allowedTools 用)。空数组返回空,不报错。repo 纯持久化不过滤,enabled/tenantId 校验留 domain 层。 */
+  async findByIds(ids: string[]): Promise<ToolDefinitionRow[]> {
+    if (ids.length === 0) return [];
+    return this.db
+      .select()
+      .from(toolDefinitions)
+      .where(inArray(toolDefinitions.id, ids));
   }
 
   async findEnabledByTenant(tenantId: string): Promise<ToolDefinitionRow[]> {

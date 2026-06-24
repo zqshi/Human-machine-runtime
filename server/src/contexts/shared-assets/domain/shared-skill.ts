@@ -60,6 +60,8 @@ export interface SharedAsset {
   name: string;
   description: string;
   contentRef: string | null;
+  /** v1.4:skill 内联内容(组装层注入 prompt);null 时回退 contentRef */
+  content: string | null;
   tags: string[];
   version: string;
   status: string;
@@ -127,6 +129,8 @@ export function createSharedSkillFromReport(report: SkillReport, actor: string):
     name: report.name,
     description: report.description,
     contentRef: report.contentRef,
+    // v1.4:发布时 content 暂为 null(report 审核态无内联内容);发布后经 updateSharedAsset 单独写入 content
+    content: null,
     tags: report.tags || [],
     version: report.version,
     status: 'active',

@@ -45,6 +45,8 @@ export const sharedAssets = pgTable(
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description'),
     contentRef: text('content_ref'),
+    /** v1.4:skill 内联内容(Markdown 文本,组装层注入 prompt)。contentRef 是外部引用,优先读 content。 */
+    content: text('content'),
     tags: jsonb('tags').$type<string[]>().default([]),
     version: varchar('version', { length: 32 }).notNull().default('1.0.0'),
     status: varchar('status', { length: 32 }).notNull().default('active'),

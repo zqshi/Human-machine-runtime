@@ -30,6 +30,8 @@ export interface WorkerRunOptions {
   anthropicBaseUrl?: string;
   /** D2:RAG 上下文块(知识库/记忆召回结果),worker 拼 prompt 时前置为 <context> 块 */
   ragContext?: string;
+  /** v1.4:skill 内容块(组装层 boundSkills 召回),worker 拼 prompt 时前置为 <skills> 块 */
+  skillsContext?: string;
   /** v1.3:资源限制(CPU '1000m'/memory '512Mi' K8s 风格),转换为 docker --cpus/--memory;缺省用 1.0/2g */
   resources?: { cpu: string; memory: string };
   workerImage: string;
@@ -213,6 +215,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
     };
     if (opts.ragContext) {
       payload.ragContext = opts.ragContext;
+    }
+    if (opts.skillsContext) {
+      payload.skillsContext = opts.skillsContext;
     }
     if (opts.sessionId) {
       payload.sessionId = opts.sessionId;

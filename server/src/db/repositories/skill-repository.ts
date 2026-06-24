@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { skillReports, sharedAssets, assetBindings } from '../schema/skill.js';
 import type { ISkillRepository } from '../../contexts/shared-assets/skill-service.js';
@@ -66,6 +66,7 @@ export class SkillRepository implements ISkillRepository {
       name: asset.name,
       description: asset.description,
       contentRef: asset.contentRef,
+      content: asset.content,
       tags: asset.tags,
       version: asset.version,
       status: asset.status,
@@ -83,12 +84,37 @@ export class SkillRepository implements ISkillRepository {
         name: asset.name,
         description: asset.description,
         contentRef: asset.contentRef,
+        content: asset.content,
         tags: asset.tags,
         version: asset.version,
         status: asset.status,
         updatedAt: new Date(asset.updatedAt),
       })
       .where(eq(sharedAssets.id, asset.id));
+  }
+
+  /** v1.4:批量按 id 查 content(组装层 boundSkills→skillsContext 用)。content 为 null 的不进 Map。 */
+  async getContentsByIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: sharedAssets.id, content: sharedAssets.content, name: sharedAssets.name })
+      .from(sharedAssets)
+      .where(inArray(sharedAssets.id, ids));
+    const map = new Map<string, string>();
+    for (const r of rows) {
+      if (r.content) map.set(r.id, r.content);
+    }
+    return map;
+  }
+
+  /** v1.4:批量按 id 查 SharedAsset 元数据(组装层 skillsContext 拼名字+描述用)。 */
+  async getSharedAssetsByIds(ids: string[]): Promise<SharedAsset[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.db
+      .select()
+      .from(sharedAssets)
+      .where(inArray(sharedAssets.id, ids));
+    return rows.map(toSharedDomain);
   }
 
   async deleteSharedAsset(assetId: string): Promise<boolean> {
@@ -220,6 +246,7 @@ function toSharedDomain(row: typeof sharedAssets.$inferSelect): SharedAsset {
     name: row.name,
     description: row.description ?? '',
     contentRef: row.contentRef ?? null,
+    content: row.content ?? null,
     tags: (row.tags ?? []) as string[],
     version: row.version,
     status: row.status,

@@ -12,6 +12,10 @@ import type {
   AgentTaskResult,
 } from '../sandbox/agent-runtime-adapter.js';
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
+import type {
+  IAssemblyProvider,
+  AssemblyRequest,
+} from '../domain/assembly-provider.js';
 import type { IToolRegistry } from '../../tool-management/tool-registry.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 
@@ -33,6 +37,7 @@ export class AgentHarness {
   private readonly executor: AgentExecutor;
   private readonly broadcast: BroadcastFn;
   private ragProvider: IRagContextProvider | null;
+  private assemblyProvider: IAssemblyProvider | null;
 
   constructor(
     llmClient: ILLMClient | null,
@@ -47,6 +52,7 @@ export class AgentHarness {
         appEventBus.publish(event, data as Record<string, unknown>);
       });
     this.ragProvider = ragProvider ?? null;
+    this.assemblyProvider = null;
     const execStores: AgentExecutorStores = { tasks: session.taskArtifactStore };
     this.executor = new AgentExecutor(llmClient, execStores, this.broadcast);
   }
@@ -97,6 +103,41 @@ export class AgentHarness {
       }
     }
 
+    // v1.4:组装层(按 Agent 定义自动组装 allowedTools + skillsContext)。
+    // 调用方优先(已显式传 allowedTools/skillsContext 则不覆盖)。assemble 内部容错,失败不阻断。
+    if (this.assemblyProvider) {
+      const input = (task.input ?? {}) as Record<string, unknown>;
+      const instanceId = typeof input.instanceId === 'string' ? input.instanceId : undefined;
+      const asmReq: AssemblyRequest = {
+        tenantId: task.tenantId,
+        instanceId,
+        prompt: typeof input.prompt === 'string' ? input.prompt : task.description,
+      };
+      try {
+        const asm = await this.assemblyProvider.assemble(asmReq);
+        if (asm.allowedTools !== undefined && input.allowedTools === undefined) {
+          input.allowedTools = asm.allowedTools;
+        }
+        if (asm.skillsContext && input.skillsContext === undefined) {
+          input.skillsContext = asm.skillsContext;
+        }
+        if (asm.allowedTools !== undefined || asm.skillsContext) {
+          task.input = input;
+        }
+        if (asm.degraded) {
+          appEventBus.publish('harness:assembly:degraded', {
+            taskId: task.id,
+            sources: asm.sources,
+          });
+        }
+      } catch (err) {
+        appEventBus.publish('harness:assembly:failed', {
+          taskId: task.id,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     appEventBus.publish('sandbox:task:dispatched', {
       taskId: task.id,
       tenantId: task.tenantId,
@@ -131,6 +172,14 @@ export class AgentHarness {
    */
   setRagProvider(provider: IRagContextProvider | null): void {
     this.ragProvider = provider;
+  }
+
+  /**
+   * 注入组装层,激活 dispatchTask 前的 allowedTools + skillsContext 自动组装(v1.4)。
+   * 延后注入(模式同 setRagProvider):依赖 repo 晚于 AgentHarness 实例化。
+   */
+  setAssemblyProvider(provider: IAssemblyProvider | null): void {
+    this.assemblyProvider = provider;
   }
 
   /** 测试/关停用:清理 executor 的所有 progress timer。 */

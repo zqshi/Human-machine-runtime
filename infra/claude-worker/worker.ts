@@ -28,6 +28,8 @@ interface TaskPayload {
   maxBudgetUsd?: number;
   /** D2:RAG 上下文块(Harness 召回的知识库/记忆),拼 prompt 时前置为 <context> 块 */
   ragContext?: string;
+  /** v1.4:skill 内容块(组装层 boundSkills 召回),拼 prompt 时前置为 <skills> 块 */
+  skillsContext?: string;
 }
 
 function emit(obj: unknown): void {
@@ -78,11 +80,12 @@ async function main(): Promise<void> {
     options.resume = task.sessionId;
   }
 
-  // D2:RAG 上下文作为 <context> 块前置注入 prompt(SDK 0.1.0 query 只收单 prompt 字符串,
-  // 无 systemPrompt 选项,故拼进 prompt。context 块用 XML 标签隔离,降低对原 prompt 的干扰)
-  const finalPrompt = task.ragContext
-    ? `<context>\n${task.ragContext}\n</context>\n\n${task.prompt}`
-    : task.prompt;
+  // D2:RAG 上下文作为 <context> 块前置注入 prompt;v1.4:skill 内容作为 <skills> 块前置。
+  // SDK 0.1.0 query 只收单 prompt 字符串(无 systemPrompt),故拼进 prompt,XML 标签隔离降干扰。
+  const blocks: string[] = [];
+  if (task.skillsContext) blocks.push(`<skills>\n${task.skillsContext}\n</skills>`);
+  if (task.ragContext) blocks.push(`<context>\n${task.ragContext}\n</context>`);
+  const finalPrompt = blocks.length > 0 ? `${blocks.join('\n\n')}\n\n${task.prompt}` : task.prompt;
 
   let capturedSessionId: string | undefined = task.sessionId;
 
