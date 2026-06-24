@@ -1,6 +1,7 @@
 import type { EvalBenchmarkRepository } from '../../db/repositories/eval-benchmark-repository.js';
 import type { EvalEvaluatorRepository } from '../../db/repositories/eval-evaluator-repository.js';
 import type { LiteLLMClient } from '../gateway/clients/litellm-client.js';
+import type { IEvalAgentPort } from './eval-agent-port.js';
 import { newId } from '../../shared/utils.js';
 import { PRESET_SUITES } from './eval-preset-data.js';
 import { logger } from '../../app/logger.js';
@@ -21,7 +22,9 @@ export class EvalService {
   constructor(
     private repo: EvalBenchmarkRepository,
     private evaluatorRepo: EvalEvaluatorRepository,
-    litellmClient?: LiteLLMClient
+    litellmClient?: LiteLLMClient,
+    /** v1.7:真实 Agent 执行 port(取 actualOutput + toolCalls)。未注入则 evaluateCase 抛错 */
+    private agentPort?: IEvalAgentPort
   ) {
     this.evaluatorEngine = new EvaluatorEngine(litellmClient);
   }
@@ -85,7 +88,11 @@ export class EvalService {
     await this.repo.updateRun(runId, { status: 'running', startedAt: new Date() });
 
     // Execute asynchronously (non-blocking)
-    this.executeRun(runId, cases, evaluators).catch((err) => {
+    this.executeRun(runId, cases, evaluators, {
+      employeeId: opts.employeeId,
+      modelId: opts.modelId,
+      tenantId: opts.tenantId,
+    }).catch((err) => {
       logger.error({ runId, err }, 'eval-service: run execution failed');
       this.repo.updateRun(runId, { status: 'failed', finishedAt: new Date() });
     });
@@ -109,14 +116,13 @@ export class EvalService {
       matchRules: unknown;
       rubric: unknown;
     }>,
-    evaluators: EvalEvaluator[] = []
+    evaluators: EvalEvaluator[] = [],
+    /** v1.7:run 上下文(透传给 evaluateCaseWithEvaluators 调真实 Agent) */
+    runOpts: { employeeId: string; modelId?: string; tenantId?: string }
   ) {
     let completedCases = 0;
     let passedCases = 0;
     let totalTokens = 0;
-    // 评测系统为 Phase 1 STUB（见 evaluateCaseWithEvaluators：actualOutput 为模拟占位，未接入
-    // 真实 LLM）。CaseEvalResult 无 cost 字段、无成本数据来源，故 run 级 totalCost 恒为 0；
-    // 待 Phase 3 接入真实 Agent 执行后从 LLM usage 估算累加。const 以消 prefer-const。
     const totalCost = 0;
     const allScores: number[] = [];
     const dimAccum: DimensionScores = { correctness: 0, efficiency: 0, safety: 0, interaction: 0 };
@@ -136,8 +142,8 @@ export class EvalService {
           rubric: evalCase.rubric as Record<string, string> | undefined,
         };
 
-        // 使用评估器引擎评分
-        const result = await this.evaluateCaseWithEvaluators(context, evaluators);
+        // 使用评估器引擎评分(v1.7:传 runOpts 调真实 Agent 取 actualOutput + toolCalls)
+        const result = await this.evaluateCaseWithEvaluators(context, evaluators, runOpts);
         const results = await this.repo.listResults(runId);
         const resultRow = results.find((r) => r.caseId === evalCase.id);
 
@@ -223,19 +229,43 @@ export class EvalService {
 
   private async evaluateCaseWithEvaluators(
     ctx: CaseEvalContext,
-    evaluators: EvalEvaluator[]
+    evaluators: EvalEvaluator[],
+    runOpts: { employeeId: string; modelId?: string; tenantId?: string }
   ): Promise<CaseEvalResult> {
     const startTime = Date.now();
+
+    // v1.7:真实 Agent 执行。未注入 agentPort → 抛错(用户决策:不回退 STUB,要求配 Agent)。
+    if (!this.agentPort) {
+      throw new Error(
+        'eval v1.7 requires AgentPort configured (LiteLLM/Agent unavailable) — refusing STUB fallback'
+      );
+    }
+
+    // 调真实 Agent(多轮工具调用循环)取 conclusion + toolCalls(trajectory)
+    const expectedTools = Array.isArray(ctx.expectedTools)
+      ? (ctx.expectedTools as unknown[]).filter((t): t is string => typeof t === 'string')
+      : [];
+    const agentResult = await this.agentPort.execute({
+      instanceId: runOpts.employeeId,
+      tenantId: runOpts.tenantId ?? '',
+      prompt: ctx.taskDescription,
+      modelId: runOpts.modelId,
+      toolDefinitionIds: expectedTools,
+    });
+
     const input = {
       taskDescription: ctx.taskDescription,
       expectedBehavior: ctx.expectedBehavior,
       expectedOutput: ctx.expectedOutput,
-      // ⚠️ STUB: 评测系统当前使用模拟输出。Phase 3 接入真实 Agent 执行前，
-      // actualOutput 为占位串，evaluator 评分基于伪数据，verdict 不可作为真实 Agent
-      // 质量依据，不应进入线上决策门禁。
-      actualOutput: '[Simulated output — Phase 1 placeholder]',
-      toolCallsLog: [],
+      // v1.7:真实 Agent 回复(替代 Phase 1 占位串)
+      actualOutput: agentResult.conclusion || '(empty conclusion)',
+      // v1.7:真实工具调用轨迹(trajectory 评测)
+      toolCallsLog: agentResult.toolCalls,
       context: ctx.context,
+      // v1.7:透传 trajectory 评测所需(evaluator-engine 消费)
+      evalType: ctx.evalType,
+      expectedTrajectory: ctx.expectedTrajectory,
+      rubric: typeof ctx.rubric === 'string' ? ctx.rubric : undefined,
     };
 
     // 使用所有选中的评估器评分，取加权平均
@@ -250,7 +280,7 @@ export class EvalService {
         dimensionScores: { correctness: score, efficiency: score, safety: 1.0, interaction: score },
         passed: false,
         failureReason: 'No evaluators produced results',
-        tokenUsage: 0,
+        tokenUsage: agentResult.tokenUsage.total,
         durationMs: Date.now() - startTime,
       };
     }
@@ -277,7 +307,8 @@ export class EvalService {
     }
 
     const durationMs = Date.now() - startTime;
-    const totalTokenUsage = allResults.reduce((s, r) => s + (r.tokenUsage ?? 0), 0);
+    // v1.7:tokenUsage 从真实 Agent 执行取(evaluator 不产 token)
+    const totalTokenUsage = agentResult.tokenUsage.total;
 
     return {
       score: avgScore,

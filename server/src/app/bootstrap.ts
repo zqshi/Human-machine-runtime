@@ -11,6 +11,7 @@ import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
+import { EvalAgentInvoker } from './bootstrap/eval-agent-invoker.js';
 import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
@@ -589,7 +590,18 @@ export function createAppContext(db: Database): AppContext {
   /* ──── Eval Benchmark ──── */
   const evalBenchmarkRepo = new EvalBenchmarkRepository(db);
   const evalEvaluatorRepo = new EvalEvaluatorRepository(db);
-  const evalService = new EvalService(evalBenchmarkRepo, evalEvaluatorRepo, litellmClient);
+  // v1.7:eval 真实 Agent 执行(litellm + toolMgmt + toolDefRepo 多轮工具循环)。toolMgmt 已早实例化。
+  const evalAgentPort = new EvalAgentInvoker(
+    litellmClient,
+    toolManagementService,
+    new ToolDefinitionRepository(db)
+  );
+  const evalService = new EvalService(
+    evalBenchmarkRepo,
+    evalEvaluatorRepo,
+    litellmClient,
+    evalAgentPort
+  );
 
   /* ──── Employee Memory ──── */
   const employeeMemoryRepo = new EmployeeMemoryRepository(db);

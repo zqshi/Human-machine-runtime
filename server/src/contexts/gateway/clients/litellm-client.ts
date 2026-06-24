@@ -27,7 +27,12 @@ export class LiteLLMClient extends BaseGatewayClient {
 
   async chatCompletion(params: {
     model: string;
-    messages: { role: string; content: string }[];
+    /** v1.7:messages 扩为联合类型,支持多轮工具调用(assistant 带 tool_calls / tool role 回传结果) */
+    messages: Array<
+      | { role: string; content: string }
+      | { role: 'assistant'; content: string | null; tool_calls?: unknown[] }
+      | { role: 'tool'; content: string; tool_call_id: string }
+    >;
     temperature?: number;
     max_tokens?: number;
     stream?: boolean;
@@ -35,6 +40,10 @@ export class LiteLLMClient extends BaseGatewayClient {
     metadata?: Record<string, unknown>;
     /** 覆盖默认 Authorization，用于 per-instance virtual key 调用 */
     apiKey?: string;
+    /** v1.7:工具定义(OpenAI function calling 格式) */
+    tools?: unknown[];
+    /** v1.7:工具选择策略('auto'/'none'/{type:'function',function:{name}}) */
+    tool_choice?: string | { type: string; function?: { name: string } };
   }) {
     return this.request('/v1/chat/completions', {
       method: 'POST',

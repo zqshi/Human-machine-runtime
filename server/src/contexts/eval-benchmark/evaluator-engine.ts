@@ -27,6 +27,12 @@ export interface EvaluatorInput {
   actualOutput: string;
   toolCallsLog?: unknown[];
   context?: Record<string, unknown>;
+  /** v1.7:评测类型(trajectory/output/behavior/...),judge 据此选 rubric,rule 据此选 target field */
+  evalType?: string;
+  /** v1.7:期望工具调用轨迹(trajectory 评测,judge 评判契合度) */
+  expectedTrajectory?: string;
+  /** v1.7:评分标准文本(judge prompt 注入,替代硬编码) */
+  rubric?: string;
 }
 
 export interface EvaluatorOutput {
@@ -57,7 +63,10 @@ export class EvaluatorEngine {
 
   /* ──── Rule-based 评估 ──── */
 
-  private async evaluateByRules(evaluator: EvalEvaluator, input: EvaluatorInput): Promise<EvaluatorOutput> {
+  private async evaluateByRules(
+    evaluator: EvalEvaluator,
+    input: EvaluatorInput
+  ): Promise<EvaluatorOutput> {
     const rules = (evaluator.ruleConfig as RuleConfigItem[] | null) ?? [];
     if (rules.length === 0) {
       return this.createFallbackResult('No rule config provided, using default score');
@@ -90,7 +99,18 @@ export class EvaluatorEngine {
   }
 
   private matchRule(rule: RuleConfigItem, input: EvaluatorInput): boolean | Promise<boolean> {
-    const target = rule.field === 'output' ? input.actualOutput : '';
+    // v1.7:target 按 rule.field 选取。tool_calls → 工具名序列(trajectory 匹配);
+    // output/behavior/default → conclusion 文本。
+    const target =
+      rule.field === 'tool_calls'
+        ? (input.toolCallsLog ?? [])
+            .map((c) =>
+              c && typeof c === 'object' && 'toolName' in c
+                ? String((c as { toolName: unknown }).toolName)
+                : ''
+            )
+            .join(',')
+        : input.actualOutput;
 
     switch (rule.type) {
       case 'exact_match':
@@ -148,7 +168,10 @@ export class EvaluatorEngine {
         return await this.executePython(scriptCode, contextJson);
       }
     } catch (err) {
-      logger.warn({ err, language, ruleType: rule.type }, 'evaluator-engine: script execution failed');
+      logger.warn(
+        { err, language, ruleType: rule.type },
+        'evaluator-engine: script execution failed'
+      );
       return false;
     }
   }
@@ -207,7 +230,10 @@ else:
 
       execFile('python3', args, { timeout: 10000, env, maxBuffer: 1024 * 1024 }, (err, stdout) => {
         if (err) {
-          logger.warn({ err, stderr: (err as Error & { stderr?: string }).stderr }, 'evaluator-engine: python exec error');
+          logger.warn(
+            { err, stderr: (err as Error & { stderr?: string }).stderr },
+            'evaluator-engine: python exec error'
+          );
           resolve(false);
           return;
         }
@@ -218,11 +244,16 @@ else:
 
   /* ──── LLM Judge 评估 ──── */
 
-  private async evaluateByJudge(evaluator: EvalEvaluator, input: EvaluatorInput): Promise<EvaluatorOutput> {
+  private async evaluateByJudge(
+    evaluator: EvalEvaluator,
+    input: EvaluatorInput
+  ): Promise<EvaluatorOutput> {
     const judgeConfig = evaluator.judgeConfig as JudgeConfig | null;
 
     if (!judgeConfig || !this.litellmClient?.isConfigured()) {
-      return this.createFallbackResult('LLM Judge unavailable — no judge config or LiteLLM not configured');
+      return this.createFallbackResult(
+        'LLM Judge unavailable — no judge config or LiteLLM not configured'
+      );
     }
 
     try {
@@ -254,17 +285,41 @@ else:
   }
 
   private buildPrompt(config: JudgeConfig, input: EvaluatorInput): string {
+    const toolCallsText =
+      input.toolCallsLog && input.toolCallsLog.length > 0
+        ? JSON.stringify(
+            input.toolCallsLog.map((c) =>
+              c && typeof c === 'object' && 'toolName' in c
+                ? {
+                    tool: (c as { toolName: unknown }).toolName,
+                    args: (c as { arguments?: unknown }).arguments,
+                  }
+                : c
+            )
+          )
+        : '（无工具调用）';
     return config.promptTemplate
       .replace(/\{taskDescription\}/g, input.taskDescription)
       .replace(/\{expectedBehavior\}/g, input.expectedBehavior ?? '（未提供）')
       .replace(/\{actualOutput\}/g, input.actualOutput)
-      .replace(/\{rubric\}/g, '（见上方评分标准）');
+      .replace(/\{rubric\}/g, input.rubric ?? '（见上方评分标准）')
+      .replace(/\{toolCallsLog\}/g, toolCallsText)
+      .replace(/\{expectedTrajectory\}/g, input.expectedTrajectory ?? '（未提供）')
+      .replace(
+        /\{expectedOutput\}/g,
+        input.expectedOutput ? JSON.stringify(input.expectedOutput) : '（未提供）'
+      );
   }
 
   private parseJudgeResponse(
     content: string,
     dimensions: EvalDimension[]
-  ): { score: number; dimensionScores: Record<string, number>; comment?: string; tokenUsage?: number } {
+  ): {
+    score: number;
+    dimensionScores: Record<string, number>;
+    comment?: string;
+    tokenUsage?: number;
+  } {
     let parsed: Record<string, unknown>;
     try {
       // 尝试提取 JSON
@@ -306,7 +361,10 @@ else:
 
   /* ──── Hybrid 评估 ──── */
 
-  private async evaluateHybrid(evaluator: EvalEvaluator, input: EvaluatorInput): Promise<EvaluatorOutput> {
+  private async evaluateHybrid(
+    evaluator: EvalEvaluator,
+    input: EvaluatorInput
+  ): Promise<EvaluatorOutput> {
     // Phase 1: Rule-based 快筛
     const ruleResult = await this.evaluateByRules(evaluator, input);
 
@@ -346,7 +404,10 @@ else:
 
   /* ──── 工具方法 ──── */
 
-  private weightedScore(dimensionScores: Record<string, number>, dimensions: EvalDimension[]): number {
+  private weightedScore(
+    dimensionScores: Record<string, number>,
+    dimensions: EvalDimension[]
+  ): number {
     let totalWeight = 0;
     let weightedSum = 0;
     for (const dim of dimensions) {
