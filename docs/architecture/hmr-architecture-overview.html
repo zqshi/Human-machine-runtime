@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HMR 架构总览</title>
+  <style>
+    :root {
+      --ink: #1d1d1f;
+      --muted: #6e6e73;
+      --line: #d2d2d7;
+      --paper: #f5f5f7;
+      --panel: #ffffff;
+      --blue: #007aff;
+      --cyan: #5ac8fa;
+      --green: #34c759;
+      --orange: #ff9500;
+      --red: #ff3b30;
+      --purple: #af52de;
+      --slate: #1d1d1f;
+      --shadow: 0 18px 55px rgba(0, 0, 0, 0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 4%, rgba(0, 122, 255, 0.14), transparent 28rem),
+        radial-gradient(circle at 92% 10%, rgba(90, 200, 250, 0.14), transparent 24rem),
+        linear-gradient(180deg, #eef5ff 0%, var(--paper) 32rem);
+      font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+      -webkit-font-smoothing: antialiased;
+    }
+    header { padding: 72px 7vw 44px; border-bottom: 1px solid rgba(29, 29, 31, 0.08); }
+    main { width: min(1180px, calc(100vw - 48px)); margin: 0 auto; padding: 42px 0 72px; }
+    h1, h2, h3 { line-height: 1.18; letter-spacing: 0; margin: 0; }
+    h1 { max-width: 980px; font-size: clamp(38px, 6vw, 72px); font-weight: 850; }
+    h2 { margin-top: 56px; font-size: clamp(26px, 3.4vw, 42px); font-weight: 820; }
+    h3 { margin-top: 28px; font-size: 22px; font-weight: 760; }
+    p { margin: 12px 0 0; }
+    .eyebrow { margin-bottom: 16px; color: var(--blue); font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+    .subtitle { max-width: 940px; margin-top: 22px; color: var(--muted); font-size: 20px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border: 1px solid rgba(0, 122, 255, 0.18); border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72); color: var(--slate); font-size: 13px; font-weight: 700; backdrop-filter: blur(8px);
+    }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; margin-top: 22px; }
+    .card { grid-column: span 4; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, 0.88); box-shadow: var(--shadow); }
+    .card.wide { grid-column: span 8; }
+    .card.full { grid-column: 1 / -1; }
+    .card h3 { margin-top: 0; display: flex; align-items: center; gap: 10px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef4ff; color: var(--blue); font-size: 12px; font-weight: 800; vertical-align: middle; }
+    .tag.cyan { background: #e6f7ff; color: #0a8fb3; }
+    .tag.green { background: #e8faea; color: #1e8a44; }
+    .tag.orange { background: #fff3e0; color: #b35a00; }
+    .tag.purple { background: #f4e8ff; color: #7a2dc0; }
+    .muted { color: var(--muted); }
+    .callout { margin-top: 20px; padding: 20px 22px; border-left: 5px solid var(--blue); border-radius: 16px; background: #f0f7ff; }
+    .success { border-left-color: var(--green); background: #eafaf0; }
+    .warn { border-left-color: var(--orange); background: #fff7ec; }
+    .danger { border-left-color: var(--red); background: #ffefed; }
+    table { width: 100%; margin-top: 18px; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07); }
+    th, td { padding: 13px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 14px; }
+    th { background: #eef4ff; color: #0a2540; font-weight: 800; }
+    tr:last-child td { border-bottom: 0; }
+    code { padding: 2px 6px; border-radius: 7px; background: #eef2f7; color: #1d1d1f; font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 0.92em; }
+    pre { overflow: auto; padding: 18px; border: 1px solid #d3dceb; border-radius: 16px; background: #f7f9fc; }
+    .diagram { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #ffffff; box-shadow: var(--shadow); }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px; }
+    ul { padding-left: 20px; margin: 10px 0 0; }
+    li { margin: 7px 0; }
+    .footer { margin-top: 58px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    @media (max-width: 860px) {
+      header { padding: 52px 24px 34px; }
+      main { width: calc(100vw - 28px); }
+      .card, .card.wide { grid-column: 1 / -1; }
+      .columns { grid-template-columns: 1fr; }
+      th, td { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">HMR Architecture Overview</div>
+    <h1>面向多渠道决策指挥的中间层运行时</h1>
+    <p class="subtitle">
+      HMR（Human-machine-runtime，人机运行时）不是 IM、不是 Agent 框架、不是项目管理工具，而是坐在它们之上的
+      <strong>中间层操作系统</strong>：聚合多渠道消息 → AI 智能分拣 → 人机协同决策 → 命令下达到执行闭环追踪。
+      后端为<strong>单体 Hono + DDD 限界上下文</strong>（29 个 context 同进程，60+ 装配组件），前端为单 SPA 三入口，
+      通过 <code>AgentRuntimeAdapter</code> 与 <code>ChannelAdapter</code> 两道标准接口实现上层 Agent 框架与下层渠道的双向可插拔。
+    </p>
+    <div class="meta">
+      <span class="pill">代码库：monorepo（server + client-suite）</span>
+      <span class="pill">后端：Hono + TS + Drizzle（单进程 29 context）</span>
+      <span class="pill">前端：React + zustand + Tailwind（Apple HIG）</span>
+      <span class="pill">当前版本：v1.8 已归档 / v1.2.2 待启动</span>
+      <span class="pill">更新时间：2026-06-24</span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>1. 一句话总结</h2>
+      <div class="callout success">
+        HMR 把<strong>消息归一化、优先级评估、跨渠道去重、决策建议、执行回执</strong>这五件事做成了不可替代的中间层。
+        上层 Agent 框架（OpenClaw / Claude Agent SDK / Dify / Coze）可换、下层渠道（Matrix / WPS / 钉钉 / 飞书 / 企微）可换，
+        运行时层不动。这是跨平台政治护城河——钉钉不会帮聚合飞书，只有中立第三方能做。
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>三层解耦 <span class="tag">核心</span></h3>
+          <p>Agent 框架可插拔（<code>AgentRuntimeAdapter</code>）、渠道可插拔（<code>ChannelAdapter</code>），运行时层消息归一化 + 决策引擎 + 执行编排不可替代。</p>
+        </article>
+        <article class="card">
+          <h3>单体 DDD <span class="tag cyan">29 context</span></h3>
+          <p>不是 29 个微服务。单 Hono 进程内按限界上下文组织，domain 零外部依赖，依赖单向向右。避免微服务运维成本，保留领域隔离。</p>
+        </article>
+        <article class="card">
+          <h3>claude-worker 沙箱 <span class="tag green">执行</span></h3>
+          <p>Agent 任务在独立 Docker 容器内跑 Claude Agent SDK，按行 NDJSON 上报进度，预算熔断 + 会话续接 + Token 用量入账。</p>
+        </article>
+        <article class="card">
+          <h3>per-instance 模型隔离 <span class="tag orange">授权</span></h3>
+          <p><code>ModelGrantChecker</code> 白名单（off/log/enforce 三态灰度）+ <code>LlmKeySyncService</code> 把授权同步为 LiteLLM virtual key，per-instance 兜底隔离。</p>
+        </article>
+        <article class="card">
+          <h3>双模式前端 <span class="tag purple">三入口</span></h3>
+          <p>单 SPA 三入口：<code>main</code>（用户端）/ <code>admin</code>（租户管理）/ <code>ops</code>（运管）。<code>appMode</code> 切换 IM/OpenClaw 两套 Dock。</p>
+        </article>
+        <article class="card">
+          <h3>声明/运行 reconcile <span class="tag">云原生</span></h3>
+          <p>v1.8 把实例升级为 desiredState(actual)/specGeneration diff 增量调和，reconciler 主动调和、health-monitor 被动探活，每 5 分钟并行。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 当前总体架构</h2>
+      <p>
+        浏览器访问三入口 SPA；Vite dev server（<code>:5176</code>）或 Nginx（容器 <code>:8080</code>）把同源 <code>/api</code> 代理到后端 Hono（<code>:3002</code>），
+        <code>/_matrix</code> 代理到 Conduit（<code>:6167</code>）。后端单进程内中间件链 → 路由六域（platform / admin / control / openclaw / proxy / mcp）→
+        29 个限界上下文 → 外部依赖（PostgreSQL / Redis / LiteLLM / WeKnora / Matrix / claude-worker 容器 / 外部网关）。
+      </p>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TB
+  Browser["浏览器 / 管理员 / 企业用户"] --> SPA["前端 SPA（main / admin / ops 三入口）<br/>client-suite/apps/web · React+zustand+Tailwind"]
+
+  subgraph Proxy["开发/部署代理层"]
+    Vite["Vite dev :5176<br/>或 Nginx :8080"]
+  end
+
+  subgraph Backend["HMR Server · Hono 单进程 :3002"]
+    MW["中间件链<br/>errorHandler→secureHeaders→cors→rateLimit→metrics"]
+    Routes["路由六域<br/>platform · admin · control · openclaw · proxy · mcp · health"]
+    Contexts["29 限界上下文<br/>domain / application / adapters"]
+  end
+
+  subgraph Runtime["运行时核心"]
+    RE["runtime-engine<br/>归一化/优先级/去重/推荐/回执"]
+    AC["agent-core<br/>Session / Harness / Sandbox"]
+    CH["channel<br/>InboundPipeline / ChannelRouter / DecisionConsole"]
+    Worker["claude-worker<br/>Docker 沙箱 · Claude Agent SDK"]
+  end
+
+  subgraph Stores["数据与基础设施"]
+    PG[("PostgreSQL 16<br/>:5435")]
+    Redis[("Redis 7<br/>:6379")]
+    Conduit[("Matrix Conduit<br/>:6167")]
+    LiteLLM[("LiteLLM<br/>:4000")]
+    Weknora[("WeKnora RAG<br/>:8088")]
+    Gateway["外部网关<br/>clawhub / portal / xspace / claw-farm / platform-be"]
+  end
+
+  SPA --> Vite
+  Vite -->|"/api"| MW
+  Vite -->|"/_matrix"| Conduit
+  MW --> Routes --> Contexts
+  Contexts --> RE
+  Contexts --> AC
+  Contexts --> CH
+  AC --> Worker
+  AC --> LiteLLM
+  CH --> Conduit
+  Contexts --> PG
+  Contexts --> Redis
+  Contexts --> Weknora
+  Contexts --> Gateway
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. 后端 DDD 分层与 29 限界上下文</h2>
+      <p>
+        后端按<strong>限界上下文</strong>组织（非顶层四层目录）。每个 context 内部按需划分
+        <code>domain</code>（纯逻辑、零外部依赖）/ <code>application</code>（用例编排）/ <code>adapters</code>（外部适配）。
+        依赖方向单向：<code>domain → application → adapters</code>，禁止反向。路由层只做参数校验与转发，业务判断下沉。
+      </p>
+      <div class="columns">
+        <div>
+          <h3>核心域 <span class="tag">身份与租户</span></h3>
+          <ul>
+            <li><code>identity-access</code> — JWT + SSO(OIDC) + RBAC + <code>AuthProviderRegistry</code>（local/OIDC/platform-be 多 provider），<code>scope</code> 区分 platform/tenant</li>
+            <li><code>tenant-management</code> — 租户生命周期 + 套餐（Free/Pro/Team）+ <code>PlanService</code></li>
+            <li><code>tenant-instance</code> — 数字员工实例，<code>provisioners/</code> 三实现（composite / container-orchestrator / local），desiredState/actual 声明运行分离</li>
+            <li><code>quota-management</code> — 配额四维度（容量/资源/AI/数据）+ 读时检查 + <code>QuotaMonitor</code> 周期巡检</li>
+          </ul>
+          <h3>业务域 <span class="tag cyan">运行与编排</span></h3>
+          <ul>
+            <li><code>runtime-engine</code> — 消息归一化 / 优先级 / 去重 / 推荐 / 回执五引擎 + <code>DecisionProjector</code></li>
+            <li><code>agent-core</code> — Agent 执行，<code>session/harness/sandbox/domain</code> 四子层 + <code>AdapterRegistry</code></li>
+            <li><code>channel</code> — <code>ChannelAdapter</code> 接口 + 三适配器（matrix/wps/websocket）+ <code>InboundPipeline</code> + <code>ChannelRouter</code> + <code>DecisionConsole</code> + <code>ChannelBridgeService</code></li>
+            <li><code>shared-agent</code> / <code>shared-assets</code> — 跨租户共享 Agent / 技能工具资产</li>
+            <li><code>knowledge</code> + <code>document</code> — 知识库 + 文档（WeKnora 检索，可选启用）</li>
+            <li><code>employee-memory</code> — 数字员工记忆（mem0，可选启用）</li>
+            <li><code>workspace</code> / <code>marketplace</code> / <code>agent-profile</code> — 对接 xspace / clawhub / portal</li>
+            <li><code>analytics</code> — 用量统计 + <code>AnalyticsService</code></li>
+          </ul>
+        </div>
+        <div>
+          <h3>支撑域 <span class="tag green">平台能力</span></h3>
+          <ul>
+            <li><code>gateway</code> — 7 个上游 client + 5 条 proxy 路由 + <code>ModelGrantChecker</code> + <code>LlmKeySyncService</code> + <code>GatewayHealth</code> 周期探活</li>
+            <li><code>credential-vault</code> — 凭证加密存储 + <code>LeaseService</code> 短期租约 + <code>CredentialManagementService</code></li>
+            <li><code>tool-management</code> + <code>mcp-management</code> — 工具资产 + MCP executor（<code>McpService</code>）</li>
+            <li><code>scheduler</code> — 定时任务（8 handler + <code>pg-advisory-lock</code> 防并发 + cron-calculator）</li>
+            <li><code>notification</code> + <code>push-channel</code> — 邮件通知 + 推送通道</li>
+            <li><code>audit-observability</code> + <code>observability</code> — 审计日志 + 指标追踪 + <code>TokenUsageService</code> + <code>TraceSyncJob</code></li>
+            <li><code>system-config</code> — 系统配置（SSO 开关、模型授权灰度模式等）</li>
+            <li><code>eval-benchmark</code> — 评测基准（真实 agent trajectory 评测，<code>EvalService</code> + <code>EvalAgentInvoker</code>）</li>
+            <li><code>billing</code> — 计费骨架（事件累加；写侧 v1.2.2 补全）</li>
+            <li><code>department</code> — 部门组织</li>
+          </ul>
+        </div>
+      </div>
+      <h3>3.1 路由六域与中间件链</h3>
+      <table>
+        <thead>
+          <tr><th>路由域</th><th>路径前缀</th><th>角色要求</th><th>审计</th><th>职责</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>platform/</code></td><td><code>/api/platform</code></td><td><code>platform_admin</code></td><td>—</td><td>L1 运管：租户/用户/角色/审计/配置/监控/套餐/计费</td></tr>
+          <tr><td><code>admin/</code></td><td><code>/api/admin</code></td><td><code>platform_admin</code></td><td>✓</td><td>L2 租户管理：员工/技能/工具/AI Gateway/配额/日志/共享 Agent/MCP/凭证/评测/定时任务/记忆/通知</td></tr>
+          <tr><td><code>control/</code></td><td><code>/api/control</code></td><td><code>platform_admin</code> 或 <code>tenant_admin</code></td><td>—</td><td>L2 控制面：实例/部门/知识/文档/技能/存储/上传/市场目录/配额/应用目录/审计</td></tr>
+          <tr><td><code>openclaw/</code></td><td><code>/api/openclaw</code></td><td>登录用户</td><td>—</td><td>用户端决策中心 + Enterprise Agent OS（任务/决策/信号/目标/协作/编排/考核/判断/工作室/对话/渠道/工作空间）</td></tr>
+          <tr><td>gateway proxy</td><td><code>/api/proxy</code></td><td>登录用户</td><td>—</td><td>收敛外部出口：marketplace / profile / workspace / channel / mcp 五条 proxy</td></tr>
+          <tr><td><code>mcp-endpoint/</code></td><td><code>/api/mcp</code></td><td>登录用户</td><td>—</td><td>MCP tool-server 端点（Agent Runtime 调用工具）</td></tr>
+          <tr><td><code>health/</code></td><td><code>/health</code> + <code>/metrics</code></td><td>公开</td><td>—</td><td>分级健康检查 + Prometheus 抓取（不经 rateLimit）</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">
+        中间件链顺序（<code>server/src/app/index.ts</code>）：<code>errorHandler → secureHeaders → cors → rateLimit(/api/*) → metrics</code>。
+        <code>authMiddleware</code> 在各路由域内部按角色挂载；<code>auditTrailMiddleware</code> 仅挂 admin 域。
+        <code>registerRoutes</code> 把 <code>AppContext</code>（<code>bootstrap.ts</code> 装配的 60+ 组件）注入到各路由工厂；启动时拉起 <code>gatewayHealth / quotaMonitor / traceSyncJob / schedulerService</code> 四个后台周期任务 + <code>matrixBot</code>（可选）+ <code>agentCore.session.load()</code>。
+      </p>
+    </section>
+
+    <section>
+      <h2>4. 前端架构</h2>
+      <p>
+        <code>client-suite</code> 是 npm workspaces：主应用 <code>apps/web</code> + 设计 token 包 <code>packages/ui-tokens</code>。
+        <code>apps/web/src</code> 严格四层：<code>domain</code>（15 子域纯逻辑）→ <code>infrastructure</code>（API client + Matrix + channels）→
+        <code>application</code>（28 个 zustand stores + services + hooks）→ <code>presentation</code>（25 个 feature 模块）。
+      </p>
+      <div class="grid">
+        <article class="card wide">
+          <h3>三入口与双模式</h3>
+          <p>
+            三个 HTML 入口分别渲染 <code>App</code> / <code>AdminApp</code> / <code>OpsApp</code>，启动前都调 <code>bootstrapApp()</code> 注入 session 过期回调（清 authStore）。
+            <code>App.tsx</code> 检测 URL：<code>?code&state</code> → OIDC 回调（<code>SSOCallback</code>）；<code>?loginToken</code> → Matrix SSO 回调；否则按 <code>isLoggedIn</code> 切 <code>LoginPage</code>/<code>WorkspacePage</code>。
+            <code>uiStore</code> 持有 <code>appMode</code>（<code>'im'</code>/<code>'openclaw'</code>），<code>Dock</code> 据此渲染两套 item：IM 模式（消息/轻应用/通讯录…+ 工作面板切换键）、OpenClaw 模式（工作面板/Agent/Team…）。
+            <code>sharedAgentChatService</code> 在 IM 模式内复用 <code>useAgentChat</code>，幂等 <code>initConversation</code> 准备会话状态机。
+          </p>
+        </article>
+        <article class="card">
+          <h3>设计语言</h3>
+          <p>Apple HIG glass morphism，主色 <code>#007AFF</code>。暗色模式经 <code>[data-mode="openclaw"]</code> CSS 变量覆盖。</p>
+        </article>
+        <article class="card">
+          <h3>API 适配层</h3>
+          <p><code>infrastructure/api/</code> 24 个 client/adapter，<code>openclawApiAdapter</code> 收敛决策中心调用，<code>sessionHandler</code> 统一处理 401 过期，与后端六域路由对齐。</p>
+        </article>
+        <article class="card">
+          <h3>stores（节选）</h3>
+          <p><code>authStore / openclawStore / agentStore / chatStore / marketplaceStore / uiStore</code> 等 28 个，一个 store 一个文件。</p>
+        </article>
+      </div>
+      <div class="callout warn">
+        <strong>已知技术债 D8/D9/D10</strong>：<code>useAgentChat</code> 仍直接 import <code>openclawStore</code>，完整 <code>AgentRuntimePort</code> 抽象未做，
+        Agent 定义与运行时未彻底分离（影响替换为 Hermes 等框架）。marketplace「对话」半成品（<code>mk-*</code> 与 <code>sa-*</code> id 体系不兼容）。
+        IM 模式流式回包待浏览器真实验证。
+      </div>
+    </section>
+
+    <section>
+      <h2>5. 核心运行时引擎</h2>
+      <p>运行时层是 HMR 的价值核心，分三块：<code>runtime-engine</code>（消息→决策链路）、<code>agent-core</code>（Agent 执行）、<code>channel</code>（渠道入站编排）。</p>
+      <div class="columns">
+        <div>
+          <h3>runtime-engine · 消息决策五引擎</h3>
+          <ul>
+            <li><code>MessageNormalizer</code> — 多渠道消息归一化：意图分类、紧急度评估、实体抽取</li>
+            <li><code>PriorityScorer</code> — 多因子优先级（意图×紧急度×发送者权重×时效性）</li>
+            <li><code>DedupEngine</code> — 跨渠道去重（Jaro-Winkler 相似度 + 指纹哈希）</li>
+            <li><code>RecommendationEngine</code> — 决策建议（历史模式匹配 + 多源上下文聚合）</li>
+            <li><code>ReceiptManager</code> — 执行回执路由（成功/失败/进度回传原始渠道）</li>
+            <li><code>DecisionProjector</code> — 决策投射</li>
+          </ul>
+        </div>
+        <div>
+          <h3>agent-core · Session/Harness/Sandbox/Domain 四子层</h3>
+          <ul>
+            <li><strong>Session</strong> — <code>session-store.ts</code> 会话状态</li>
+            <li><strong>Harness</strong> — <code>harness.ts</code> 编排 + <code>litellm-llm-client</code> + <code>budget-guard</code> 预算熔断</li>
+            <li><strong>Sandbox</strong> — <code>adapter-registry</code> + <code>claude-agent-sdk-adapter</code>（主）+ <code>openclaw-adapter</code>（降级）+ <code>infrastructure/</code></li>
+            <li><strong>domain</strong> — <code>agent-executor</code> / <code>agent-definition</code> / <code>assembly-provider</code>（按定义组装工具+skill）/ <code>rag-context-provider</code> / <code>trace-recorder</code> / <code>pricing</code></li>
+          </ul>
+        </div>
+      </div>
+      <h3>5.1 channel · 入站流水线与路由</h3>
+      <p><code>channel</code> context 不只是 adapter 集合，而是完整的入站编排链：</p>
+      <ul>
+        <li><code>InboundPipeline</code> — 责任链，<code>use()</code> 注册 handler，逐个执行；任一 handler 抛错<strong>中止整条流水线</strong>防止不一致状态传播</li>
+        <li><code>ChannelRouter</code> — 按 <code>RoutingRule.priority</code> 降序匹配条件，<code>resolveTargetChannels</code> 决定消息投递到哪些渠道；无匹配 fallback 到 <code>websocket</code></li>
+        <li><code>DecisionConsole</code> — 决策控台，组合 <code>ChannelService</code> + <code>ChannelRouter</code>，产出 <code>DispatchCommand</code>（targetChannels + roomId + message）</li>
+        <li><code>ChannelBridgeService</code> — 桥接 Matrix Bot 与运行时</li>
+      </ul>
+      <h3>5.2 claude-worker 沙箱执行协议</h3>
+      <p>
+        <code>infra/claude-worker/worker.ts</code> 是独立 Docker 容器内的 worker：接收 <code>CLAUDE_TASK_JSON</code> 环境变量，
+        调用 Claude Agent SDK <code>query()</code>，按行 stdout 输出 NDJSON 事件供宿主 <code>DockerWorkerRunner</code> 消费。
+      </p>
+      <pre><code>{"type":"session_id","sessionId":"sess_xxx"}      # 会话建立（首次或 resume）
+{"type":"progress","progress":50,"usage":{...}}     # 进度 + Token 用量
+{"type":"result","result":"...","stopReason":"end_turn"}  # 最终结果
+{"type":"done","sessionId":"sess_xxx"}               # 任务完成
+{"type":"error","message":"..."}                     # 失败（exit 1）</code></pre>
+      <p class="muted">
+        退出码：0 完成 / 1 故障或超时 / 2 <code>CLAUDE_TASK_JSON</code> 缺失。支持会话续接（<code>sessionId</code> resume）、
+        预算熔断（<code>budget-guard</code>，<code>CLAUDE_DEFAULT_BUDGET_USD</code>）、RAG 上下文块与 skill 上下文块前置注入。
+        <code>ANTHROPIC_API_KEY</code> 未配置时不注册 adapter，系统降级到 OpenClaw adapter。
+      </p>
+    </section>
+
+    <section>
+      <h2>6. 模型授权与 per-instance 隔离</h2>
+      <p>HMR 在 LLM 调用上做了双层隔离，确保数字员工实例只能用被授权的模型：</p>
+      <div class="columns">
+        <div>
+          <h3>ModelGrantChecker <span class="tag orange">白名单</span></h3>
+          <p>校验「某 instance 是否被授权使用某 model」，授权关系存于 <code>instance_model_grants</code> 表（白名单语义，默认关闭）。</p>
+          <p>灰度三态（<code>SystemConfigService.aiGateway.enforceModelGrants</code> 控制）：</p>
+          <ul>
+            <li><code>off</code> — 不校验直接放行（默认）</li>
+            <li><code>log</code> — 校验并记录未授权，仍放行（可观测期）</li>
+            <li><code>enforce</code> — 校验并拒绝未授权（强制期，返回 403）</li>
+          </ul>
+        </div>
+        <div>
+          <h3>LlmKeySyncService <span class="tag">兜底</span></h3>
+          <p>把 instance 的 grants 同步为 LiteLLM virtual key：grants 变更时，计算被授权的全部模型别名，在 LiteLLM 生成/更新一把绑定 <code>allowed_models</code> 的 key，缓存到 <code>instance_llm_keys</code>。</p>
+          <p><code>chat.ts</code> 调用时用该 key，实现 per-instance 模型隔离（LiteLLM 层兜底，即使应用层漏校验也被 LiteLLM 拦）。</p>
+          <p class="muted">同步失败不阻断主流程（grants 仍写成功），仅记录 <code>sync_status=failed</code>；LiteLLM 未配置时跳过生成但记 stale。</p>
+        </div>
+      </div>
+      <div class="callout">
+        <code>chat.ts</code>（<code>/api/openclaw/chat</code>）是用户端对话端点：优先调 LiteLLM，不可用时自动返回 mock 回复（保证前端全链路可演示，不依赖外部服务）。<code>DEFAULT_MODEL = claude-sonnet-4-6</code>。
+      </div>
+    </section>
+
+    <section>
+      <h2>7. 核心业务链路</h2>
+
+      <h3>7.1 超管创建租户 + 配额初始化</h3>
+      <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Admin as 平台管理员
+  participant SPA as ops.html
+  participant API as /api/platform
+  participant TM as tenant-management
+  participant QM as quota-management
+  participant IA as identity-access
+  participant PG as PostgreSQL
+
+  Admin->>SPA: 创建租户 + 选套餐
+  SPA->>API: POST /api/platform/tenants
+  API->>TM: 创建 Tenant + 默认配额模板
+  TM->>QM: 初始化四维配额
+  API->>IA: 创建租户 owner 账号（bcrypt）
+  TM->>PG: 落库 tenants + user_quotas
+  API-->>SPA: 返回租户 + owner
+        </pre>
+      </div>
+
+      <h3>7.2 多渠道入站 → 归一化 → 路由 → 决策 → 回执</h3>
+      <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User as 企业用户
+  participant IM as Matrix/WPS/WebSocket
+  participant CH as channel adapter
+  participant Pipe as InboundPipeline
+  participant Router as ChannelRouter
+  participant RE as runtime-engine
+  participant DC as DecisionConsole
+  participant AC as agent-core
+  participant LLM as LiteLLM
+
+  User->>IM: 发送消息
+  IM->>CH: inbound（onInboundMessage）
+  CH->>Pipe: process(InboundMessage)
+  Pipe->>RE: MessageNormalizer 归一化（意图/紧急度/实体）
+  Note over Pipe: 任一 handler 失败即中止流水线
+  RE->>RE: DedupEngine 跨渠道去重
+  RE->>RE: PriorityScorer 优先级评分
+  Router->>Router: 按 priority 匹配 RoutingRule
+  Router-->>DC: resolveTargetChannels
+  DC->>AC: DispatchCommand（目标渠道+房间+消息）
+  AC->>LLM: 经 LiteLLM 调用（per-instance key）
+  LLM-->>AC: 决策建议
+  AC-->>RE: 建议 + 执行命令
+  RE->>DC: ReceiptManager 回执路由
+  DC->>CH: outbound 回原始渠道
+  CH->>IM: 投递回复
+        </pre>
+      </div>
+
+      <h3>7.3 Agent 任务执行（claude-worker 沙箱 + 预算熔断 + 入账）</h3>
+      <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant Chat as /api/openclaw/chat
+  participant Grant as ModelGrantChecker
+  participant Exec as AgentExecutor
+  participant Harness as Harness + budget-guard
+  participant Sandbox as claude-agent-sdk-adapter
+  participant Worker as claude-worker 容器
+  participant SDK as Claude Agent SDK
+  participant Trace as trace-recorder
+  participant QM as quota-management
+  participant BILL as billing
+
+  Chat->>Grant: check(instance, model)
+  Grant-->>Chat: decision（enforce 模式未授权则 403）
+  Chat->>Exec: submitTask(AgentTaskInput)
+  Exec->>Harness: 编排（assembly-provider 组装 tools+skills+RAG）
+  Harness->>Sandbox: 路由到 claude-agent-sdk-adapter
+  Sandbox->>Worker: docker run + CLAUDE_TASK_JSON
+  loop 按行 NDJSON
+    Worker->>SDK: query() 执行
+    SDK-->>Worker: SDKMessage 流
+    Worker-->>Sandbox: progress/usage 事件
+    Sandbox->>Harness: 预算检查（budget-guard）
+  end
+  Worker-->>Sandbox: result + done
+  Sandbox-->>Exec: AgentTaskResult
+  Exec->>Trace: 记录 trajectory span
+  Exec->>QM: Token 用量入账（recordUsage）
+  Exec->>BILL: billingService.recordEvent
+  Exec-->>Chat: 流式回包
+        </pre>
+      </div>
+      <p class="muted">
+        v1.6 全链路 trace 闭环（DispatchTask 编排链路 span 串联）；v1.7 eval 评测真实化（真实 agent 执行 + trajectory 评测，<code>EvalAgentInvoker</code> 独立调用链）。
+        Token 用量经 <code>tokenUsageService.recordUsage</code> 落 analytics，<code>billingService.recordEvent</code> 累加 amount。
+      </p>
+    </section>
+
+    <section>
+      <h2>8. 声明/运行 reconcile 与调度</h2>
+      <p>v1.8 把数字员工实例升级为云原生声明式模型，<code>scheduler</code> context 周期调度两条兜底路径：</p>
+      <div class="columns">
+        <div>
+          <h3>instance-reconciler <span class="tag">主动调和</span></h3>
+          <ul>
+            <li>每 5 分钟遍历实例，按 <code>desired→actual + specGeneration</code> diff 调和</li>
+            <li><code>decideReconcileAction</code> 返回 <code>noop</code> 时跳过（避免无谓 get/save）</li>
+            <li>有 drift 调 <code>InstanceService.reconcile</code>：状态调和（stop/start）+ spec 增量</li>
+            <li>reconcile 失败累计达阈值（默认 3）→ 内部 rebuild 兜底（整机重建）</li>
+            <li>职责：<strong>声明态(desired/spec) → 运行态(actual)</strong></li>
+          </ul>
+        </div>
+        <div>
+          <h3>instance-health-monitor <span class="tag cyan">被动探活</span></h3>
+          <ul>
+            <li>每 5 分钟探活远端真实态（remote）</li>
+            <li>unhealthy 先 <code>force-reconcile</code> 轻量恢复</li>
+            <li>持续不健康累积 → rebuild 兜底（30min cooldown 去重）</li>
+            <li>职责：<strong>运行态(actual) → 远端真实态(remote)</strong></li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        两者每 5 分钟并行、互不阻塞，共用 <code>InstanceService.rebuild</code>。理论可能短时双 rebuild，由 cooldown 去重 + rebuild 幂等保护。
+        <code>pg-advisory-lock</code> 保证同一任务在多实例部署时不并发执行。
+      </div>
+      <h3>8.1 scheduler 全部 8 个 handler</h3>
+      <table>
+        <thead><tr><th>handler</th><th>职责</th></tr></thead>
+        <tbody>
+          <tr><td><code>instance-reconciler</code></td><td>声明/运行调和（v1.8 收官）</td></tr>
+          <tr><td><code>instance-health-monitor</code></td><td>实例健康探活 + rebuild 兜底</td></tr>
+          <tr><td><code>llm-agent-invoker</code></td><td>LLM Agent 任务调度</td></tr>
+          <tr><td><code>agent-handler</code></td><td>通用 agent 任务</td></tr>
+          <tr><td><code>weekly-report</code></td><td>周报生成</td></tr>
+          <tr><td><code>employee-cleanup</code></td><td>数字员工清理</td></tr>
+          <tr><td><code>oauth-state-cleanup</code></td><td>OAuth state 过期清理</td></tr>
+          <tr><td><code>system-handler</code></td><td>系统级任务</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>9. 数据与存储边界</h2>
+      <p>
+        单库 <code>hmr</code>（PostgreSQL 16，本地 <code>:5435</code>），连接串 <code>postgresql://hmr:hmr@localhost:5435/hmr</code>。
+        schema 按 context 拆 24 个文件（<code>server/src/db/schema/</code>），migrations 同构拆 18 个（<code>db/migrations/</code>），
+        repositories 50+ 个。Redis（<code>:6379</code>）可选，用于 rate-limit 共享计数（留空则进程内内存，仅单实例）。
+      </p>
+      <table>
+        <thead>
+          <tr><th>schema 文件</th><th>归属上下文</th><th>主要表/对象</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>identity.ts</code></td><td>identity-access</td><td><code>users</code>、<code>user_roles</code>、<code>platform_sessions</code>、oauth state</td></tr>
+          <tr><td><code>tenant.ts</code></td><td>tenant-management / quota</td><td><code>tenants</code>、<code>workspaces</code>、<code>user_quotas</code></td></tr>
+          <tr><td><code>instance.ts</code></td><td>tenant-instance</td><td><code>runtime_instances</code>、<code>desired_state</code>、<code>spec_generation</code>（v1.8 新增）、<code>instance_model_grants</code>、<code>instance_llm_keys</code></td></tr>
+          <tr><td><code>agent-definition.ts</code> / <code>agent-profile.ts</code></td><td>agent-core / agent-profile</td><td>Agent 定义、Profile/Journey、画像档案</td></tr>
+          <tr><td><code>tool-registry.ts</code> / <code>mcp.ts</code></td><td>tool-management / mcp-management</td><td>工具资产、MCP 服务</td></tr>
+          <tr><td><code>skill.ts</code></td><td>shared-assets</td><td>技能包、版本</td></tr>
+          <tr><td><code>knowledge.ts</code> / <code>document.ts</code></td><td>knowledge / document</td><td>知识库、文档、WeKnora 映射</td></tr>
+          <tr><td><code>employee-memory.ts</code></td><td>employee-memory</td><td>数字员工记忆（mem0 scope）</td></tr>
+          <tr><td><code>credential.ts</code></td><td>credential-vault</td><td>加密凭证、<code>credential_leases</code>（短期租约 TTL）</td></tr>
+          <tr><td><code>ai-gateway.ts</code></td><td>gateway</td><td><code>discovered_models</code>、模型路由、调用追踪、风控</td></tr>
+          <tr><td><code>billing.ts</code> / <code>plan.ts</code></td><td>billing / tenant-management</td><td><code>billing_accounts</code>、套餐（Free/Pro/Team）</td></tr>
+          <tr><td><code>observability.ts</code> / <code>audit.ts</code></td><td>observability / audit-observability</td><td>指标追踪、跨租户审计日志</td></tr>
+          <tr><td><code>eval-benchmark.ts</code></td><td>eval-benchmark</td><td>dataset、eval run、trajectory</td></tr>
+          <tr><td><code>operational.ts</code></td><td>多支撑域</td><td><code>openclaw_entities</code>、<code>notifications</code>、<code>push_channels</code>、<code>tool_configs</code>、<code>ai_budgets</code>、<code>ai_failover_chains</code>、<code>workspaces</code></td></tr>
+          <tr><td><code>config.ts</code></td><td>system-config</td><td><code>system_configs</code>、<code>platform_configs</code>（SSO 开关、模型授权灰度等）</td></tr>
+          <tr><td><code>scheduled-tasks.ts</code> / <code>department.ts</code> / <code>app-catalog.ts</code> / <code>app-review.ts</code></td><td>scheduler / department / marketplace</td><td>定时任务、部门组织、应用目录、应用评审</td></tr>
+        </tbody>
+      </table>
+      <div class="callout danger">
+        <strong>硬规则（CLAUDE.md §7.2.1）</strong>：DB schema 变更<strong>必须</strong>同步 Drizzle migration（<code>.ts</code>）——
+        仅改 <code>schema.ts</code> 不够，<code>migrate.ts</code> 不跑 <code>.sql</code>，<code>tsc</code>/<code>vitest</code> 测不出缺列，只有真请求暴露（见 memory）。
+        新表必须加索引（外键 / where / orderBy / 唯一约束）。列表 API 必须分页。
+      </div>
+    </section>
+
+    <section>
+      <h2>10. 鉴权与安全边界</h2>
+      <table>
+        <thead>
+          <tr><th>凭证 / 机制</th><th>代表谁</th><th>签发 / 管理</th><th>主要消费方</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>JWT</code>（scope=platform/tenant）</td><td>登录用户</td><td>identity-access（<code>AuthProviderRegistry</code>）</td><td>所有 <code>/api/*</code>（authMiddleware）；<code>tenantId</code> 强制数据隔离</td></tr>
+          <tr><td><code>Session Cookie</code></td><td>浏览器会话</td><td>identity-access（<code>DrizzleSessionStore</code>，<code>SESSION_SECRET</code>）</td><td>BFF 同源会话</td></tr>
+          <tr><td><code>Credential Vault</code></td><td>外部系统密钥</td><td>credential-vault（<code>CREDENTIAL_ENCRYPTION_KEY</code> 加密存储）</td><td>channel adapter、tool executor、gateway client</td></tr>
+          <tr><td><code>Credential Lease</code></td><td>短期凭证租约</td><td>credential-vault <code>LeaseService</code>（<code>CREDENTIAL_LEASE_TTL_SEC</code>）</td><td>runtime、gateway、工具执行器</td></tr>
+          <tr><td><code>OIDC SSO</code></td><td>企业 IdP 用户</td><td>identity-access（<code>OIDC_ISSUER</code> 等环境变量，预留开关）</td><td>替代本地密码登录（Entra ID / Okta / Keycloak）</td></tr>
+          <tr><td><code>Matrix loginToken</code></td><td>Matrix SSO 用户</td><td>Conduit + App.tsx 回调</td><td>Matrix 单点登录场景</td></tr>
+          <tr><td><code>Platform-BE 代理认证</code></td><td>企业 OAuth 委托</td><td>gateway（<code>PLATFORM_BE_*</code>）</td><td>企业统一身份/凭证服务</td></tr>
+        </tbody>
+      </table>
+      <div class="grid">
+        <article class="card wide">
+          <h3>多租户数据隔离</h3>
+          <p>两域：<strong>Platform</strong>（platform scope，全局可见，跨租户管理）与 <strong>Tenant</strong>（tenant scope，<code>tenantId</code> 强制过滤）。
+          配额四维度：容量（实例/并发/用户）、资源（CPU/内存/存储）、AI（Token/调用/速率）、数据（保留期/Webhook/知识库）。</p>
+        </article>
+        <article class="card">
+          <h3>LiteLLM 隔离</h3>
+          <p>所有大模型调用经 <code>LITELLM_BASE_URL</code> 中转，per-instance virtual key 兜底。换模型仅改 LiteLLM 配置，HMR 链路无感。</p>
+        </article>
+        <article class="card">
+          <h3>私有化部署</h3>
+          <p>内网无 Anthropic 出口时，<code>ANTHROPIC_BASE_URL</code> 经企业代理（LiteLLM <code>/v1/messages</code> 或自建）转发。见 <code>docs/architecture/private-deployment-paths.md</code>。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>11. 构建、部署与质量门禁</h2>
+      <h3>11.1 docker-compose 服务清单</h3>
+      <table>
+        <thead>
+          <tr><th>服务</th><th>镜像</th><th>端口</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>postgres</code></td><td>postgres:16-alpine</td><td><code>5435</code></td><td>主库 HMR</td></tr>
+          <tr><td><code>redis</code></td><td>redis:7-alpine</td><td><code>6379</code></td><td>rate-limit 共享计数（可选）</td></tr>
+          <tr><td><code>conduit</code></td><td>matrix-conduit</td><td><code>6167</code></td><td>Matrix homeserver（默认渠道）</td></tr>
+          <tr><td><code>litellm</code></td><td>litellm:main-latest</td><td><code>4000</code></td><td>LLM 统一出口 + per-instance key</td></tr>
+          <tr><td><code>weknora</code></td><td>weknora:latest</td><td><code>8088</code></td><td>RAG 知识检索（profile）</td></tr>
+          <tr><td><code>web</code>（server）/ <code>client</code></td><td>—</td><td><code>3002</code> / <code>8080</code></td><td>Hono 后端 / Nginx SPA</td></tr>
+        </tbody>
+      </table>
+      <h3>11.2 部署形态</h3>
+      <div class="columns">
+        <div>
+          <h3>生产部署</h3>
+          <ul>
+            <li><strong>Helm</strong>：<code>deploy/helm/human-machine-runtime/</code>（values-dev / values-prod）</li>
+            <li><strong>K8s</strong>：<code>deploy/k8s/base/</code>（deployment / service / ingress / hpa / pdb / networkpolicy / configmap / secret）</li>
+            <li><strong>可观测</strong>：<code>deploy/observability/</code> + Prometheus 告警规则 + Grafana 仪表盘</li>
+            <li><strong>claude-worker</strong>：<code>infra/claude-worker/Dockerfile</code>（先 <code>bash scripts/build-claude-worker.sh</code> 构建）</li>
+          </ul>
+        </div>
+        <div>
+          <h3>本地开发</h3>
+          <ul>
+            <li><code>npm run dev</code>（tsx watch，后端 :3002）</li>
+            <li><code>npx vite</code>（前端 :5176，代理 /api→3002、/_matrix→6167）</li>
+            <li><code>npm run db:setup</code>（迁移 + 种子，7 账号）</li>
+            <li><code>bash scripts/ensure-matrix-bot.sh</code>（注册 bot + factory room）</li>
+            <li><code>dev-portforward.sh</code> / <code>start-all.sh</code> / <code>check-all.sh</code></li>
+          </ul>
+        </div>
+      </div>
+      <h3>11.3 三重质量门禁（每次 commit 必过）</h3>
+      <table>
+        <thead><tr><th>门禁</th><th>命令</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>lint</td><td><code>eslint</code> / <code>tsc --noEmit</code></td><td>react-hooks/set-state-in-effect 已关（effect+fetch 模式，引数据层后重开）</td></tr>
+          <tr><td>type-check</td><td><code>tsc --strict</code>（client-suite）</td><td>strict 模式，no any</td></tr>
+          <tr><td>test</td><td><code>vitest run</code></td><td>后端 102 文件 / 前端 93 文件（v1.8: 1455 passed）</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <strong>工程宪章硬约束（CLAUDE.md）</strong>：单文件 ≤ 1000 行（800 行主动评估拆分）；domain 层零外部依赖；
+        新路由必挂 auth 中间件；列表 API 必须分页；DB 变更必有 migration；版本归档前过 §14 全量门禁（死代码 / 依赖卫生 / 配置一致性 / 文档对齐 / 架构合规 / 仓库卫生）。
+      </div>
+    </section>
+
+    <section>
+      <h2>12. 当前阶段成果与差异点</h2>
+      <div class="columns">
+        <div>
+          <h3>已完成（v1.0 → v1.8）</h3>
+          <ul>
+            <li><strong>v1.0</strong> 投产工程 4 阶段</li>
+            <li><strong>v1.1</strong> 流程可用性（Conduit / 配额 / 调度重试 / 实例自愈）</li>
+            <li><strong>v1.2.1</strong> 外部契约收尾 + 私有化前置（claude-worker 双路径 + credential 后端 + 集成测试端到端）</li>
+            <li><strong>v1.3</strong> 声明式 CRD（migration 真实 DB 验证）</li>
+            <li><strong>v1.4</strong> 可组装层（按 agent 定义自动组装工具与 skill）</li>
+            <li><strong>v1.6</strong> 全链路 trace 闭环（DispatchTask span 串联）</li>
+            <li><strong>v1.7</strong> eval 评测真实化（真实 agent 执行 + trajectory 评测）</li>
+            <li><strong>v1.8</strong> 声明/运行 reconcile 解耦（desiredState + specGeneration diff 调和，云原生收官）</li>
+          </ul>
+        </div>
+        <div>
+          <h3>待启动与长期债务</h3>
+          <ul>
+            <li><strong>v1.2.2（current 待启动）</strong> 商业模式闭环：计费写侧补全（consume/deduct/reserve + 对账）+ 用量报表 API + 前端 + 异常告警</li>
+            <li><strong>D7</strong> bootstrap god-file 已清（832→542 行，8 bundle）</li>
+            <li><strong>D8（P1 未排期）</strong> <code>AgentRuntimePort</code> 抽象未做，openclawStore 硬绑运行时</li>
+            <li><strong>D9（P2）</strong> marketplace「对话」半成品（id 体系不兼容）</li>
+            <li><strong>D2（P1）</strong> knowledge + memory 检索未进 agent 决策回路</li>
+            <li>SSO（OIDC/SAML）待企业客户需求触发；数据层抽象后重开 react-hooks 规则</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>诚实约束（v1.8 snapshot）</strong>：ContainerOrchestrator 上游无 resize API，reconcile 仅状态级（真扩容需 rebuild 或上游支持）；
+        内部推广暂不计费，v1.2.2 择机开工；D8 影响替换为 Hermes 等框架，是当前最大的运行时可替换缺口。
+      </div>
+    </section>
+
+    <section>
+      <h2>13. 团队心智模型</h2>
+      <div class="callout">
+        <p><strong>不要把 user / tenant / channel / agent / runtime / tool / skill / knowledge / credential 混在一起。</strong></p>
+        <p>
+          User 是人；Tenant/Workspace 是组织归属；Channel 是外部入口（可换）；Agent 是产品定义（可换框架）；
+          Runtime 是运行载体（desiredState/actual 分离）；Tool 是可调用能力契约；Skill 是可复用技能包；
+          Knowledge 是可检索知识边界；Credential 是安全材料。它们可以关联，但必须通过服务 API 显式绑定。
+        </p>
+      </div>
+      <table>
+        <thead><tr><th>问题</th><th>应该问哪个 context</th></tr></thead>
+        <tbody>
+          <tr><td>这个登录用户、外部 sender 对应谁？权限域？</td><td><code>identity-access</code>（<code>AuthProviderRegistry</code>）</td></tr>
+          <tr><td>这个租户、workspace、套餐、配额是什么？</td><td><code>tenant-management</code> / <code>quota-management</code></td></tr>
+          <tr><td>这个数字员工实例由谁承载？desired/actual 状态？</td><td><code>tenant-instance</code>（reconciler + health-monitor）</td></tr>
+          <tr><td>某条消息如何归一化、优先级、去重、决策建议？</td><td><code>runtime-engine</code></td></tr>
+          <tr><td>入站消息怎么编排、路由到哪个渠道？</td><td><code>channel</code>（InboundPipeline + ChannelRouter + DecisionConsole）</td></tr>
+          <tr><td>Agent 任务怎么执行？预算熔断？Token 入账？</td><td><code>agent-core</code>（Harness + budget-guard + claude-worker）</td></tr>
+          <tr><td>某 instance 被授权用哪些模型？怎么隔离？</td><td><code>gateway</code>（ModelGrantChecker + LlmKeySyncService）</td></tr>
+          <tr><td>换成 Dify/Coze/自研 Agent 框架怎么接？</td><td><code>agent-core/sandbox</code> 的 <code>AgentRuntimeAdapter</code></td></tr>
+          <tr><td>接入钉钉/飞书/企微/邮件渠道？</td><td><code>channel/adapters</code> 的 <code>ChannelAdapter</code></td></tr>
+          <tr><td>Agent 绑定了哪些技能、工具？怎么组装？</td><td><code>shared-assets</code> / <code>tool-management</code> + <code>assembly-provider</code></td></tr>
+          <tr><td>某个 Agent/Skill 绑定了哪些知识？怎么检索？</td><td><code>knowledge</code>（WeKnora）+ <code>rag-context-provider</code></td></tr>
+          <tr><td>数字员工的长期记忆？</td><td><code>employee-memory</code>（mem0）</td></tr>
+          <tr><td>外部密钥、租约、加密存储？</td><td><code>credential-vault</code></td></tr>
+          <tr><td>对接 clawhub/portal/xspace/claw-farm/LiteLLM？</td><td><code>gateway/clients</code> + <code>gateway/routes</code> proxy</td></tr>
+          <tr><td>定时任务、reconcile/health 巡检？</td><td><code>scheduler</code>（8 handler + pg-advisory-lock）</td></tr>
+          <tr><td>一次调用链路、Token 用量在哪里查？</td><td><code>observability</code> / <code>analytics</code> / <code>trace-recorder</code></td></tr>
+          <tr><td>计费、对账、用量报表？</td><td><code>billing</code> / <code>analytics</code>（v1.2.2 补全写侧）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="footer">
+      <p><strong>参考材料：</strong></p>
+      <p>
+        <code>CLAUDE.md</code>（工程宪章 v2），
+        <code>README.md</code>，
+        <code>docs/product-strategy-command-center.md</code>，
+        <code>docs/architecture/production-architecture.md</code>，
+        <code>docs/architecture/cloud-native-platform-design.md</code>，
+        <code>docs/architecture/multi-tenancy-design.md</code>，
+        <code>docs/architecture/private-deployment-paths.md</code>，
+        <code>docs/enterprise-agent-os/*</code>，
+        <code>docs/versions/v1.8-snapshot.md</code> / <code>v1.2.2-current.md</code> / <code>backlog.md</code>，
+        <code>server/src/app/index.ts</code> / <code>app/bootstrap.ts</code>（542 行）/ <code>app/bootstrap/</code>（8 bundle），
+        <code>server/src/routes/index.ts</code>，
+        <code>server/src/app/bootstrap/types.ts</code>（AppContext 60+ 字段），
+        <code>infra/claude-worker/worker.ts</code>。
+      </p>
+      <p>
+        本文定位为团队介绍材料，不替代各限界上下文的 detailed design。数据库凭据、密钥值和生产访问策略不在本文中分发。
+        架构与 KS-ClawMate（service-first 微服务）范式不同：HMR 是单体 DDD，以限界上下文而非微服务划分边界。
+      </p>
+    </section>
+  </main>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#eef4ff",
+        primaryTextColor: "#1d1d1f",
+        primaryBorderColor: "#007aff",
+        lineColor: "#6e6e73",
+        secondaryColor: "#eafaf0",
+        tertiaryColor: "#fff7ec",
+        fontFamily: "Avenir Next, PingFang SC, sans-serif"
+      }
+    });
+  </script>
+</body>
+</html>

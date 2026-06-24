@@ -156,7 +156,7 @@ graph TB
   style ChannelPlane fill:#f3e8fe,stroke:#af52de,stroke-width:2px
 ```
 
-### DDD 限界上下文（28 个）
+### DDD 限界上下文（29 个）
 
 ```mermaid
 graph LR
@@ -448,7 +448,7 @@ human-machine-runtime/
         admin/                           # L2 租户管理路由
         control/                         # L2 控制面路由
         openclaw/                        # 用户端决策中心 + Enterprise Agent OS
-      contexts/                          # DDD 限界上下文 ×28
+      contexts/                          # DDD 限界上下文 ×29
         runtime-engine/                  # 核心运行时引擎（消息归一化/优先级/去重/推荐/回执）
         agent-core/                      # Agent 执行 + AgentRuntimeAdapter 接口
         channel/                         # ChannelAdapter 接口 + 适配器 + 路由 + 决策控台
@@ -639,6 +639,7 @@ helm upgrade --install hmr-server deploy/helm/human-machine-runtime \
 
 | 文档 | 内容 |
 |------|------|
+| [HMR 架构总览](docs/architecture/hmr-architecture-overview.html) | 一页纸全局架构（单 HTML，含 Mermaid 图） |
 | [产品战略白皮书](docs/product-strategy-command-center.md) | 定位/架构/竞品/商业模式/路线图 |
 | [租户运营平台](docs/super-admin/) | 架构/PRD/里程碑 |
 | [租户管理后台](docs/admin-console/) | 架构/PRD/里程碑 |
