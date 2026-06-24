@@ -94,6 +94,8 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
     const ragContext = typeof input.ragContext === 'string' ? input.ragContext : undefined;
     // v1.4:skill 内容(由组装层 boundSkills 召回),透传给 worker 拼 <skills> 块
     const skillsContext = typeof input.skillsContext === 'string' ? input.skillsContext : undefined;
+    // v1.6:trace id(协议预留,透传给 worker payload)
+    const traceId = typeof input.traceId === 'string' ? input.traceId : undefined;
     // v1.3:资源限制(K8s 风格 CPU/memory),透传给 docker-runner 转 docker 参数;缺省用 config 默认
     const resources =
       typeof input.resources === 'object' &&
@@ -149,6 +151,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       anthropicBaseUrl: this.config.anthropicBaseUrl,
       ragContext,
       skillsContext,
+      traceId,
       resources,
       workerImage: this.config.workerImage,
     };

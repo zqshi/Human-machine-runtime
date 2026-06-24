@@ -32,6 +32,8 @@ export interface WorkerRunOptions {
   ragContext?: string;
   /** v1.4:skill 内容块(组装层 boundSkills 召回),worker 拼 prompt 时前置为 <skills> 块 */
   skillsContext?: string;
+  /** v1.6:trace id(协议预留,worker 后续可上报 child span;本期不埋点) */
+  traceId?: string;
   /** v1.3:资源限制(CPU '1000m'/memory '512Mi' K8s 风格),转换为 docker --cpus/--memory;缺省用 1.0/2g */
   resources?: { cpu: string; memory: string };
   workerImage: string;
@@ -218,6 +220,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
     }
     if (opts.skillsContext) {
       payload.skillsContext = opts.skillsContext;
+    }
+    if (opts.traceId) {
+      payload.traceId = opts.traceId;
     }
     if (opts.sessionId) {
       payload.sessionId = opts.sessionId;

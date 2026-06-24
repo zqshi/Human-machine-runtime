@@ -31,9 +31,7 @@ export interface IBoundToolsPort {
 /** skill 内容 store port */
 export interface IContentStorePort {
   /** 批量查 skill 元数据 + content(组装 skillsContext) */
-  getByIds(
-    ids: string[]
-  ): Promise<
+  getByIds(ids: string[]): Promise<
     Array<{
       id: string;
       name: string;

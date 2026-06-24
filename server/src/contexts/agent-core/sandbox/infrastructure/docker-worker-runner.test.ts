@@ -398,6 +398,37 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(task.ragContext).toBe('rag-block');
   });
 
+  it('traceId 有值时 payload 含 traceId(v1.6 trace 协议预留透传)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(makeOpts({ traceId: 'trc_test_123' }), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.traceId).toBe('trc_test_123');
+  });
+
   it('任务完成后清理 env file(不留 apiKey 残留)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);

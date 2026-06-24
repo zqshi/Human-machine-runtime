@@ -13,6 +13,8 @@ import type {
 } from '../sandbox/agent-runtime-adapter.js';
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
 import type { IAssemblyProvider, AssemblyRequest } from '../domain/assembly-provider.js';
+import type { ITraceRecorder } from '../domain/trace-recorder.js';
+import { newId } from '../../../shared/utils.js';
 import type { IToolRegistry } from '../../tool-management/tool-registry.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 
@@ -35,6 +37,7 @@ export class AgentHarness {
   private readonly broadcast: BroadcastFn;
   private ragProvider: IRagContextProvider | null;
   private assemblyProvider: IAssemblyProvider | null;
+  private traceRecorder: ITraceRecorder | null;
 
   constructor(
     llmClient: ILLMClient | null,
@@ -50,6 +53,7 @@ export class AgentHarness {
       });
     this.ragProvider = ragProvider ?? null;
     this.assemblyProvider = null;
+    this.traceRecorder = null;
     const execStores: AgentExecutorStores = { tasks: session.taskArtifactStore };
     this.executor = new AgentExecutor(llmClient, execStores, this.broadcast);
   }
@@ -73,6 +77,72 @@ export class AgentHarness {
     task: AgentTaskInput,
     preferredFramework?: AgentFramework
   ): Promise<{ taskId: string; framework: AgentFramework }> {
+    // v1.6:全链路 trace。入口生成 traceId(复用 input.traceId 或新建)+ 写根 trace;
+    // 三段(RAG/assembly/sandbox)各开 child span(扁平挂根 parentSpanId=undefined);
+    // 完成收尾 updateDistributedTrace。trace 失败不阻断主链路。
+    const input0 = (task.input ?? {}) as Record<string, unknown>;
+    const traceId =
+      typeof input0.traceId === 'string' ? input0.traceId : newId('trc');
+    // 把 traceId 写回 input(若原无),让 adapter/worker payload 能透传(协议预留)
+    if (input0.traceId === undefined) {
+      input0.traceId = traceId;
+      task.input = input0;
+    }
+    const traceStartTime = Date.now();
+    const spanCount = { value: 0 };
+    const traceRecorder = this.traceRecorder;
+    const instanceId = typeof input0.instanceId === 'string' ? input0.instanceId : undefined;
+    const sessionId = typeof input0.sessionId === 'string' ? input0.sessionId : undefined;
+
+    // 内联 span 记录 helper:记 startTime→fn→insertSpan(扁平挂根)。
+    // fn 抛错仍写 span(status=error)再 rethrow(由外层 try/catch 容错)。
+    const traceStep = async <T>(
+      operationName: string,
+      spanKind: 'internal' | 'client' | 'server',
+      fn: () => Promise<T>
+    ): Promise<T> => {
+      if (!traceRecorder) return fn();
+      const startTime = new Date();
+      let status = 'ok';
+      try {
+        return await fn();
+      } catch (err) {
+        status = 'error';
+        throw err;
+      } finally {
+        spanCount.value++;
+        try {
+          await traceRecorder.insertSpan({
+            spanId: newId('spn'),
+            distTraceId: traceId,
+            parentSpanId: undefined, // 扁平挂根
+            operationName,
+            spanKind,
+            startTime,
+            latencyMs: Date.now() - startTime.getTime(),
+            status,
+            metadata: { taskId: task.id },
+          });
+        } catch {
+          // span 写入失败不阻断(trace 是旁路观测)
+        }
+      }
+    };
+
+    if (traceRecorder) {
+      try {
+        await traceRecorder.insertDistributedTrace({
+          traceId,
+          rootOperation: 'agent.task',
+          instanceId,
+          sessionId,
+          tags: { taskId: task.id, name: task.name },
+        });
+      } catch {
+        // 根 trace 写失败不阻断
+      }
+    }
+
     // D2:执行前召回 RAG 上下文(知识库 + 员工记忆),注入到 task.input.ragContext。
     // provider 缺省或召回跳过(skipped)则不改 task,主链路不受影响。
     if (this.ragProvider) {
@@ -85,11 +155,13 @@ export class AgentHarness {
           prompt: typeof input.prompt === 'string' ? input.prompt : task.description,
         };
         try {
-          const rag = await this.ragProvider.getRagContext(recallReq);
-          if (rag.context) {
-            input.ragContext = rag.context;
-            task.input = input;
-          }
+          await traceStep('rag.retrieve', 'internal', async () => {
+            const rag = await this.ragProvider!.getRagContext(recallReq);
+            if (rag.context) {
+              input.ragContext = rag.context;
+              task.input = input;
+            }
+          });
         } catch (err) {
           // 召回失败不阻断主链路(provider 内部已容错,此处双保险)
           appEventBus.publish('harness:rag:failed', {
@@ -104,29 +176,31 @@ export class AgentHarness {
     // 调用方优先(已显式传 allowedTools/skillsContext 则不覆盖)。assemble 内部容错,失败不阻断。
     if (this.assemblyProvider) {
       const input = (task.input ?? {}) as Record<string, unknown>;
-      const instanceId = typeof input.instanceId === 'string' ? input.instanceId : undefined;
+      const asmInstanceId = typeof input.instanceId === 'string' ? input.instanceId : undefined;
       const asmReq: AssemblyRequest = {
         tenantId: task.tenantId,
-        instanceId,
+        instanceId: asmInstanceId,
         prompt: typeof input.prompt === 'string' ? input.prompt : task.description,
       };
       try {
-        const asm = await this.assemblyProvider.assemble(asmReq);
-        if (asm.allowedTools !== undefined && input.allowedTools === undefined) {
-          input.allowedTools = asm.allowedTools;
-        }
-        if (asm.skillsContext && input.skillsContext === undefined) {
-          input.skillsContext = asm.skillsContext;
-        }
-        if (asm.allowedTools !== undefined || asm.skillsContext) {
-          task.input = input;
-        }
-        if (asm.degraded) {
-          appEventBus.publish('harness:assembly:degraded', {
-            taskId: task.id,
-            sources: asm.sources,
-          });
-        }
+        await traceStep('assembly.compose', 'internal', async () => {
+          const asm = await this.assemblyProvider!.assemble(asmReq);
+          if (asm.allowedTools !== undefined && input.allowedTools === undefined) {
+            input.allowedTools = asm.allowedTools;
+          }
+          if (asm.skillsContext && input.skillsContext === undefined) {
+            input.skillsContext = asm.skillsContext;
+          }
+          if (asm.allowedTools !== undefined || asm.skillsContext) {
+            task.input = input;
+          }
+          if (asm.degraded) {
+            appEventBus.publish('harness:assembly:degraded', {
+              taskId: task.id,
+              sources: asm.sources,
+            });
+          }
+        });
       } catch (err) {
         appEventBus.publish('harness:assembly:failed', {
           taskId: task.id,
@@ -140,9 +214,28 @@ export class AgentHarness {
       tenantId: task.tenantId,
       name: task.name,
       preferredFramework,
+      traceId,
     });
-    const result = await this.sandbox.dispatchTask(task, preferredFramework);
-    return result;
+    try {
+      const result = await traceStep('sandbox.dispatch', 'client', () =>
+        this.sandbox.dispatchTask(task, preferredFramework)
+      );
+      return result;
+    } finally {
+      // v1.6:根 trace 收尾(含 spanCount + 总耗时)
+      if (traceRecorder) {
+        try {
+          await traceRecorder.updateDistributedTrace(traceId, {
+            status: 'completed',
+            spanCount: spanCount.value,
+            totalDurationMs: Date.now() - traceStartTime,
+            completedAt: new Date(),
+          });
+        } catch {
+          // 收尾失败不阻断
+        }
+      }
+    }
   }
 
   /** Adapter 任务完成回调注册(透传 sandbox.adapterRegistry 的任意 adapter)。 */
@@ -177,6 +270,14 @@ export class AgentHarness {
    */
   setAssemblyProvider(provider: IAssemblyProvider | null): void {
     this.assemblyProvider = provider;
+  }
+
+  /**
+   * 注入 trace 记录器,激活 dispatchTask 全链路 trace 串联(v1.6)。
+   * 延后注入(模式同 setRagProvider/setAssemblyProvider)。
+   */
+  setTraceRecorder(recorder: ITraceRecorder | null): void {
+    this.traceRecorder = recorder;
   }
 
   /** 测试/关停用:清理 executor 的所有 progress timer。 */

@@ -91,13 +91,13 @@ describe('AgentHarness - assembly 注入(v1.4)', () => {
     });
 
     const task = makeTask();
-    const originalInput = { ...task.input };
     await harness.dispatchTask(task);
 
+    // assembly skipped → 未注入 allowedTools/skillsContext(核心意图)。
+    // 注:v1.6 dispatchTask 会写回 traceId 到 input(协议预留),故 input 含 traceId,
+    // 此处只断言 assembly 维度未改,不断言整个 input 等于原始。
     expect(captured.task!.input.allowedTools).toBeUndefined();
     expect(captured.task!.input.skillsContext).toBeUndefined();
-    // input 未被 assembly 改(可能被 rag 改,但此处无 rag)
-    expect(captured.task!.input).toEqual(originalInput);
   });
 
   it('assembly degraded → publish 事件但 allowedTools 不覆盖(不静默放开全工具)', async () => {

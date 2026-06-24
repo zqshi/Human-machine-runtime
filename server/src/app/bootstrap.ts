@@ -10,6 +10,7 @@ import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
+import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
 import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
@@ -613,6 +614,9 @@ export function createAppContext(db: Database): AppContext {
       skillRepo
     )
   );
+
+  // v1.6:激活 trace 记录器(dispatchTask 全链路 trace 串联)。aiGatewayRepo 早实例化。
+  agentHarness.setTraceRecorder(buildTraceRecorder(aiGatewayRepo));
 
   /* ──── Scheduled Tasks (定时任务调度) ──── */
   const scheduledTaskRepo = new ScheduledTaskRepository(db);
