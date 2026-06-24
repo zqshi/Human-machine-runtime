@@ -47,6 +47,7 @@ import { createAdminMemoryRoutes } from './admin/employee-memory.js';
 import { createAdminCredentialRoutes } from './admin/credentials.js';
 import { createAdminAgentDefinitionRoutes } from './admin/agent-definitions.js';
 import { createAdminToolApprovalRoutes } from './admin/tool-approvals.js';
+import { createAdminRuntimeTemplateRoutes } from './admin/runtime-templates.js';
 import { createOpenclawTaskRoutes } from './openclaw/tasks.js';
 import { createOpenclawDecisionRoutes } from './openclaw/decisions.js';
 import { createOpenclawSignalRoutes } from './openclaw/signals.js';
@@ -200,6 +201,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
     '/tool-approvals',
     createAdminToolApprovalRoutes(ctx.toolApprovalRepo, ctx.toolManagementService, ctx.auditService)
   );
+  admin.route('/runtime-templates', createAdminRuntimeTemplateRoutes());
   app.route('/api/admin', admin);
 
   /* ──── Control (L2 管理控制面) ──── */
