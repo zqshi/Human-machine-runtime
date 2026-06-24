@@ -12,6 +12,13 @@ import {
   applyResourceConfig,
   resetResourceConfig,
   isCustomResource,
+  setDesiredState,
+  bumpSpecGeneration,
+  hasStateDrift,
+  decideReconcileAction,
+  getReconciledSpecGeneration,
+  getReconcileFailures,
+  withReconciled,
 } from './instance.js';
 import type { TenantQuotas } from '../../tenant-management/domain/tenant.js';
 
@@ -241,5 +248,137 @@ describe('isCustomResource', () => {
     expect(isCustomResource(inst)).toBe(false);
     const customized = applyResourceConfig(inst, {}, 'admin');
     expect(isCustomResource(customized)).toBe(true);
+  });
+});
+
+describe('desiredState / specGeneration (v1.8 reconcile)', () => {
+  it('createInstance defaults desiredState to REQUESTED and specGeneration to 0', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    expect(inst.desiredState).toBe(STATE.REQUESTED);
+    expect(inst.specGeneration).toBe(0);
+  });
+
+  it('createInstance keeps desiredState in sync with state (no drift at birth)', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    expect(inst.desiredState).toBe(inst.state);
+    expect(hasStateDrift(inst)).toBe(false);
+  });
+
+  it('setDesiredState updates desired without touching actual state', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    const updated = setDesiredState(inst, STATE.STOPPED);
+    expect(updated.desiredState).toBe(STATE.STOPPED);
+    expect(updated.state).toBe(STATE.REQUESTED); // actual 不变
+    expect(updated).not.toBe(inst); // 不可变返回新对象
+  });
+
+  it('setDesiredState records a drift against actual state', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    const drifted = setDesiredState(inst, STATE.RUNNING);
+    expect(hasStateDrift(drifted)).toBe(true);
+  });
+
+  it('bumpSpecGeneration increments generation monotonically', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    expect(inst.specGeneration).toBe(0);
+    expect(bumpSpecGeneration(inst).specGeneration).toBe(1);
+    expect(bumpSpecGeneration(bumpSpecGeneration(inst)).specGeneration).toBe(2);
+  });
+
+  it('hasStateDrift is false once actual catches up to desired', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'Test', creator: 'admin' });
+    const drifted = setDesiredState(inst, STATE.RUNNING);
+    expect(hasStateDrift(drifted)).toBe(true);
+    // actual 跟随 desired 后,drift 消除
+    const reconciled = { ...drifted, state: STATE.RUNNING };
+    expect(hasStateDrift(reconciled)).toBe(false);
+  });
+});
+
+describe('reconcile runtime helpers (v1.8)', () => {
+  it('getReconciledSpecGeneration returns -1 when unset', () => {
+    const inst = createInstance({ tenantId: 'tn_1', name: 'T', creator: 'a' });
+    expect(getReconciledSpecGeneration(inst)).toBe(-1);
+  });
+  it('getReconciledSpecGeneration returns stored value', () => {
+    const inst = {
+      ...createInstance({ tenantId: 'tn_1', name: 'T', creator: 'a' }),
+      runtime: { reconciledSpecGeneration: 5 },
+    };
+    expect(getReconciledSpecGeneration(inst)).toBe(5);
+  });
+  it('getReconcileFailures returns 0 when unset', () => {
+    expect(
+      getReconcileFailures(createInstance({ tenantId: 'tn_1', name: 'T', creator: 'a' }))
+    ).toBe(0);
+  });
+  it('withReconciled stamps generation, resets failures, clears error, keeps rest', () => {
+    const rt = withReconciled({ pid: 1, lastReconcileError: 'x', reconcileFailures: 2 }, 3);
+    expect(rt.reconciledSpecGeneration).toBe(3);
+    expect(rt.reconcileFailures).toBe(0);
+    expect(rt.lastReconcileError).toBeUndefined();
+    expect(rt.pid).toBe(1);
+  });
+});
+
+describe('decideReconcileAction (v1.8)', () => {
+  const base = () => createInstance({ tenantId: 'tn_1', name: 'T', creator: 'a' });
+
+  it('returns stop when desired=stopped but actual running', () => {
+    const inst = { ...base(), state: STATE.RUNNING, desiredState: STATE.STOPPED };
+    expect(decideReconcileAction(inst)).toBe('stop');
+  });
+
+  it('returns start when desired=running but actual requested', () => {
+    const inst = { ...base(), state: STATE.REQUESTED, desiredState: STATE.RUNNING };
+    expect(decideReconcileAction(inst)).toBe('start');
+  });
+
+  it('returns start when desired=running but actual stopped', () => {
+    const inst = { ...base(), state: STATE.STOPPED, desiredState: STATE.RUNNING };
+    expect(decideReconcileAction(inst)).toBe('start');
+  });
+
+  it('returns noop when desired=running and provisioning in flight (do not disturb)', () => {
+    const inst = { ...base(), state: STATE.PROVISIONING, desiredState: STATE.RUNNING };
+    expect(decideReconcileAction(inst)).toBe('noop');
+  });
+
+  it('returns reconcile when spec drifted while running', () => {
+    const inst = {
+      ...base(),
+      state: STATE.RUNNING,
+      desiredState: STATE.RUNNING,
+      specGeneration: 2,
+      runtime: { reconciledSpecGeneration: 1 },
+    };
+    expect(decideReconcileAction(inst)).toBe('reconcile');
+  });
+
+  it('returns reconcile when specGeneration never reconciled (running)', () => {
+    const inst = {
+      ...base(),
+      state: STATE.RUNNING,
+      desiredState: STATE.RUNNING,
+      specGeneration: 0,
+      runtime: {},
+    };
+    expect(decideReconcileAction(inst)).toBe('reconcile');
+  });
+
+  it('returns noop when spec already reconciled', () => {
+    const inst = {
+      ...base(),
+      state: STATE.RUNNING,
+      desiredState: STATE.RUNNING,
+      specGeneration: 2,
+      runtime: { reconciledSpecGeneration: 2 },
+    };
+    expect(decideReconcileAction(inst)).toBe('noop');
+  });
+
+  it('returns noop when desired=stopped and actual already stopped', () => {
+    const inst = { ...base(), state: STATE.STOPPED, desiredState: STATE.STOPPED };
+    expect(decideReconcileAction(inst)).toBe('noop');
   });
 });

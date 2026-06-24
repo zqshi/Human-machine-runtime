@@ -125,6 +125,7 @@ import { LlmAgentInvoker } from '../contexts/scheduler/handlers/llm-agent-invoke
 import { registerEmployeeCleanup } from '../contexts/scheduler/handlers/employee-cleanup.js';
 import { registerWeeklyReport } from '../contexts/scheduler/handlers/weekly-report.js';
 import { registerInstanceHealthMonitor } from '../contexts/scheduler/handlers/instance-health-monitor.js';
+import { registerInstanceReconciler } from '../contexts/scheduler/handlers/instance-reconciler.js';
 import {
   ensureSchedulerTasks,
   BOOTSTRAP_SCHEDULER_TASKS,
@@ -648,6 +649,8 @@ export function createAppContext(db: Database): AppContext {
     containerOrchestratorClient,
     notificationService
   );
+  // v1.8:声明/运行调和 controller(*/5 spec-diff reconcile;失败兜底复用上方 rebuild)
+  registerInstanceReconciler(systemHandler, instanceService);
   const jobHandlerRegistry = new JobHandlerRegistry();
   const agentInvoker = new LlmAgentInvoker(litellmClient, {});
   jobHandlerRegistry.register(new AgentJobHandler(agentInvoker));

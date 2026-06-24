@@ -38,6 +38,10 @@ export const instances = pgTable(
     farmNamespace: varchar('farm_namespace', { length: 128 }),
     lastError: text('last_error'),
     version: integer('version').notNull().default(0),
+    /** v1.8:期望态(声明 desired);state 是 actual。reconciler 按 desired→actual diff 调和 */
+    desiredState: varchar('desired_state', { length: 32 }).notNull().default('requested'),
+    /** v1.8:spec 世代(覆盖 resources/policy/agentDefinition 整体),声明变更 +1,驱动 reconcile */
+    specGeneration: integer('spec_generation').notNull().default(0),
     /** v1.3:关联的 Agent 定义 CRD(声明式 spec;可空,旧实例不引用) */
     agentDefinitionId: varchar('agent_definition_id', { length: 64 }),
     /** v1.3:引用 Agent 定义时的 spec 世代(与 agent_definitions.generation 对齐) */
@@ -51,5 +55,6 @@ export const instances = pgTable(
     index('idx_instances_farm').on(table.farmInstanceId),
     index('idx_instances_department').on(table.departmentId),
     index('idx_instances_agent_definition').on(table.agentDefinitionId),
+    index('idx_instances_desired_state').on(table.desiredState),
   ]
 );

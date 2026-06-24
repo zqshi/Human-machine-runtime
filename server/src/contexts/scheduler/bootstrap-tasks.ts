@@ -67,4 +67,16 @@ export const BOOTSTRAP_SCHEDULER_TASKS: EnsureTaskInput[] = [
     cronExpr: '*/5 * * * *',
     timezone: 'Asia/Shanghai',
   },
+  {
+    id: 'scht_instance_reconciler',
+    name: '实例声明/运行调和',
+    description:
+      '每 5 分钟按 desired→actual + specGeneration diff 调和实例(状态 stop/start + spec 增量),' +
+      'reconcile 失败达阈值内部 rebuild 兜底。handlerKey=instance-reconciler',
+    jobType: 'system',
+    jobPayload: { handlerKey: 'instance-reconciler' },
+    scheduleType: 'cron',
+    cronExpr: '*/5 * * * *',
+    timezone: 'Asia/Shanghai',
+  },
 ];

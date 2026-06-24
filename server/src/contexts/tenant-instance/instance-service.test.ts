@@ -72,6 +72,21 @@ function makeProvisioner(shouldFail = false): IInstanceProvisioner {
       return { containerId: 'abc123' };
     }),
     teardown: vi.fn(async () => {}),
+    reconcile: vi.fn(async () => ({ reconciledAt: 'now' })),
+    getRemoteStatus: vi.fn(async () => ({ state: 'running' as const })),
+  };
+}
+
+/** reconcile 可独立控制失败的 provisioner(v1.8 reconcile 编排测试用) */
+function makeProvisionerWithReconcile(failReconcile = false): IInstanceProvisioner {
+  return {
+    provision: vi.fn(async () => ({ containerId: 'abc123' })),
+    teardown: vi.fn(async () => {}),
+    reconcile: vi.fn(async () => {
+      if (failReconcile) throw new Error('reconcile failed');
+      return { reconciledAt: 'now' };
+    }),
+    getRemoteStatus: vi.fn(async () => ({ state: 'running' as const })),
   };
 }
 
@@ -427,6 +442,161 @@ describe('InstanceService', () => {
       const custom = await svc.list(undefined, 'custom');
       expect(custom).toHaveLength(1);
       expect(custom[0].resources.source).toBe('custom');
+    });
+  });
+
+  describe('reconcile (v1.8)', () => {
+    it('noop returns instance unchanged when no drift', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 1,
+        runtime: { reconciledSpecGeneration: 1 },
+      });
+      const prov = makeProvisionerWithReconcile();
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id);
+      expect(result.state).toBe(STATE.RUNNING);
+      expect(prov.reconcile).not.toHaveBeenCalled();
+    });
+
+    it('stop: desired=stopped tears down and sets actual STOPPED', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.STOPPED,
+        specGeneration: 0,
+      });
+      const prov = makeProvisionerWithReconcile();
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id);
+      expect(result.state).toBe(STATE.STOPPED);
+      expect(prov.teardown).toHaveBeenCalledTimes(1);
+      expect(result.runtime.reconciledSpecGeneration).toBe(0);
+    });
+
+    it('start: desired=running with actual stopped provisions and marks applied', async () => {
+      const inst = makeInstance({
+        state: STATE.STOPPED,
+        desiredState: STATE.RUNNING,
+        specGeneration: 2,
+      });
+      const prov = makeProvisionerWithReconcile();
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id);
+      expect(result.state).toBe(STATE.RUNNING);
+      expect(prov.provision).toHaveBeenCalledTimes(1);
+      expect(result.runtime.reconciledSpecGeneration).toBe(2);
+    });
+
+    it('reconcile: spec drift triggers provisioner.reconcile and stamps applied generation', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 3,
+        runtime: { reconciledSpecGeneration: 2 },
+      });
+      const prov = makeProvisionerWithReconcile();
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id);
+      expect(prov.reconcile).toHaveBeenCalledTimes(1);
+      expect(result.runtime.reconciledSpecGeneration).toBe(3);
+      expect(result.runtime.reconcileFailures).toBe(0);
+    });
+
+    it('reconcile failure below threshold records failure without rebuild', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 3,
+        runtime: { reconciledSpecGeneration: 2 },
+      });
+      const prov = makeProvisionerWithReconcile(true);
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id, { failureThreshold: 3 });
+      expect(prov.reconcile).toHaveBeenCalledTimes(1);
+      expect(result.runtime.reconcileFailures).toBe(1);
+      expect(result.runtime.lastReconcileError).toBe('reconcile failed');
+      expect(prov.teardown).not.toHaveBeenCalled();
+    });
+
+    it('reconcile failure at threshold triggers rebuild fallback', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 3,
+        runtime: { reconciledSpecGeneration: 2, reconcileFailures: 2 },
+      });
+      const prov = makeProvisionerWithReconcile(true);
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id, { failureThreshold: 3 });
+      expect(prov.teardown).toHaveBeenCalledTimes(1);
+      expect(prov.provision).toHaveBeenCalledTimes(1);
+      expect(result.state).toBe(STATE.RUNNING);
+      expect(result.runtime.reconciledSpecGeneration).toBe(3);
+      expect(result.runtime.reconcileFailures).toBe(0);
+    });
+
+    it('reconcile without provisioner just marks applied', async () => {
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 3,
+        runtime: { reconciledSpecGeneration: 2 },
+      });
+      const svc = new InstanceService(makeRepo([inst]));
+      const result = await svc.reconcile(inst.id);
+      expect(result.runtime.reconciledSpecGeneration).toBe(3);
+    });
+
+    it('force reconcile triggers provisioner.reconcile even when decide would noop', async () => {
+      // desired=actual=RUNNING 且 spec 已调和 → decide noop;force 时仍走 reconcileSpec 轻量调和
+      const inst = makeInstance({
+        state: STATE.RUNNING,
+        desiredState: STATE.RUNNING,
+        specGeneration: 1,
+        runtime: { reconciledSpecGeneration: 1 },
+      });
+      const prov = makeProvisionerWithReconcile();
+      const svc = new InstanceService(makeRepo([inst]), prov);
+      const result = await svc.reconcile(inst.id, { force: true });
+      expect(prov.reconcile).toHaveBeenCalledTimes(1);
+      expect(result.runtime.reconciledSpecGeneration).toBe(1);
+      expect(result.runtime.reconcileFailures).toBe(0);
+    });
+  });
+
+  describe('desired/spec maintenance (v1.8)', () => {
+    it('start sets desiredState to RUNNING', async () => {
+      const inst = makeInstance({ state: STATE.REQUESTED });
+      const svc = new InstanceService(makeRepo([inst]));
+      const result = await svc.start(inst.id);
+      expect(result.desiredState).toBe(STATE.RUNNING);
+    });
+
+    it('stop sets desiredState to STOPPED', async () => {
+      const inst = makeInstance({ state: STATE.RUNNING });
+      const svc = new InstanceService(makeRepo([inst]));
+      const result = await svc.stop(inst.id);
+      expect(result.desiredState).toBe(STATE.STOPPED);
+    });
+
+    it('updateResources bumps specGeneration (signals spec drift)', async () => {
+      const inst = makeInstance();
+      const svc = new InstanceService(makeRepo([inst]));
+      expect(inst.specGeneration).toBe(0);
+      const result = await svc.updateResources(
+        inst.id,
+        { compute: { cpu: '1000m', memory: '1Gi', gpu: null } },
+        'admin'
+      );
+      expect(result.specGeneration).toBe(1);
+    });
+
+    it('updatePolicy bumps specGeneration', async () => {
+      const inst = makeInstance();
+      const svc = new InstanceService(makeRepo([inst]));
+      const result = await svc.updatePolicy(inst.id, { retry: 3 }, 'admin');
+      expect(result.specGeneration).toBe(1);
     });
   });
 });

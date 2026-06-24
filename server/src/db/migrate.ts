@@ -17,6 +17,7 @@ import { migrateEmployeeMemoryScope } from './migrations/employee-memory-scope.j
 import { migrateScheduledTasks } from './migrations/scheduled-tasks.js';
 import { migrateBilling } from './migrations/billing.js';
 import { migrateAgentDefinition } from './migrations/agent-definition.js';
+import { migrateInstance } from './migrations/instance.js';
 
 async function runMigrations() {
   const client = postgres(config.db.url, { max: 1 });
@@ -39,6 +40,7 @@ async function runMigrations() {
   await migrateScheduledTasks(db);
   await migrateBilling(db);
   await migrateAgentDefinition(db);
+  await migrateInstance(db);
 
   console.log('Schema sync complete — all tables created.');
   await client.end();

@@ -3,7 +3,8 @@
  *
  * 数据源:ContainerOrchestratorClient.listInstances(FarmInstance.isActive/status)。
  * 判定:isActive=true && status='running' → healthy;否则 unhealthy;上游丢失 → missing。
- * 自愈:连续 failureThreshold 次(默认 3 次,即 5 分钟 ×3 = 15 分钟)unhealthy/missing → InstanceService.rebuild。
+ * 自愈(v1.8 reconcile 为主):unhealthy 先 force-reconcile(provisioner.reconcile 轻量 start),
+ *   连续 failureThreshold 次(默认 3 次,即 5 分钟 ×3 = 15 分钟)仍 unhealthy/missing → InstanceService.rebuild 兜底。
  * 防抖:同一实例 rebuildCooldownMs(默认 30 分钟)内最多 rebuild 1 次
  *   (通过 instance_health_snapshots.status='rebuild_triggered' 去重,多副本安全)。
  * 告警:rebuild 抛错 → notificationService.createAlert(severity='critical')。
@@ -182,6 +183,14 @@ export function registerInstanceHealthMonitor(
  */
 async function maybeRebuild(ctx: RebuildContext): Promise<void> {
   const { inst, healthRepo } = ctx;
+
+  // v1.8:reconcile 为主——unhealthy 先 best-effort 轻量调和(force:provisioner.reconcile 尝试 start),
+  // 失败不阻断,由下方连续失败累积 → rebuild 兜底
+  try {
+    await ctx.instanceService.reconcile(inst.id, { force: true });
+  } catch {
+    /* reconcile 失败由累积 rebuild 兜底 */
+  }
 
   // 1. 连续失败阈值判定
   const recent = await healthRepo.listRecent(inst.id, ctx.failureThreshold);

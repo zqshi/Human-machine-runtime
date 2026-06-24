@@ -92,6 +92,7 @@ function makeMocks() {
   const instanceService = {
     list: vi.fn(async () => [makeInstance()]),
     rebuild: vi.fn(async (id: string) => makeInstance({ id })),
+    reconcile: vi.fn(async () => makeInstance()),
   };
   const orchestrator = {
     isConfigured: vi.fn(() => true),
@@ -313,5 +314,24 @@ describe('instance-health-monitor', () => {
     // 只写 2 条快照(RUNNING + PROVISIONING),STOPPED/FAILED 跳过
     expect(m.healthRepo.insertSnapshot).toHaveBeenCalledTimes(2);
     expect((r.metadata as { total: number }).total).toBe(2);
+  });
+
+  it('v1.8: unhealthy 先调 reconcile(force) 轻量恢复,累积不足不 rebuild', async () => {
+    const m = makeMocks();
+    m.orchestrator.listInstances.mockResolvedValueOnce({
+      instances: [makeFarm({ isActive: false, status: 'crashed' })],
+    });
+    const h = new SystemJobHandler();
+    registerInstanceHealthMonitor(
+      h,
+      m.instanceService as unknown as InstanceService,
+      m.healthRepo as unknown as InstanceHealthRepository,
+      m.orchestrator as unknown as ContainerOrchestratorClient,
+      m.notificationService as unknown as NotificationService
+    );
+    await runMonitor(h);
+    // reconcile(为主)被调用,rebuild(兜底)因累积不足未触发
+    expect(m.instanceService.reconcile).toHaveBeenCalledWith('inst_1', { force: true });
+    expect(m.instanceService.rebuild).not.toHaveBeenCalled();
   });
 });

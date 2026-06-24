@@ -9,6 +9,10 @@ import {
   applyResourceConfig,
   resetResourceConfig,
   validateResourceConfig,
+  decideReconcileAction,
+  getReconcileFailures,
+  withReconciled,
+  bumpSpecGeneration,
 } from './domain/instance.js';
 import type { TenantQuotas } from '../tenant-management/domain/tenant.js';
 import { nowIso, AppError } from '../../shared/utils.js';
@@ -24,9 +28,31 @@ export interface IInstanceRepository {
 
 /* ---------- Provisioner interface ---------- */
 
+/**
+ * v1.8:远端真实运行态。reconciler / health-monitor 据此判断 actual,与 desired 对比。
+ * - running:远端进程/pod 健康在跑
+ * - stopped:远端已停止(但资源可能还在)
+ * - unknown:查询失败,无法判断(查询容错,不应阻断)
+ */
+export interface InstanceRemoteStatus {
+  state: 'running' | 'stopped' | 'unknown';
+  detail?: Record<string, unknown>;
+}
+
 export interface IInstanceProvisioner {
   provision(instance: Instance): Promise<Record<string, unknown>>;
   teardown(instance: Instance): Promise<void>;
+  /**
+   * v1.8:增量调和——按当前声明态(desired spec)尽力调整运行态(actual),返回更新后的 runtime。
+   * 处理状态级调和(start/确认 running);spec 级变更(扩容等)若 provisioner 底层不支持,
+   * 由上层 InstanceService.reconcile 决策降级为 rebuild。失败须抛出,reconciler 计数后触发兜底。
+   */
+  reconcile(instance: Instance): Promise<Record<string, unknown>>;
+  /**
+   * v1.8:查询远端真实运行态。容错:查询失败返回 {state:'unknown'} 而非抛出(查询不应崩)。
+   * 未配置或无远端实现返回 null。
+   */
+  getRemoteStatus(instance: Instance): Promise<InstanceRemoteStatus | null>;
 }
 
 /* ---------- Audit interface ---------- */
@@ -151,7 +177,12 @@ export class InstanceService {
       );
     }
 
-    let updated: Instance = { ...touch(inst), state: STATE.PROVISIONING, lastError: null };
+    let updated: Instance = {
+      ...touch(inst),
+      state: STATE.PROVISIONING,
+      lastError: null,
+      desiredState: STATE.RUNNING,
+    };
     updated.version = await this.repo.save(updated);
 
     if (this.provisioner) {
@@ -201,6 +232,7 @@ export class InstanceService {
     const updated: Instance = {
       ...touch(inst),
       state: STATE.STOPPED,
+      desiredState: STATE.STOPPED,
       runtime: {},
     };
     updated.version = await this.repo.save(updated);
@@ -228,6 +260,7 @@ export class InstanceService {
       ...touch(inst),
       state: STATE.PROVISIONING,
       lastError: null,
+      desiredState: STATE.RUNNING,
       runtime: {},
     };
     updated.version = await this.repo.save(updated);
@@ -247,6 +280,111 @@ export class InstanceService {
     updated.version = await this.repo.save(updated);
     this.emitAudit('instance.rebuilt', updated, 'system');
     return updated;
+  }
+
+  /* ---- reconcile (v1.8: 声明/运行调和) ---- */
+
+  /**
+   * 声明→运行调和编排。按 desired→actual + specGeneration diff 决策动作并执行,actual 跟随 desired:
+   * - stop:期望停止 → teardown,actual→STOPPED
+   * - start:期望运行未跑 → 复用 start() 拉起,随后标记 spec 已应用
+   * - reconcile:spec 漂移 → provisioner.reconcile 增量;失败累计 reconcileFailures,达阈值 → rebuild 兜底
+   * - noop:无 drift,直接返回
+   *
+   * 状态调和直接生效;spec 调和(resources/policy 变更)走 provisioner.reconcile 增量——provisioner 尽力
+   * (Local 真增量;Container 受上游 API 限制仅状态级,真扩容需 rebuild/上游 resize,见版本遗留)。
+   */
+  async reconcile(
+    instanceId: string,
+    opts: { failureThreshold?: number; force?: boolean } = {}
+  ): Promise<Instance> {
+    const threshold = opts.failureThreshold ?? 3;
+    const inst = await this.get(instanceId);
+    const action = decideReconcileAction(inst);
+
+    // force:health-monitor 等已知不健康场景,跳过 noop 直接轻量调和
+    // (provisioner.reconcile 尝试 start 恢复),失败由 reconcileSpec 计数→rebuild 兜底
+    if (action === 'noop' && !opts.force) return inst;
+    if (action === 'stop') return this.reconcileToStopped(inst);
+    if (action === 'start') return this.reconcileToRunning(inst);
+    return this.reconcileSpec(inst, threshold);
+  }
+
+  /** desired=stopped:teardown 让 actual 跟随,标记 spec 已调和(停止态无需 spec 应用) */
+  private async reconcileToStopped(inst: Instance): Promise<Instance> {
+    if (this.provisioner) {
+      try {
+        await this.provisioner.teardown(inst);
+      } catch {
+        /* best-effort teardown */
+      }
+    }
+    const updated: Instance = {
+      ...touch(inst),
+      state: STATE.STOPPED,
+      runtime: withReconciled(inst.runtime, inst.specGeneration),
+    };
+    updated.version = await this.repo.save(updated);
+    this.emitAudit('instance.reconciled.stopped', updated, 'system');
+    return updated;
+  }
+
+  /** desired=running 未跑:复用 start() 拉起,标记 spec 已应用避免立即再 reconcile */
+  private async reconcileToRunning(inst: Instance): Promise<Instance> {
+    const started = await this.start(inst.id);
+    const marked: Instance = {
+      ...touch(started),
+      runtime: withReconciled(started.runtime, inst.specGeneration),
+    };
+    marked.version = await this.repo.save(marked);
+    return marked;
+  }
+
+  /** spec 漂移:provisioner.reconcile 增量调和;失败累计,达阈值 rebuild 兜底 */
+  private async reconcileSpec(inst: Instance, threshold: number): Promise<Instance> {
+    const failures = getReconcileFailures(inst);
+
+    if (!this.provisioner) {
+      const updated: Instance = {
+        ...touch(inst),
+        runtime: withReconciled(inst.runtime, inst.specGeneration),
+      };
+      updated.version = await this.repo.save(updated);
+      return updated;
+    }
+
+    try {
+      const runtimeInfo = await this.provisioner.reconcile(inst);
+      const updated: Instance = {
+        ...touch(inst),
+        state: STATE.RUNNING,
+        runtime: withReconciled({ ...inst.runtime, ...runtimeInfo }, inst.specGeneration, 0),
+      };
+      updated.version = await this.repo.save(updated);
+      this.emitAudit('instance.reconciled', updated, 'system');
+      return updated;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const newFailures = failures + 1;
+      const failed: Instance = {
+        ...touch(inst),
+        runtime: { ...inst.runtime, reconcileFailures: newFailures, lastReconcileError: message },
+      };
+      failed.version = await this.repo.save(failed);
+
+      if (newFailures >= threshold) {
+        this.emitAudit('instance.reconcile.fallback', failed, 'system');
+        const rebuilt = await this.rebuild(inst.id);
+        const marked: Instance = {
+          ...touch(rebuilt),
+          runtime: withReconciled(rebuilt.runtime, inst.specGeneration, 0),
+        };
+        marked.version = await this.repo.save(marked);
+        return marked;
+      }
+      this.emitAudit('instance.reconcile.failed', failed, 'system');
+      return failed;
+    }
   }
 
   async remove(instanceId: string): Promise<{ id: string; deleted: true }> {
@@ -293,9 +431,10 @@ export class InstanceService {
   ): Promise<Instance> {
     const inst = await this.get(instanceId);
     const updated: Instance = { ...touch(inst), policy };
-    updated.version = await this.repo.save(updated);
-    this.emitAudit('instance.policy.updated', updated, actor);
-    return updated;
+    const specBumped = bumpSpecGeneration(updated);
+    specBumped.version = await this.repo.save(specBumped);
+    this.emitAudit('instance.policy.updated', specBumped, actor);
+    return specBumped;
   }
 
   async updateApprovalPolicy(
@@ -305,9 +444,10 @@ export class InstanceService {
   ): Promise<Instance> {
     const inst = await this.get(instanceId);
     const updated: Instance = { ...touch(inst), approvalPolicy };
-    updated.version = await this.repo.save(updated);
-    this.emitAudit('instance.approvalPolicy.updated', updated, actor);
-    return updated;
+    const specBumped = bumpSpecGeneration(updated);
+    specBumped.version = await this.repo.save(specBumped);
+    this.emitAudit('instance.approvalPolicy.updated', specBumped, actor);
+    return specBumped;
   }
 
   /* ---- resources ---- */
@@ -349,9 +489,11 @@ export class InstanceService {
       }
     }
 
-    updated.version = await this.repo.save(updated);
-    this.emitAudit('instance.resources.updated', updated, actor);
-    return updated;
+    // v1.8:声明态(resources)变更 → bump specGeneration,标记 spec drift 供 reconciler 检测增量调和
+    const specBumped = bumpSpecGeneration(updated);
+    specBumped.version = await this.repo.save(specBumped);
+    this.emitAudit('instance.resources.updated', specBumped, actor);
+    return specBumped;
   }
 
   async resetResources(instanceId: string, actor = 'system'): Promise<Instance> {
@@ -361,9 +503,10 @@ export class InstanceService {
       quotas = await this.tenantQuotaLookup.getQuotas(inst.tenantId);
     }
     const updated = quotas ? resetResourceConfig(inst, quotas) : { ...touch(inst) };
-    updated.version = await this.repo.save(updated);
-    this.emitAudit('instance.resources.reset', updated, actor);
-    return updated;
+    const specBumped = bumpSpecGeneration(updated);
+    specBumped.version = await this.repo.save(specBumped);
+    this.emitAudit('instance.resources.reset', specBumped, actor);
+    return specBumped;
   }
 
   /* ---- quota helper ---- */

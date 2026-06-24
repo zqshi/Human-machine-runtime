@@ -46,6 +46,16 @@ export interface Instance {
   lastError: string | null;
   /** 乐观锁版本号：每次 save 自增，CAS 防止并发覆写 */
   version: number;
+  /**
+   * v1.8:期望态(声明 desired)。与 state(actual)分离后,reconciler 按 desired→actual
+   * diff 异步调和。默认与 state 同步(无 drift);声明变更只动 desired,actual 由调和跟随。
+   */
+  desiredState: InstanceState;
+  /**
+   * v1.8:spec 世代(覆盖 resources/policy/agentDefinition 整体维度)。每次声明态变更 +1,
+   * reconciler 据此检测 spec 是否变过——区别于 version(乐观锁)与 agentGeneration(仅 agent 定义维度)。
+   */
+  specGeneration: number;
   /** v1.3:关联的 Agent 定义 CRD id(声明式 spec;可空,旧实例不引用) */
   agentDefinitionId?: string | null;
   /** v1.3:引用 Agent 定义时的 spec 世代(与 agent_definitions.generation 对齐) */
@@ -297,6 +307,8 @@ export function createInstance(input: CreateInstanceInput, cfg?: CreateInstanceC
     approvalPolicy: {},
     requestId: input.requestId ?? null,
     version: 0,
+    desiredState: STATE.REQUESTED,
+    specGeneration: 0,
     createdAt: now,
     updatedAt: now,
     lastError: null,
@@ -305,4 +317,87 @@ export function createInstance(input: CreateInstanceInput, cfg?: CreateInstanceC
 
 export function touch(instance: Instance): Instance {
   return { ...instance, updatedAt: nowIso() };
+}
+
+/* ---------- v1.8: desired / spec generation (reconcile 原语) ---------- */
+
+/**
+ * 设置期望态(声明)。仅改 desiredState,不动 actual state —— 实际调和由 reconciler
+ * 异步执行(InstanceService.reconcile / instance-reconciler controller),actual 跟随 desired。
+ */
+export function setDesiredState(instance: Instance, desired: InstanceState): Instance {
+  return { ...touch(instance), desiredState: desired };
+}
+
+/**
+ * 自增 spec 世代。声明态变更(resources/policy/agentDefinition)后调用,标记 desired spec 已变;
+ * reconciler 检测到世代变更触发增量调和或 rebuild。
+ */
+export function bumpSpecGeneration(instance: Instance): Instance {
+  return { ...touch(instance), specGeneration: instance.specGeneration + 1 };
+}
+
+/**
+ * 期望态 vs 实际态 drift 判定(reconcile 触发条件之一)。
+ * 完整的 action 决策(reconcile/stop/rebuild/noop)见 reconcile 决策逻辑,由 application 层编排。
+ */
+export function hasStateDrift(instance: Instance): boolean {
+  return instance.desiredState !== instance.state;
+}
+
+/* ---------- v1.8: reconcile 决策(纯函数,编排核心) ---------- */
+
+export type ReconcileAction = 'noop' | 'start' | 'stop' | 'reconcile';
+
+/**
+ * actual runtime 已调和到的 spec 世代(存于 runtime.reconciledSpecGeneration)。
+ * 未调和(无记录)返回 -1,使任意 specGeneration>=0 首次都判定为 drift。
+ */
+export function getReconciledSpecGeneration(instance: Instance): number {
+  const v = instance.runtime.reconciledSpecGeneration;
+  return typeof v === 'number' ? v : -1;
+}
+
+/** 连续 reconcile 失败次数(存于 runtime.reconcileFailures),用于 rebuild 兜底阈值判断 */
+export function getReconcileFailures(instance: Instance): number {
+  const v = instance.runtime.reconcileFailures;
+  return typeof v === 'number' ? v : 0;
+}
+
+/**
+ * 声明→运行 diff 决策。基于 desiredState/state/specGeneration 与已调和世代输出动作:
+ * - stop:期望停止,实际未停 → teardown(actual 跟随到 STOPPED)
+ * - start:期望运行,实际未跑(PROVISIONING 中除外)→ provision
+ * - reconcile:spec 漂移(specGeneration≠已调和世代)且期望运行已在跑 → 增量调和
+ * - noop:无 drift
+ *
+ * 不依赖 provisioner 能力(纯逻辑);provisioner 能否真增量由各自 reconcile 实现,
+ * 失败由 application 层计数触发 rebuild 兜底。
+ */
+export function decideReconcileAction(instance: Instance): ReconcileAction {
+  const { desiredState: desired, state: actual, specGeneration } = instance;
+  const specChanged = getReconciledSpecGeneration(instance) !== specGeneration;
+
+  if (desired === STATE.STOPPED && actual !== STATE.STOPPED) return 'stop';
+  if (desired === STATE.RUNNING && actual !== STATE.RUNNING && actual !== STATE.PROVISIONING) {
+    return 'start';
+  }
+  if (specChanged && desired === STATE.RUNNING && actual === STATE.RUNNING) return 'reconcile';
+  return 'noop';
+}
+
+/**
+ * 标记 runtime 已调和到指定 spec 世代并重置失败计数(调和成功后调用)。
+ * 清除 lastReconcileError(失败痕迹),保留其余 runtime 字段(如 pid/podName)。
+ */
+export function withReconciled(
+  runtime: Record<string, unknown>,
+  specGeneration: number,
+  failures = 0
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...runtime };
+  delete next.lastReconcileError;
+  next.reconciledSpecGeneration = specGeneration;
+  next.reconcileFailures = failures;
+  return next;
 }
