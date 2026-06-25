@@ -154,6 +154,87 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(task.sessionId).toBeUndefined();
   });
 
+  it('T18b选项A: externalTools 透传到 CLAUDE_TASK_JSON(供 worker 注入 custom tool)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    try {
+      await import('fs').then((m) => m.unlinkSync(envFilePath));
+    } catch {
+      // ignore
+    }
+
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const externalTools = [
+      {
+        toolId: 'tool-1',
+        name: 'search_kb',
+        description: '搜索知识库',
+        inputSchema: { query: { type: 'string' } },
+      },
+    ];
+    const promise = runner.run(makeOpts({ externalTools }), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    expect(captured).not.toBeNull();
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.externalTools).toEqual(externalTools);
+  });
+
+  it('externalTools 缺省时 CLAUDE_TASK_JSON 不含 externalTools 字段(向后兼容)', async () => {
+    const child = makeFakeChild();
+    const spawner = makeSpawner(child);
+    const runner = new DockerWorkerRunner(spawner);
+
+    const envFilePath = join(tmpdir(), 'hmr-task-cld_test01.env');
+    try {
+      await import('fs').then((m) => m.unlinkSync(envFilePath));
+    } catch {
+      // ignore
+    }
+
+    let captured: string | null = null;
+    const origSpawn = spawner.spawn;
+    spawner.spawn = vi.fn((...args) => {
+      const result = origSpawn(...args);
+      try {
+        captured = readFileSync(envFilePath, 'utf8');
+      } catch {
+        captured = null;
+      }
+      return result;
+    });
+
+    const promise = runner.run(makeOpts(), {}, new AbortController());
+    child.emit('close', 0, null);
+    await promise;
+
+    const taskLine = captured!
+      .split('\n')
+      .find((l) => l.startsWith('CLAUDE_TASK_JSON='))!
+      .slice('CLAUDE_TASK_JSON='.length);
+    const task = JSON.parse(taskLine);
+    expect(task.externalTools).toBeUndefined();
+  });
+
   it('anthropicBaseUrl 有值时 env file 注入 ANTHROPIC_BASE_URL(私有化经企业代理转发)', async () => {
     const child = makeFakeChild();
     const spawner = makeSpawner(child);

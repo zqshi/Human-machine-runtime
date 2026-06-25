@@ -41,6 +41,17 @@ export interface WorkerRunOptions {
   skillsContext?: string;
   /** v1.6:trace id(协议预留,worker 后续可上报 child span;本期不埋点) */
   traceId?: string;
+  /**
+   * T18b 选项A:外部工具定义(worker 注入为 SDK custom tool,handler 调 server /tool-invoke 收口执行)。
+   * 由组装层(claude-agent-sdk-adapter)从 AgentDefinition.boundTools 解析 ToolDefinition 后填入
+   * {toolId,name,description,inputSchema}。runner 仅透传到 worker payload,不查 DB(保持薄层同步设计)。
+   */
+  externalTools?: Array<{
+    toolId: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }>;
   /** v1.3:资源限制(CPU '1000m'/memory '512Mi' K8s 风格),转换为 docker --cpus/--memory;缺省用 1.0/2g */
   resources?: { cpu: string; memory: string };
   workerImage: string;
@@ -243,6 +254,10 @@ export class DockerWorkerRunner implements IWorkerRunner {
     }
     if (opts.sessionId) {
       payload.sessionId = opts.sessionId;
+    }
+    // T18b 选项A:外部工具定义透传 worker(注入为 custom tool;组装层从 boundTools 解析填入)
+    if (opts.externalTools?.length) {
+      payload.externalTools = opts.externalTools;
     }
     return payload;
   }
