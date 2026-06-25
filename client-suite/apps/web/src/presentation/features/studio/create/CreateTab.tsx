@@ -72,7 +72,6 @@ export function CreateTab() {
   const [showModelMenu, setShowModelMenu] = useState(false);
 
   const modelMenuRef = useRef<HTMLDivElement>(null);
-  const openAgentManagement = useStudioStore((s) => s.openAgentManagement);
   const enterCreateFlow = useStudioStore((s) => s.enterCreateFlow);
 
   useEffect(() => {
@@ -92,8 +91,7 @@ export function CreateTab() {
   const handleSend = () => {
     if (!inputText.trim()) return;
     if (activeTab === 'Agent') {
-      const agentId = `agent-${Date.now()}`;
-      openAgentManagement(agentId);
+      enterCreateFlow('Agent');
     } else if (activeTab === 'Skill') {
       enterCreateFlow('Skill');
     } else if (activeTab === 'App') {

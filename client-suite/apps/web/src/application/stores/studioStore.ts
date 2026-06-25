@@ -4,10 +4,7 @@
  * 管理我的资产列表、筛选、选中态、Agent管理等状态。
  */
 import { create } from 'zustand';
-import type {
-  AssetItem,
-  AssetType,
-} from '../../presentation/features/studio/AssetCard';
+import type { AssetItem, AssetType } from '../../presentation/features/studio/AssetCard';
 import { studioApi } from '../services/studioApi';
 
 type FilterType = 'all' | AssetType;
@@ -16,6 +13,7 @@ export type ManagementTab = 'orchestration' | 'knowledge' | 'settings' | 'releas
 
 /** 创建流程标识 — 进入后全屏接管，隐藏 Studio 外壳 */
 export type CreateFlowType =
+  | 'Agent'
   | 'Skill'
   | 'App'
   | 'mcp-openapi'

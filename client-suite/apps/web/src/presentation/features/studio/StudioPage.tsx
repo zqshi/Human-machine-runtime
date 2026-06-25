@@ -11,6 +11,7 @@ import { CreateTab } from './create/CreateTab';
 import { AgentManagementPage } from './management/AgentManagementPage';
 import { McpDetailPage } from './management/McpDetailPage';
 import { AssetDetailPage } from './management/AssetDetailPage';
+import { AgentCreateFlow } from './create/AgentCreateFlow';
 import { SkillCreateFlow } from './create/SkillCreateFlow';
 import { AppCreateFlow } from './create/AppCreateFlow';
 import { McpOpenApiFlow } from './create/McpOpenApiFlow';
@@ -50,6 +51,7 @@ export function StudioPage() {
   }
 
   // 创建流程 — 全屏接管
+  if (activeCreateFlow === 'Agent') return <AgentCreateFlow onBack={exitCreateFlow} />;
   if (activeCreateFlow === 'Skill') return <SkillCreateFlow onBack={exitCreateFlow} />;
   if (activeCreateFlow === 'App') return <AppCreateFlow onBack={exitCreateFlow} />;
   if (activeCreateFlow === 'mcp-openapi') return <McpOpenApiFlow onBack={exitCreateFlow} />;

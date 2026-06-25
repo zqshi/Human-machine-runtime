@@ -372,6 +372,41 @@ interface IAgentRuntimeAdapter {
 
 ---
 
+## Agent 声明式创建与投产管控（v1.9）
+
+> v1.9 投产就绪版本:Agent 声明式创建升级 + 3 项投产阻断项补全(#1 拒答/#7 审批/#13 灰度)+ D8 运行时解耦。详见 `docs/versions/v1.9-snapshot.md`。
+
+### Agent 声明式创建向导
+
+Agent 创建走 7 步声明式向导（`AgentCreateFlow`),声明完整 `AgentDefinitionSpec` 落库 `agent_definitions` CRD,实例通过 `agentDefinitionId` 关联消费:
+
+1. 基础信息（名称/头像/描述）
+2. 人设（systemPrompt + guardrails 拒答规则 + refusalResponse）
+3. 模型（primaryModel + fallbackModels + maxConcurrency）
+4. 技能（boundSkills）
+5. 知识（boundKnowledge,RAG 召回范围）
+6. 工具（boundTools,按 riskLevel 走审批）
+7. 运行时（runtimeType: claude/openclaw/hermes + sandboxTemplate）
+
+API:`/api/admin/agent-definitions`(CRUD + 分页,admin 聚合层挂 auth + requireRole)。
+
+### 投产阻断项补全
+
+- **#1 任务边界/拒答**:persona.systemPrompt 软约束注入 + guardrails 硬约束拦截(keyword/regex block 直接拒答,intent review 转 LLM 复核)。实例路径 harness 注入(T3);openclaw 对话路径 useAgentChat 前端拦截 + 后端兜底。
+- **#7 执行审批**:工具 riskLevel + 实例 approvalPolicy 阈值,超阈值走 `tool_approvals` 审批队列,admin approve 触发续执行。
+- **#13 灰度发布**:feature flag(enabled + rolloutPct 确定性 hash 灰度 + allowedTenants 白名单 + killSwitch 紧急关停),guardrails/approval 默认 off,灰度逐步 enforce。
+
+### D8 运行时解耦(治本)
+
+`useAgentChat` 经 `AgentRuntimePort` 抽象调用对话后端(WeKnora/OpenClaw),不再硬绑 `weKnoraApi`;persona 从 `instance → agentDefinitionId → AgentDefinition.persona` 拉取,替代 capabilityRegistry template.systemPrompt。运行时可按 `runtime.runtimeType` 替换。
+
+### 管理后台投产管控
+
+管理后台「投产管控」组:
+- **工具审批**:pending 队列 approve/reject(`/api/admin/tool-approvals`)
+- **Feature Flag**:enabled/rolloutPct/killSwitch 编辑(`/api/admin/feature-flags`)
+- **运行时模板**:内置 sandbox 模板 + runtimeType→adapter 映射(只读,`/api/admin/runtime-templates`)
+
 ## API 概览
 
 ### 认证（/api/auth）

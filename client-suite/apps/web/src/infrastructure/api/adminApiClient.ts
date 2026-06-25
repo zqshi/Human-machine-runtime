@@ -34,11 +34,23 @@ export type {
 
 // ─── Instances ──────────────────────────────────────────────────────
 
+/** 实例详情(对齐后端 Instance domain,含 v1.9 agentDefinitionId 关联) */
+export interface InstanceDetail {
+  id: string;
+  name?: string;
+  state?: string;
+  tenantId?: string;
+  /** v1.9:关联的 AgentDefinition id(useAgentChat 拉 persona 用) */
+  agentDefinitionId?: string | null;
+  agentGeneration?: number | null;
+  [key: string]: unknown;
+}
+
 export const instanceApi = {
-  list(): Promise<{ instances: Record<string, unknown>[] }> {
+  list(): Promise<{ instances: InstanceDetail[] }> {
     return request('/api/admin/instances');
   },
-  get(id: string): Promise<Record<string, unknown>> {
+  get(id: string): Promise<InstanceDetail> {
     return request(`/api/admin/instances/${encodeURIComponent(id)}`);
   },
   start(id: string): Promise<Record<string, unknown>> {

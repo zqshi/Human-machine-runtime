@@ -24,7 +24,10 @@ export type AdminSection =
   | 'channel-admin'
   | 'employee-memory'
   | 'scheduled-tasks'
-  | 'scheduled-task-detail';
+  | 'scheduled-task-detail'
+  | 'tool-approvals'
+  | 'feature-flags'
+  | 'runtime-templates';
 
 export type PlatformSection =
   | 'tenants'

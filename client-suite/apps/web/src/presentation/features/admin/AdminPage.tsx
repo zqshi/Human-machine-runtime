@@ -14,6 +14,9 @@ import { UserAnalysisSection } from './UserAnalysisSection';
 import { OpsWeeklySection } from './OpsWeeklySection';
 import { QuotaManagementSection } from './QuotaManagementSection';
 import { MemorySection } from './memory';
+import { ToolApprovalsSection } from './ToolApprovalsSection';
+import { FeatureFlagSection } from './FeatureFlagSection';
+import { RuntimeTemplatesSection } from './RuntimeTemplatesSection';
 
 type NavItem = { key: AdminSection; icon: string; label: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -54,6 +57,14 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'notifications', icon: 'notifications', label: '通知' },
     ],
   },
+  {
+    title: '投产管控',
+    items: [
+      { key: 'tool-approvals', icon: 'task_alt', label: '工具审批' },
+      { key: 'feature-flags', icon: 'flag', label: 'Feature Flag' },
+      { key: 'runtime-templates', icon: 'memory', label: '运行时模板' },
+    ],
+  },
 ];
 
 function SectionContent({ section }: { section: AdminSection }) {
@@ -86,6 +97,12 @@ function SectionContent({ section }: { section: AdminSection }) {
       return <AuthSection />;
     case 'notifications':
       return <NotificationsSection />;
+    case 'tool-approvals':
+      return <ToolApprovalsSection />;
+    case 'feature-flags':
+      return <FeatureFlagSection />;
+    case 'runtime-templates':
+      return <RuntimeTemplatesSection />;
   }
 }
 
