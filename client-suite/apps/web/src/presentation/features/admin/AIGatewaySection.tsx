@@ -155,10 +155,7 @@ function ModelsTab() {
         addToast(`健康检查完成：正常${latency != null ? `（${latency}ms）` : ''}`, 'success');
       } else if (status === 'degraded') {
         const http = result.httpStatus != null ? `HTTP ${result.httpStatus} · ` : '';
-        addToast(
-          `健康检查完成：降级（${http}${latency != null ? `${latency}ms` : '—'}）`,
-          'info'
-        );
+        addToast(`健康检查完成：降级（${http}${latency != null ? `${latency}ms` : '—'}）`, 'info');
       } else if (status === 'unconfigured') {
         addToast('健康检查失败：模型未配置 baseUrl', 'error');
       } else if (status === 'unreachable') {
@@ -177,9 +174,7 @@ function ModelsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">
-          {models.length} 个模型
-        </span>
+        <span className="text-xs text-gray-500">{models.length} 个模型</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -276,9 +271,7 @@ function ModelsTab() {
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <button
-                  onClick={() =>
-                    setGrantTarget({ id: mid, name: String(m.displayName || m.name) })
-                  }
+                  onClick={() => setGrantTarget({ id: mid, name: String(m.displayName || m.name) })}
                   className={`group flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full transition-colors ${
                     (grantsCount[mid] ?? 0) > 0
                       ? 'bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/15'

@@ -120,21 +120,17 @@ export function FailoverSection({ models: modelsProp }: { models: Record<string,
     });
   };
 
-  const fallbacks = (rule ? (rule.fallbackModelIds || []) : []) as string[];
+  const fallbacks = (rule ? rule.fallbackModelIds || [] : []) as string[];
   const ruleStrategy = String(rule?.strategy || 'ordered');
   const candidates = models.filter(
-    (m) =>
-      String(m.id) !== form.primaryModelId &&
-      !form.fallbackModelIds.includes(String(m.id))
+    (m) => String(m.id) !== form.primaryModelId && !form.fallbackModelIds.includes(String(m.id))
   );
 
   return (
     <div className="border border-gray-200 rounded-xl bg-white p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-            故障转移
-          </h3>
+          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">故障转移</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">
             主模型异常时，按备用链自动切换，保障调用可用性
           </p>

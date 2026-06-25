@@ -203,72 +203,72 @@ export function AgentGrantsDrawer({ modelId, modelName, onClose, onSaved }: Prop
             grouped.map(([dept, items]) => {
               const gstate = groupState(items);
               return (
-              <div key={dept}>
-                <div className="flex items-center gap-2 px-1 py-1 mb-1 rounded-md hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    ref={(el) => {
-                      if (el) el.indeterminate = gstate === 'some';
-                    }}
-                    checked={gstate === 'all'}
-                    onChange={() => toggleGroup(items)}
-                    className="w-3.5 h-3.5 accent-[#007AFF]"
-                  />
-                  <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                    <Icon name={groupMode === 'owner' ? 'person' : 'groups'} size={12} />
-                    {dept}
-                  </span>
-                  <span className="text-[11px] text-gray-400 normal-case">
-                    · {items.filter((i) => selected.has(i.id)).length}/{items.length}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {items.map((inst) => {
-                    const checked = selected.has(inst.id);
-                    const shared = inst.ownerName?.includes('共享');
-                    return (
-                      <label
-                        key={inst.id}
-                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border cursor-pointer transition-colors ${
-                          checked
-                            ? 'border-[#007AFF]/40 bg-[#007AFF]/5'
-                            : 'border-gray-100 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggle(inst.id)}
-                          className="w-3.5 h-3.5 accent-[#007AFF]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-gray-800 truncate">{inst.name}</span>
-                            {shared && (
-                              <span className="shrink-0 text-[9px] px-1 py-px rounded bg-blue-50 text-blue-500">
-                                共享
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-gray-400 truncate">
-                            {inst.ownerName || '—'}
-                          </div>
-                        </div>
-                        <span
-                          className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full ${
-                            inst.state === 'running'
-                              ? 'bg-green-50 text-green-600'
-                              : 'bg-gray-100 text-gray-500'
+                <div key={dept}>
+                  <div className="flex items-center gap-2 px-1 py-1 mb-1 rounded-md hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      ref={(el) => {
+                        if (el) el.indeterminate = gstate === 'some';
+                      }}
+                      checked={gstate === 'all'}
+                      onChange={() => toggleGroup(items)}
+                      className="w-3.5 h-3.5 accent-[#007AFF]"
+                    />
+                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                      <Icon name={groupMode === 'owner' ? 'person' : 'groups'} size={12} />
+                      {dept}
+                    </span>
+                    <span className="text-[11px] text-gray-400 normal-case">
+                      · {items.filter((i) => selected.has(i.id)).length}/{items.length}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {items.map((inst) => {
+                      const checked = selected.has(inst.id);
+                      const shared = inst.ownerName?.includes('共享');
+                      return (
+                        <label
+                          key={inst.id}
+                          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border cursor-pointer transition-colors ${
+                            checked
+                              ? 'border-[#007AFF]/40 bg-[#007AFF]/5'
+                              : 'border-gray-100 hover:bg-gray-50'
                           }`}
                         >
-                          {inst.state === 'running' ? '运行中' : '已停止'}
-                        </span>
-                      </label>
-                    );
-                  })}
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggle(inst.id)}
+                            className="w-3.5 h-3.5 accent-[#007AFF]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm text-gray-800 truncate">{inst.name}</span>
+                              {shared && (
+                                <span className="shrink-0 text-[9px] px-1 py-px rounded bg-blue-50 text-blue-500">
+                                  共享
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-gray-400 truncate">
+                              {inst.ownerName || '—'}
+                            </div>
+                          </div>
+                          <span
+                            className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full ${
+                              inst.state === 'running'
+                                ? 'bg-green-50 text-green-600'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {inst.state === 'running' ? '运行中' : '已停止'}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
+              );
             })
           )}
         </div>

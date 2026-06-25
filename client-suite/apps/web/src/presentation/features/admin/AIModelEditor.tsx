@@ -91,7 +91,8 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
     if (form.maxTokens && Number(form.maxTokens) <= 0) e.maxTokens = '必须为正整数';
     if (form.timeout && Number(form.timeout) <= 0) e.timeout = '必须为正整数';
     if (form.streamTimeout && Number(form.streamTimeout) <= 0) e.streamTimeout = '必须为正整数';
-    if (form.rateLimitPerMin && Number(form.rateLimitPerMin) <= 0) e.rateLimitPerMin = '必须为正整数';
+    if (form.rateLimitPerMin && Number(form.rateLimitPerMin) <= 0)
+      e.rateLimitPerMin = '必须为正整数';
     if (form.inputPrice && Number(form.inputPrice) < 0) e.inputPrice = '不能为负数';
     if (form.outputPrice && Number(form.outputPrice) < 0) e.outputPrice = '不能为负数';
     setErrors(e);
@@ -151,7 +152,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
           <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider">基础配置</h4>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">供应商 <span className="text-red-500">*</span></label>
+            <label className="text-xs text-gray-500 block mb-0.5">
+              供应商 <span className="text-red-500">*</span>
+            </label>
             <select
               value={form.providerType}
               onChange={(e) => set('providerType', e.target.value)}
@@ -167,14 +170,18 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">显示名称 <span className="text-red-500">*</span></label>
+            <label className="text-xs text-gray-500 block mb-0.5">
+              显示名称 <span className="text-red-500">*</span>
+            </label>
             <input
               value={form.displayName}
               onChange={(e) => set('displayName', e.target.value)}
               placeholder="Claude Sonnet 4.6"
               className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.displayName ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
             />
-            {errors.displayName && <p className="text-[11px] text-red-500 mt-0.5">{errors.displayName}</p>}
+            {errors.displayName && (
+              <p className="text-[11px] text-red-500 mt-0.5">{errors.displayName}</p>
+            )}
           </div>
 
           <div>
@@ -219,7 +226,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
           <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider">连接配置</h4>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">Base URL <span className="text-red-500">*</span></label>
+            <label className="text-xs text-gray-500 block mb-0.5">
+              Base URL <span className="text-red-500">*</span>
+            </label>
             <input
               value={form.baseUrl}
               onChange={(e) => set('baseUrl', e.target.value)}
@@ -230,14 +239,18 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">供应商模型名 <span className="text-red-500">*</span></label>
+            <label className="text-xs text-gray-500 block mb-0.5">
+              供应商模型名 <span className="text-red-500">*</span>
+            </label>
             <input
               value={form.providerModelName}
               onChange={(e) => set('providerModelName', e.target.value)}
               placeholder="claude-sonnet-4-6"
               className={`w-full px-3 py-1.5 text-sm border rounded-lg font-mono text-xs ${errors.providerModelName ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
             />
-            {errors.providerModelName && <p className="text-[11px] text-red-500 mt-0.5">{errors.providerModelName}</p>}
+            {errors.providerModelName && (
+              <p className="text-[11px] text-red-500 mt-0.5">{errors.providerModelName}</p>
+            )}
           </div>
 
           <div>
@@ -270,7 +283,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 placeholder="32768"
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.maxTokens ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.maxTokens && <p className="text-[11px] text-red-500 mt-0.5">{errors.maxTokens}</p>}
+              {errors.maxTokens && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.maxTokens}</p>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">限流 (req/min)</label>
@@ -281,7 +296,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 placeholder="60"
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.rateLimitPerMin ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.rateLimitPerMin && <p className="text-[11px] text-red-500 mt-0.5">{errors.rateLimitPerMin}</p>}
+              {errors.rateLimitPerMin && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.rateLimitPerMin}</p>
+              )}
             </div>
           </div>
 
@@ -295,7 +312,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 placeholder="600"
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.timeout ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.timeout && <p className="text-[11px] text-red-500 mt-0.5">{errors.timeout}</p>}
+              {errors.timeout && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.timeout}</p>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">流式超时 (秒)</label>
@@ -306,7 +325,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 placeholder="45"
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.streamTimeout ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.streamTimeout && <p className="text-[11px] text-red-500 mt-0.5">{errors.streamTimeout}</p>}
+              {errors.streamTimeout && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.streamTimeout}</p>
+              )}
             </div>
           </div>
         </div>
@@ -325,7 +346,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 onChange={(e) => set('inputPrice', e.target.value)}
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.inputPrice ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.inputPrice && <p className="text-[11px] text-red-500 mt-0.5">{errors.inputPrice}</p>}
+              {errors.inputPrice && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.inputPrice}</p>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">输出价格 (/M tok)</label>
@@ -336,7 +359,9 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
                 onChange={(e) => set('outputPrice', e.target.value)}
                 className={`w-full px-3 py-1.5 text-sm border rounded-lg ${errors.outputPrice ? 'border-red-400 bg-red-50/30' : 'border-gray-200'}`}
               />
-              {errors.outputPrice && <p className="text-[11px] text-red-500 mt-0.5">{errors.outputPrice}</p>}
+              {errors.outputPrice && (
+                <p className="text-[11px] text-red-500 mt-0.5">{errors.outputPrice}</p>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-0.5">货币</label>
