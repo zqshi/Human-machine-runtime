@@ -29,18 +29,23 @@ export interface ClaudeAdapterConfig {
   defaultModel: string;
   defaultMaxTurns: number;
   defaultBudgetUsd: number;
+  /**
+   * T18b-C 止血:限制实例路径只读工具(过滤 Bash/Write/Edit),消除无审批副作用
+   * 工具裸跑。默认 false 保持兼容(无绑定工具的 Agent 仍按 DEFAULT_ALLOWED_TOOLS
+   * 拿全工具)。完整治本见 docs/architecture/t18-tool-executor-mainline-gap.md T18b-A。
+   */
+  restrictToReadonlyTools?: boolean;
 }
 
-const DEFAULT_ALLOWED_TOOLS = [
-  'Bash',
-  'Write',
-  'Edit',
-  'Read',
-  'Glob',
-  'Grep',
-  'WebSearch',
-  'WebFetch',
-];
+/** 副作用工具(Bash/Write/Edit):T18b 止血开关 restrictToReadonlyTools 时过滤掉 */
+const SIDE_EFFECT_TOOLS = new Set(['Bash', 'Write', 'Edit']);
+/** 只读工具:restrictToReadonlyTools=true 时实例路径仅允许这些 */
+const READONLY_TOOLS = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'];
+/**
+ * 默认工具集保持全工具(兼容现有无绑定工具 Agent 的行为)。⚠️ 这些工具经 SDK 内置
+ * 执行器执行不经 ToolRegistryService(审批/日志/凭证/计费对本路径失效,见类头 T18b 标注)。
+ */
+const DEFAULT_ALLOWED_TOOLS = ['Bash', 'Write', 'Edit', ...READONLY_TOOLS];
 
 interface ActiveTask {
   state: AgentTaskStatus;
@@ -71,6 +76,13 @@ const BUDGET_OVERRIDE_FACTOR = 1.2;
  * 与 OpenClawAdapter 共存:framework='claude-agent-sdk',registry 路由时按
  * preferredFramework 选择。env 不配 ANTHROPIC_API_KEY 时,bootstrap 不注册本
  * adapter,系统自动降级到 OpenClaw。
+ *
+ * ⚠️ 工具执行脱节(T18b,见 docs/architecture/t18-tool-executor-mainline-gap.md):
+ * allowedTools 传给 worker 后由 claude-agent-sdk 内置执行器自行执行工具,不回调
+ * server。故 #7 审批 gate / tool_call_logs / 凭证解密 / 租户隔离 / 调用计数对本
+ * 实例路径全部失效(仅 AgentExecutor 意图分类路径经 ToolRegistryService.invoke)。
+ * 止血(T18b-C):restrictToReadonlyTools 开关可限制只读工具;完整治本(worker↔server
+ * 工具调用 RPC)见 T18b-A。
  */
 export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
   readonly framework: AgentFramework = 'claude-agent-sdk';
@@ -142,7 +154,7 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       instanceId,
       tenantId: task.tenantId,
       cwd,
-      allowedTools: parseAllowedTools(input.allowedTools),
+      allowedTools: parseAllowedTools(input.allowedTools, this.config.restrictToReadonlyTools),
       model: typeof input.model === 'string' ? input.model : this.config.defaultModel,
       maxTurns: typeof input.maxTurns === 'number' ? input.maxTurns : this.config.defaultMaxTurns,
       maxBudgetUsd: budgetUsd,
@@ -359,7 +371,11 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
   }
 }
 
-function parseAllowedTools(value: unknown): string[] {
-  if (!Array.isArray(value) || value.length === 0) return DEFAULT_ALLOWED_TOOLS;
-  return value.filter((t): t is string => typeof t === 'string');
+function parseAllowedTools(value: unknown, restrictToReadonly = false): string[] {
+  const base =
+    !Array.isArray(value) || value.length === 0
+      ? DEFAULT_ALLOWED_TOOLS
+      : value.filter((t): t is string => typeof t === 'string');
+  // T18b-C 止血:开关开启时过滤副作用工具,仅留只读工具
+  return restrictToReadonly ? base.filter((t) => !SIDE_EFFECT_TOOLS.has(t)) : base;
 }

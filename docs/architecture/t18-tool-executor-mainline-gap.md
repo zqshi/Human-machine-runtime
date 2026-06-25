@@ -1,6 +1,6 @@
 # T18 诊断 — tool-management executor 与 claude-agent-sdk 主链路脱节
 
-> **状态**: [PLANNED] 方案已出（含 SDK 深度核实），待用户拍板后 T18b 实现
+> **状态**: [PARTIAL] 选项 C(止血)已实施 2026-06-25;选项 A(治本)待独立版本承载
 > **债务**: backlog D3（v1.2.1 记录"P2 v1.3+"，本次核实更新）
 > **核实日期**: 2026-06-25（SDK 深度核实于同日补入）
 
@@ -114,3 +114,21 @@ harness.dispatchTask()                    ← 实例任务主链路汇聚点
 2. 选项 C 是否本轮先做（0.5 天，低风险）？
 
 决策后 T18b 实现依选项展开。本诊断文档归档为决策材料，T18b 实现时回查。
+
+---
+
+## T18b-C 实施记录（2026-06-25，止血已交付）
+
+**用户决策**: T18b 全量完成依次推进（C 止血 → A 治本）。本轮先做 C。
+
+**实施**: 选项 C 止血标注 + 配置开关（非"砍默认工具"激进版）:
+- `claude-agent-sdk-adapter.ts`:类头注释标注工具执行脱节风险;`ClaudeAdapterConfig` 加 `restrictToReadonlyTools?` 开关(默认 false 保持兼容);新增 `SIDE_EFFECT_TOOLS`/`READONLY_TOOLS` 常量;`parseAllowedTools(value, restrictToReadonly)` 开关开启时过滤 Bash/Write/Edit。
+- `worker.ts` / `docker-worker-runner.ts`:头注释 + DEFAULT_TOOLS 标注风险(值不变,避免破坏现有无绑定工具 Agent)。
+
+**设计权衡**: 不直接砍 DEFAULT_ALLOWED_TOOLS(会降级所有未绑定工具的 Agent),改为标注消除认知盲区(止血核心诉求)+ 开关给投产控制杠杆。投产需限制时设 `restrictToReadonlyTools=true`。
+
+**未覆盖(留 T18b-A 治本)**:
+- 显式绑定 Bash 的 Agent:allowedTools 含 Bash 传给 SDK 内置执行器,仍绕开 ToolRegistryService(审批/凭证/计费失效)。C 止血不解决此场景。
+- canUseTool 审批闭环(让 #7 审批 + callLog 对主链路生效):1.5-2 天,需 CLAUDE_WORKER_E2E=1 容器验证真生效。
+
+**验证**: tsc/eslint 全过;parseAllowedTools 默认 false 行为兼容,adapter 单测保持通过。

@@ -15,6 +15,12 @@
  *   0 — 正常完成(无论 result 还是 error 事件)
  *   1 — 抛出未捕获异常 / API 故障 / 超时
  *   2 — CLAUDE_TASK_JSON 缺失或格式错误
+ *
+ * ⚠️ 工具执行脱节(T18b,见 docs/architecture/t18-tool-executor-mainline-gap.md):
+ * 本进程内 claude-agent-sdk 用内置执行器自行执行 allowedTools(Bash/Read/...),
+ * 不回调宿主 server。故审批/日志/凭证/计费对本 worker 路径失效。宿主侧
+ * restrictToReadonlyTools 开关可限制只读工具;完整治本(canUseTool→server RPC)
+ * 见 T18b-A,需重建本镜像 + CLAUDE_WORKER_E2E=1 容器验证。
  */
 
 import { query, type Options, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';

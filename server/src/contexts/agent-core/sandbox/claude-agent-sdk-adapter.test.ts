@@ -505,5 +505,51 @@ describe('ClaudeAgentSdkAdapter - 预算二次熔断', () => {
   });
 });
 
+describe('ClaudeAgentSdkAdapter - T18b-C restrictToReadonlyTools 止血开关', () => {
+  it('开关关闭(默认):Bash/Write/Edit 保留(兼容现有无绑定工具 Agent 行为)', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(runner, new FakeSessionStore(), makeConfig());
+    await adapter.submitTask(makeTask()); // 未传 allowedTools → 走默认全工具
+    await tick();
+
+    expect(runner.lastOpts!.allowedTools).toEqual(
+      expect.arrayContaining(['Bash', 'Write', 'Edit', 'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'])
+    );
+  });
+
+  it('开关开启:默认工具集过滤掉 Bash/Write/Edit,仅留只读工具', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(
+      runner,
+      new FakeSessionStore(),
+      makeConfig({ restrictToReadonlyTools: true })
+    );
+    await adapter.submitTask(makeTask()); // 未传 allowedTools → 走默认,再过滤副作用
+    await tick();
+
+    expect(runner.lastOpts!.allowedTools).not.toContain('Bash');
+    expect(runner.lastOpts!.allowedTools).not.toContain('Write');
+    expect(runner.lastOpts!.allowedTools).not.toContain('Edit');
+    expect(runner.lastOpts!.allowedTools).toEqual(
+      expect.arrayContaining(['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'])
+    );
+  });
+
+  it('开关开启:显式传入含 Bash 的 allowedTools 也被过滤', async () => {
+    const runner = new FakeRunner();
+    const adapter = new ClaudeAgentSdkAdapter(
+      runner,
+      new FakeSessionStore(),
+      makeConfig({ restrictToReadonlyTools: true })
+    );
+    await adapter.submitTask(
+      makeTask({ input: { prompt: 'p', instanceId: 'i', allowedTools: ['Bash', 'Read', 'Write'] } })
+    );
+    await tick();
+
+    expect(runner.lastOpts!.allowedTools).toEqual(['Read']);
+  });
+});
+
 // 引入类型供 onTaskComplete 测试用
 import type { AgentTaskResult } from './agent-runtime-adapter.js';

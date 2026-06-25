@@ -18,7 +18,10 @@ export interface WorkerRunOptions {
   tenantId: string;
   /** 宿主工作目录,会被挂载为容器内 /workspace */
   cwd: string;
-  /** Agent SDK allowedTools,默认全工具 */
+  /**
+   * Agent SDK allowedTools,默认全工具(保持兼容;T18b 止血开关 restrictToReadonlyTools
+   * 在 adapter 层过滤副作用工具,见 docs/architecture/t18-tool-executor-mainline-gap.md)。
+   */
   allowedTools: string[];
   /** Claude 模型 ID,如 claude-sonnet-4-6 / claude-opus-4-6 */
   model: string;
@@ -70,6 +73,8 @@ export interface IWorkerRunner {
   checkImageAvailable(image: string): Promise<boolean>;
 }
 
+// 默认全工具(adapter 总传非空 allowedTools,此 fallback 实为死分支;保持全工具兼容)。
+// ⚠️ 工具经 SDK 内置执行器执行不经 ToolRegistryService(审批/日志/凭证/计费失效),见 t18 文档。
 const DEFAULT_TOOLS = ['Bash', 'Write', 'Edit', 'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'];
 
 /**
