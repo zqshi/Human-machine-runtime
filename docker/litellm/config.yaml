@@ -22,6 +22,18 @@ model_list:
       model: openai/deepseek-chat
       api_base: https://api.deepseek.com/v1
       api_key: os.environ/DEEPSEEK_API_KEY
+  # GLM(智谱)— 本地实测配置(2026-06-25):OpenAI 兼容端点 paas/v4
+  # chat.ts DEFAULT_MODEL=claude-sonnet-4-6,故以该名路由到 glm-4-flash,兼容默认调用无需改 chat 代码
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: openai/glm-4-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/GLM_API_KEY
+  - model_name: glm-4-flash
+    litellm_params:
+      model: openai/glm-4-flash
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/GLM_API_KEY
 
 litellm_settings:
   drop_params: true
@@ -29,3 +41,5 @@ litellm_settings:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  # T25 实测:virtual key 生成(/key/generate)需 LiteLLM 自有 DB 存 key 元数据
+  database_url: os.environ/LITELLM_DATABASE_URL

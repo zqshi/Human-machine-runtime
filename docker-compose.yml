@@ -69,6 +69,10 @@ services:
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:-sk-hmr-litellm-dev}"
+      # GLM(智谱)上游 key — 本地实测注入;部署时替换为企业自有模型 key
+      GLM_API_KEY: "${GLM_API_KEY:-}"
+      # T25 实测:virtual key 生成需 LiteLLM 自有 DB(存 key 元数据);连 host postgres 的 litellm 库
+      LITELLM_DATABASE_URL: "${LITELLM_DATABASE_URL:-postgresql://hmr:hmr@host.docker.internal:5435/litellm}"
     profiles:
       - litellm
       - full
