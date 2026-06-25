@@ -227,4 +227,103 @@ describe('MarketplaceService', () => {
       /requires/
     );
   });
+
+  // T25:installAgent 安装时自动授予默认模型 grant + 同步 LiteLLM key(否则新 instance 无 key→chat 502)
+  function makeInstallDeps(opts: {
+    existingModel?: { id: number; modelName: string | null } | null;
+    existingGrants?: string[];
+  }) {
+    const createModel = vi.fn(async () => ({ id: 99, modelName: 'claude-sonnet-4-6' }));
+    const aiGatewayRepo = {
+      listModels: vi.fn(async () => (opts.existingModel ? [opts.existingModel] : [])),
+      listGrantsByModel: vi.fn(async () => opts.existingGrants ?? []),
+      setModelGrants: vi.fn(async () => []),
+      createModel,
+    };
+    const syncInstance = vi.fn(async () => ({
+      instanceId: 'inst-1',
+      status: 'synced' as const,
+      allowedModels: ['claude-sonnet-4-6'],
+    }));
+    // 结构对齐 MarketplaceKeySyncDeps:{ aiGatewayRepo, llmKeySyncService: { syncInstance } }
+    return { aiGatewayRepo, llmKeySyncService: { syncInstance }, syncInstance, createModel };
+  }
+
+  function makeInstallSvc(keySyncDeps?: ReturnType<typeof makeInstallDeps>) {
+    const agentDefinitionService = {
+      create: vi.fn(async (input: any) => ({ id: 'adef-1', tenantId: input.tenantId, name: input.name })),
+    };
+    const instanceService = {
+      create: vi.fn(async (input: any) => ({
+        id: 'inst-1',
+        tenantId: input.tenantId,
+        agentDefinitionId: input.agentDefinitionId,
+      })),
+    };
+    const svc = new MarketplaceService(
+      makeClient(),
+      { log: vi.fn() },
+      undefined,
+      agentDefinitionService as any,
+      instanceService as any
+    );
+    if (keySyncDeps) svc.setKeySyncDeps(keySyncDeps as any);
+    return { svc, agentDefinitionService, instanceService };
+  }
+
+  it('installAgent 后授予默认模型 grant + 同步 key(新 instance 可对话)', async () => {
+    const deps = makeInstallDeps({ existingModel: { id: 7, modelName: 'claude-sonnet-4-6' } });
+    const { svc } = makeInstallSvc(deps);
+    await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
+    // 授予 grant:listGrantsByModel 取现有 + 合并新 instance + setModelGrants
+    expect(deps.aiGatewayRepo.listGrantsByModel).toHaveBeenCalledWith(7);
+    expect(deps.aiGatewayRepo.setModelGrants).toHaveBeenCalledWith(
+      7,
+      expect.arrayContaining(['inst-1']),
+      'tn_1',
+      'marketplace-install'
+    );
+    // 同步 key
+    expect(deps.syncInstance).toHaveBeenCalledWith('inst-1', 'tn_1');
+  });
+
+  it('installAgent 合并现有 grants(不删其他 instance 的授权)', async () => {
+    const deps = makeInstallDeps({
+      existingModel: { id: 7, modelName: 'claude-sonnet-4-6' },
+      existingGrants: ['inst-old-1', 'inst-old-2'],
+    });
+    const { svc } = makeInstallSvc(deps);
+    await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
+    // setModelGrants 收到合并数组:含旧 instance + 新 instance
+    expect(deps.aiGatewayRepo.setModelGrants).toHaveBeenCalledWith(
+      7,
+      expect.arrayContaining(['inst-old-1', 'inst-old-2', 'inst-1']),
+      'tn_1',
+      'marketplace-install'
+    );
+    const setArgs = deps.aiGatewayRepo.setModelGrants.mock.calls[0][1] as string[];
+    expect(setArgs).toHaveLength(3); // 不多不少,2 旧 + 1 新
+  });
+
+  it('installAgent llm_models 无默认模型时自动创建(createModel)', async () => {
+    const deps = makeInstallDeps({ existingModel: null }); // listModels 返回空
+    const { svc } = makeInstallSvc(deps);
+    await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
+    expect(deps.createModel).toHaveBeenCalled();
+  });
+
+  it('installAgent key 同步失败不阻断 install 返回(容错,记 failed)', async () => {
+    const deps = makeInstallDeps({ existingModel: { id: 7, modelName: 'claude-sonnet-4-6' } });
+    deps.syncInstance.mockRejectedValueOnce(new Error('litellm down'));
+    const { svc } = makeInstallSvc(deps);
+    // install 不抛错(容错)
+    const result = await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
+    expect(result.instanceId).toBe('inst-1');
+  });
+
+  it('installAgent 未注入 keySyncDeps 时不抛错(向后兼容,仅无 key)', async () => {
+    const { svc } = makeInstallSvc(undefined); // 不调 setKeySyncDeps
+    const result = await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
+    expect(result.instanceId).toBe('inst-1');
+  });
 });

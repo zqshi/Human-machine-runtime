@@ -5,6 +5,35 @@ import {
   defaultAgentDefinitionSpec,
   type AgentDefinitionSpec,
 } from '../agent-core/domain/agent-definition.js';
+import { config } from '../../config/index.js';
+import { logger } from '../../app/logger.js';
+
+/** T25:installAgent 后同步默认模型 grant + LiteLLM key 的依赖(setter 延后注入,复用 PersonaProvider 模式) */
+export interface MarketplaceKeySyncDeps {
+  aiGatewayRepo: {
+    listModels(): Promise<{ id: number; modelName: string | null; providerModelName: string | null; displayName: string }[]>;
+    listGrantsByModel(modelId: number): Promise<string[]>;
+    setModelGrants(
+      modelId: number,
+      instanceIds: string[],
+      tenantId: string,
+      grantedBy?: string
+    ): Promise<unknown>;
+    createModel(data: {
+      displayName: string;
+      providerType: string;
+      protocolType: string;
+      baseUrl: string;
+      modelName?: string;
+    }): Promise<{ id: number; modelName: string | null }>;
+  };
+  llmKeySyncService: {
+    syncInstance(instanceId: string, tenantId: string): Promise<unknown>;
+  };
+}
+
+/** 默认模型名(与 chat.ts DEFAULT_MODEL 对齐,marketplace agent 走 openclaw chat) */
+const DEFAULT_MODEL_NAME = 'claude-sonnet-4-6';
 
 export interface MarketplaceSkill {
   id: string;
@@ -58,6 +87,8 @@ export class MarketplaceService {
   private approvalStore: IApprovalStore | null;
   private agentDefinitionService: AgentDefinitionService | null;
   private instanceService: InstanceService | null;
+  /** T25:installAgent 后同步 grant + key 的依赖(可选,未注入则新 instance 无 key,向后兼容) */
+  private keySyncDeps: MarketplaceKeySyncDeps | null = null;
 
   constructor(
     client: MarketplaceClient,
@@ -71,6 +102,11 @@ export class MarketplaceService {
     this.approvalStore = approvalStore ?? null;
     this.agentDefinitionService = agentDefinitionService ?? null;
     this.instanceService = instanceService ?? null;
+  }
+
+  /** T25:延后注入 key 同步依赖(bootstrap 中 llmKeySyncService 构造后调用,避构造顺序问题) */
+  setKeySyncDeps(deps: MarketplaceKeySyncDeps): void {
+    this.keySyncDeps = deps;
   }
 
   /** 技能市场后端（marketplace）未配置时明确拒绝，而非崩溃。 */
@@ -306,6 +342,50 @@ export class MarketplaceService {
       tenantId,
       actor,
     });
+    // T25:安装即对话——为新 instance 授予默认模型 grant + 同步 LiteLLM key,否则无 key→chat 502。
+    // 容错:任一步失败不阻断 install 返回(同 syncOne 容错语义),仅记日志。
+    await this.syncDefaultModelKey(inst.id, tenantId).catch((err) => {
+      logger.warn({ instanceId: inst.id, err: err instanceof Error ? err.message : String(err) }, '[marketplace] installAgent key sync failed (non-blocking)');
+    });
     return { agentDefinitionId: def.id, instanceId: inst.id, name: agent.name };
+  }
+
+  /**
+   * T25:为新 instance 授予默认模型 grant + 同步 LiteLLM key。
+   * 1. findOrCreateDefaultModel 解析默认模型(llm_models 无记录则建)
+   * 2. listGrantsByModel 取现有 + 合并新 instance(setModelGrants 全量覆盖语义,需合并避免删别人授权)
+   * 3. syncInstance 生成绑定该模型的 virtual key(LlmKeySyncService.syncOne:有 grant 才生成)
+   */
+  private async syncDefaultModelKey(instanceId: string, tenantId: string): Promise<void> {
+    if (!this.keySyncDeps) return; // 未注入,向后兼容
+    const { aiGatewayRepo, llmKeySyncService } = this.keySyncDeps;
+
+    const modelId = await this.findOrCreateDefaultModel(aiGatewayRepo);
+
+    // 合并现有 grants(避免 setModelGrants 全量覆盖删其他 instance 授权)
+    const existing = await aiGatewayRepo.listGrantsByModel(modelId);
+    if (!existing.includes(instanceId)) existing.push(instanceId);
+    await aiGatewayRepo.setModelGrants(modelId, existing, tenantId, 'marketplace-install');
+
+    // 有 grant 后同步 key(syncOne 此时生成 virtual key)
+    await llmKeySyncService.syncInstance(instanceId, tenantId);
+  }
+
+  /** T25:解析默认模型——llm_models 找 modelName=DEFAULT_MODEL_NAME,无则 createModel 建 */
+  private async findOrCreateDefaultModel(
+    aiGatewayRepo: MarketplaceKeySyncDeps['aiGatewayRepo']
+  ): Promise<number> {
+    const models = await aiGatewayRepo.listModels();
+    const hit = models.find((m) => m.modelName === DEFAULT_MODEL_NAME);
+    if (hit) return hit.id;
+    // llm_models 无默认模型记录(实测时表为空)→ 建一个指向 LiteLLM 的占位记录
+    const created = await aiGatewayRepo.createModel({
+      displayName: DEFAULT_MODEL_NAME,
+      providerType: 'litellm',
+      protocolType: 'openai',
+      baseUrl: config.litellm.baseUrl,
+      modelName: DEFAULT_MODEL_NAME,
+    });
+    return created.id;
   }
 }

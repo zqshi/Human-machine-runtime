@@ -293,6 +293,9 @@ export function createAppContext(db: Database): AppContext {
     aiGatewayRepo,
     litellmClient,
   });
+  // T25:为 marketplaceService 注入 key 同步依赖(setter 延后注入,因 marketplaceService 早于 llmKeySyncService 构造)。
+  // installAgent 后自动授予默认模型 grant + 同步 LiteLLM key,使新安装 agent 可直接对话(非 502)。
+  marketplaceService.setKeySyncDeps({ aiGatewayRepo, llmKeySyncService });
   const notificationService = new NotificationService(operationalRepo);
   const { toolManagementService, toolRegistryService, toolApprovalRepo } = buildToolBundle(
     db,
