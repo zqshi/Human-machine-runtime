@@ -115,10 +115,30 @@ export function createAdminAiGatewayRoutes(
 
   app.get('/providers', async (c) => {
     const builtinProviders = [
-      { id: 'anthropic', name: 'Anthropic', baseUrl: 'https://api.anthropic.com', protocolType: 'anthropic' },
-      { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', protocolType: 'openai' },
-      { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', protocolType: 'openai' },
-      { id: 'zhipu', name: '智谱 AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', protocolType: 'openai' },
+      {
+        id: 'anthropic',
+        name: 'Anthropic',
+        baseUrl: 'https://api.anthropic.com',
+        protocolType: 'anthropic',
+      },
+      {
+        id: 'openai',
+        name: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        protocolType: 'openai',
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com/v1',
+        protocolType: 'openai',
+      },
+      {
+        id: 'zhipu',
+        name: '智谱 AI',
+        baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+        protocolType: 'openai',
+      },
       {
         id: 'qwen',
         name: '通义千问',
@@ -131,8 +151,18 @@ export function createAdminAiGatewayRoutes(
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
         protocolType: 'google',
       },
-      { id: 'mistral', name: 'Mistral', baseUrl: 'https://api.mistral.ai/v1', protocolType: 'openai' },
-      { id: 'litellm', name: 'LiteLLM Proxy', baseUrl: 'http://localhost:4000', protocolType: 'openai' },
+      {
+        id: 'mistral',
+        name: 'Mistral',
+        baseUrl: 'https://api.mistral.ai/v1',
+        protocolType: 'openai',
+      },
+      {
+        id: 'litellm',
+        name: 'LiteLLM Proxy',
+        baseUrl: 'http://localhost:4000',
+        protocolType: 'openai',
+      },
     ];
     return c.json({ providers: builtinProviders });
   });
@@ -282,9 +312,7 @@ export function createAdminAiGatewayRoutes(
     if (keySyncService) {
       keySyncService
         .syncInstances(body.instanceIds, tenantId)
-        .catch((err) =>
-          logger.warn({ err }, '[ai-gateway] key sync after grants update failed')
-        );
+        .catch((err) => logger.warn({ err }, '[ai-gateway] key sync after grants update failed'));
     }
 
     return c.json({ success: true, grants });
@@ -356,7 +384,8 @@ export function createAdminAiGatewayRoutes(
   /* ──── Traces ──── */
 
   app.get('/traces', async (c) => {
-    const { model, status, search, userId, instanceId, dateFrom, dateTo, page, limit } = c.req.query();
+    const { model, status, search, userId, instanceId, dateFrom, dateTo, page, limit } =
+      c.req.query();
     const result = await repo.listTraces({
       model,
       status,
@@ -428,7 +457,8 @@ export function createAdminAiGatewayRoutes(
     try {
       const parsed = JSON.parse(row.value) as { provider?: unknown; timeout?: unknown };
       return {
-        provider: typeof parsed.provider === 'string' ? parsed.provider : DEFAULT_GATEWAY_CONFIG.provider,
+        provider:
+          typeof parsed.provider === 'string' ? parsed.provider : DEFAULT_GATEWAY_CONFIG.provider,
         timeout:
           typeof parsed.timeout === 'number' && Number.isFinite(parsed.timeout)
             ? parsed.timeout
@@ -447,7 +477,11 @@ export function createAdminAiGatewayRoutes(
     const config = parsed.data;
 
     if (configRepo) {
-      await configRepo.setSystemConfig(GATEWAY_CONFIG_KEY, JSON.stringify(config), 'AI Gateway 全局配置');
+      await configRepo.setSystemConfig(
+        GATEWAY_CONFIG_KEY,
+        JSON.stringify(config),
+        'AI Gateway 全局配置'
+      );
     }
     return c.json({ success: true, config });
   });

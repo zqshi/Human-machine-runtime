@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  scheduledTaskApi,
-  type ScheduledTask,
-} from '../../../../application/services/adminApi';
+import { scheduledTaskApi, type ScheduledTask } from '../../../../application/services/adminApi';
 import { Icon } from '../../../components/ui/Icon';
 import { StatCard } from '../../../components/ui/StatCard';
 import { Button } from '../../../components/ui/Button';
@@ -10,7 +7,6 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { ScheduledTaskEditor } from './ScheduledTaskEditor';
 import { ScheduledTaskRunsDrawer } from './ScheduledTaskRunsDrawer';
 import { ScheduledTaskDetail } from './ScheduledTaskDetail';
-import { MOCK_TASKS } from '../../../../application/mock/scheduledTaskMock';
 
 const LAST_STATUS_LABEL: Record<string, string> = {
   completed: '成功',
@@ -38,7 +34,6 @@ export function ScheduledTasksSection() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [demoMode, setDemoMode] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   const [editorOpen, setEditorOpen] = useState(false);
@@ -54,22 +49,20 @@ export function ScheduledTasksSection() {
   }, []);
 
   const load = useCallback(() => {
-    if (demoMode) {
-      setTasks(MOCK_TASKS);
-      setLoading(false);
-      setLoadError('');
-      return;
-    }
     setLoading(true);
     setLoadError('');
     const params =
-      filter === 'enabled' ? { isEnabled: true } : filter === 'disabled' ? { isEnabled: false } : undefined;
+      filter === 'enabled'
+        ? { isEnabled: true }
+        : filter === 'disabled'
+          ? { isEnabled: false }
+          : undefined;
     scheduledTaskApi
       .list(params)
       .then((r) => setTasks(r.tasks || []))
       .catch((e) => setLoadError(e instanceof Error ? e.message : '加载失败'))
       .finally(() => setLoading(false));
-  }, [filter, demoMode]);
+  }, [filter]);
   useEffect(() => {
     load();
   }, [load]);
@@ -81,9 +74,8 @@ export function ScheduledTasksSection() {
   const stats = {
     total: tasks.length,
     enabled: tasks.filter((t) => t.isEnabled).length,
-    failed: tasks.filter(
-      (t) => t.lastRunStatus === 'failed' || t.lastRunStatus === 'timeout'
-    ).length,
+    failed: tasks.filter((t) => t.lastRunStatus === 'failed' || t.lastRunStatus === 'timeout')
+      .length,
   };
 
   const handleToggle = async (t: ScheduledTask) => {
@@ -121,7 +113,6 @@ export function ScheduledTasksSection() {
       <>
         <ScheduledTaskDetail
           task={detailTarget}
-          demoMode={demoMode}
           onBack={() => setDetailTarget(null)}
           onEdit={() => {
             setEditTarget(detailTarget);
@@ -180,18 +171,6 @@ export function ScheduledTasksSection() {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setDemoMode((v) => !v)}
-            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-              demoMode
-                ? 'border-[#007AFF] text-[#007AFF] bg-[#007AFF]/5'
-                : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-            }`}
-            title="开启后用内置演示数据展示（不调后端）"
-          >
-            <Icon name="science" size={14} />
-            演示数据
-          </button>
           <div className="flex items-center gap-1 px-2 py-1 border border-gray-200 rounded-lg">
             <Icon name="search" size={14} className="text-gray-400" />
             <input
@@ -314,7 +293,7 @@ export function ScheduledTasksSection() {
         onClose={() => setEditorOpen(false)}
         onSaved={load}
       />
-      <ScheduledTaskRunsDrawer task={runsTarget} demoMode={demoMode} onClose={() => setRunsTarget(null)} />
+      <ScheduledTaskRunsDrawer task={runsTarget} onClose={() => setRunsTarget(null)} />
     </div>
   );
 }

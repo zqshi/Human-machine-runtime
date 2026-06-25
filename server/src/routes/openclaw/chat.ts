@@ -108,10 +108,7 @@ export function createOpenclawChatRoutes(
       // 模型授权白名单校验（enforce 模式下拦截未授权的数字员工实例）
       const authz = await isAuthorized(body.instanceId, modelName);
       if (!authz.allowed) {
-        return c.json(
-          { error: 'model not authorized for this agent', reason: authz.reason },
-          403
-        );
+        return c.json({ error: 'model not authorized for this agent', reason: authz.reason }, 403);
       }
 
       // per-instance virtual key（LiteLLM 层模型隔离）；无则降级 master key
@@ -199,10 +196,7 @@ export function createOpenclawChatRoutes(
       // 模型授权白名单校验
       const authz = await isAuthorized(body.instanceId, modelName);
       if (!authz.allowed) {
-        return c.json(
-          { error: 'model not authorized for this agent', reason: authz.reason },
-          403
-        );
+        return c.json({ error: 'model not authorized for this agent', reason: authz.reason }, 403);
       }
 
       // per-instance virtual key（LiteLLM 层模型隔离）；无则降级 master key

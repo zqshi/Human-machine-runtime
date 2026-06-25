@@ -16,7 +16,6 @@ import { StatCard } from '../../../components/ui/StatCard';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Icon } from '../../../components/ui/Icon';
 import { ScheduledTaskRunDetail } from './ScheduledTaskRunDetail';
-import { MOCK_RUNS } from '../../../../application/mock/scheduledTaskMock';
 import { findSpec, type JobSpec } from './jobSpecs';
 
 const STATUS_DOT: Record<string, string> = {
@@ -34,12 +33,10 @@ function fmtTime(iso: string | null): string {
 
 export function ScheduledTaskDetail({
   task,
-  demoMode,
   onBack,
   onEdit,
 }: {
   task: ScheduledTask;
-  demoMode: boolean;
   onBack: () => void;
   onEdit: () => void;
 }) {
@@ -48,13 +45,6 @@ export function ScheduledTaskDetail({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (demoMode) {
-      const r = MOCK_RUNS[task.id] ?? [];
-      setRuns(r);
-      setSelected(r[0] ?? null);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     scheduledTaskApi
       .listRuns(task.id, { limit: 50 })
@@ -63,7 +53,7 @@ export function ScheduledTaskDetail({
         setSelected(r.runs?.[0] ?? null);
       })
       .finally(() => setLoading(false));
-  }, [task.id, demoMode]);
+  }, [task.id]);
 
   const spec: JobSpec | undefined = findSpec(
     task.jobType,
@@ -83,9 +73,7 @@ export function ScheduledTaskDetail({
   };
 
   const scheduleText =
-    task.scheduleType === 'cron'
-      ? `cron ${task.cronExpr}`
-      : `每 ${task.intervalSeconds}s`;
+    task.scheduleType === 'cron' ? `cron ${task.cronExpr}` : `每 ${task.intervalSeconds}s`;
 
   const totalRun = runs.length;
   const successRun = runs.filter((r) => r.status === 'completed').length;
@@ -110,21 +98,27 @@ export function ScheduledTaskDetail({
             <h1 className="text-lg font-semibold text-gray-900 truncate">{task.name}</h1>
             <span
               className={`px-1.5 py-0.5 rounded text-[10px] ${
-                task.jobType === 'agent' ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-500'
+                task.jobType === 'agent'
+                  ? 'bg-purple-50 text-purple-600'
+                  : 'bg-gray-100 text-gray-500'
               }`}
             >
               {spec?.label ?? task.jobType}
             </span>
             {task.isEnabled ? (
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-50 text-green-600">启用</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-50 text-green-600">
+                启用
+              </span>
             ) : (
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-400">已暂停</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-400">
+                已暂停
+              </span>
             )}
           </div>
           {task.description && <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={handleRun} disabled={demoMode}>
+          <Button variant="secondary" size="sm" onClick={handleRun}>
             <Icon name="play_arrow" size={14} className="mr-1" /> 立即执行
           </Button>
           <Button variant="ghost" size="sm" onClick={onEdit}>
@@ -183,7 +177,9 @@ export function ScheduledTaskDetail({
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[r.status] ?? 'bg-gray-400'}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[r.status] ?? 'bg-gray-400'}`}
+                    />
                     <span className="text-xs text-gray-700">{r.status}</span>
                     <span className="text-[10px] text-gray-400 ml-auto">
                       {r.triggerType === 'manual' ? '手动' : '定时'}

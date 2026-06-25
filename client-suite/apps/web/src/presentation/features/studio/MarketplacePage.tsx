@@ -39,7 +39,6 @@ interface McpListItem {
   installs: number;
 }
 
-
 export function MarketplacePage() {
   const [activeTab, setActiveTab] = useState<MarketTab>('skills');
   const [search, setSearch] = useState('');
@@ -406,53 +405,55 @@ export function MarketplacePage() {
         {/* MCP */}
         {!loading && activeTab === 'mcp' && (
           <div className="grid grid-cols-1 gap-2">
-            {mcpTools.filter(
-              (m) =>
-                !search ||
-                m.name.toLowerCase().includes(search.toLowerCase()) ||
-                m.description.includes(search)
-            ).map((mcp) => (
-              <div
-                key={mcp.id}
-                onClick={() => setDetailView({ type: 'mcp', id: mcp.id })}
-                className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all cursor-pointer"
-              >
+            {mcpTools
+              .filter(
+                (m) =>
+                  !search ||
+                  m.name.toLowerCase().includes(search.toLowerCase()) ||
+                  m.description.includes(search)
+              )
+              .map((mcp) => (
                 <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${mcp.color}`}
+                  key={mcp.id}
+                  onClick={() => setDetailView({ type: 'mcp', id: mcp.id })}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all cursor-pointer"
                 >
-                  <Icon name={mcp.icon} size={18} className="text-slate-200" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-medium text-slate-100 truncate">
-                      {mcp.name}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/[0.06] text-slate-400">
-                      {mcp.mode}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 truncate">
-                    {mcp.description} · {mcp.toolCount} 工具
-                  </p>
-                </div>
-                <div
-                  className="flex items-center gap-2 shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
-                    <Icon name="download" size={10} /> {mcp.installs}
-                  </span>
-                  <button
-                    onClick={() =>
-                      useToastStore.getState().addToast(`已安装 ${mcp.name}`, 'success')
-                    }
-                    className="h-7 px-3 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90 transition-opacity"
+                  <div
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${mcp.color}`}
                   >
-                    安装
-                  </button>
+                    <Icon name={mcp.icon} size={18} className="text-slate-200" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-medium text-slate-100 truncate">
+                        {mcp.name}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/[0.06] text-slate-400">
+                        {mcp.mode}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {mcp.description} · {mcp.toolCount} 工具
+                    </p>
+                  </div>
+                  <div
+                    className="flex items-center gap-2 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                      <Icon name="download" size={10} /> {mcp.installs}
+                    </span>
+                    <button
+                      onClick={() =>
+                        useToastStore.getState().addToast(`已安装 ${mcp.name}`, 'success')
+                      }
+                      className="h-7 px-3 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90 transition-opacity"
+                    >
+                      安装
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
 

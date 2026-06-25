@@ -66,7 +66,6 @@ interface AgentState {
 
 /* ─── Mock 演示数据 ─── */
 
-
 export const useAgentStore = create<AgentState>((set, get) => ({
   primaryAgent: null,
   capabilityRegistry: CapabilityRegistry.createDefault(),
