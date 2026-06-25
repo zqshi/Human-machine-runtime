@@ -23,10 +23,17 @@
  * 见 T18b-A,需重建本镜像 + CLAUDE_WORKER_E2E=1 容器验证。
  */
 
-import { query, type Options, type SDKMessage, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import {
+  query,
+  tool,
+  createSdkMcpServer,
+  type Options,
+  type SDKMessage,
+  type PermissionResult,
+} from '@anthropic-ai/claude-agent-sdk';
 
 // T18b-A:worker↔server 工具 RPC。env 由 docker-worker-runner --env-file 注入。
-// 未配(空)则 canUseTool 不注入,worker 降级无审批(向后兼容,同 T18b-C 前)。
+// 未配(空)则 canUseTool/custom tool 不注入,worker 降级无审批无外部工具执行(向后兼容,同 T18b-C 前)。
 const INTERNAL_SECRET = process.env.INTERNAL_TOOL_SECRET ?? '';
 const CALLBACK_URL = process.env.WORKER_CALLBACK_URL ?? '';
 
@@ -56,6 +63,72 @@ export async function checkToolWithServer(
   }
 }
 
+/**
+ * invokeToolWithServer — T18b 选项A:custom tool handler 调 server /api/internal/tool-invoke 执行外部工具(T18b-A)。
+ *
+ * 让外部/MCP 工具执行收口到 ToolRegistryService.invoke(审批/凭证解密/租户隔离/计费/callLog 全生效)。
+ * 导出为纯函数便于单测(mock fetch)。返回 MCP CallToolResult(content text 块),供 SDK custom tool handler。
+ * server 不可达/未配 → 返回 error 文本块(SDK 据此告知 Agent 工具失败,非静默)。
+ *
+ * CallToolResult 结构对齐 @modelcontextprotocol/sdk/types.js(本地等价类型,避免 worker 强依赖 MCP SDK)。
+ */
+export interface CallToolResult {
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+}
+
+export async function invokeToolWithServer(
+  url: string,
+  secret: string,
+  payload: {
+    toolId: string;
+    params: Record<string, unknown>;
+    context: { tenantId: string; instanceId?: string; callerId?: string };
+  }
+): Promise<CallToolResult> {
+  if (!secret || !url) {
+    return {
+      content: [{ type: 'text', text: 'tool-invoke not configured (INTERNAL_TOOL_SECRET/WORKER_CALLBACK_URL missing)' }],
+      isError: true,
+    };
+  }
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/api/internal/tool-invoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': secret },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) {
+      return { content: [{ type: 'text', text: `tool-invoke HTTP ${res.status}` }], isError: true };
+    }
+    const data = (await res.json()) as {
+      success?: boolean;
+      output?: unknown;
+      error?: string;
+      pendingApproval?: { approvalId: string; reason: string };
+    };
+    // 审批 gate 拦截 → 告知 Agent 待审批(非静默失败)
+    if (data.pendingApproval) {
+      return {
+        content: [{ type: 'text', text: `tool pending approval: ${data.pendingApproval.reason} (approvalId: ${data.pendingApproval.approvalId})` }],
+        isError: true,
+      };
+    }
+    if (!data.success) {
+      return { content: [{ type: 'text', text: `tool failed: ${data.error ?? 'unknown error'}` }], isError: true };
+    }
+    // 成功:output 序列化为文本块(SDK 工具结果约定为 content 数组)
+    const text = typeof data.output === 'string' ? data.output : JSON.stringify(data.output ?? '');
+    return { content: [{ type: 'text', text }] };
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `tool-invoke failed: ${err instanceof Error ? err.message : String(err)}` }],
+      isError: true,
+    };
+  }
+}
+
 interface TaskPayload {
   prompt: string;
   sessionId?: string;
@@ -67,9 +140,20 @@ interface TaskPayload {
   ragContext?: string;
   /** v1.4:skill 内容块(组装层 boundSkills 召回),拼 prompt 时前置为 <skills> 块 */
   skillsContext?: string;
-  /** T18b-A:实例 ID + 租户 ID,canUseTool 回连 server tool-check 审批用 */
+  /** T18b-A:实例 ID + 租户 ID,canUseTool/custom tool 回连 server 审批+执行用 */
   instanceId?: string;
   tenantId?: string;
+  /**
+   * T18b 选项A:外部工具定义列表(worker 注入为 custom tool)。
+   * 每项 {toolId, name, description, inputSchema};handler 内调 invokeToolWithServer。
+   * 由 docker-worker-runner 从 AgentDefinition.boundTools 解析透传(留 T29 runner 接线)。
+   */
+  externalTools?: Array<{
+    toolId: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }>;
 }
 
 function emit(obj: unknown): void {
@@ -130,6 +214,32 @@ async function main(): Promise<void> {
         return { behavior: 'allow', updatedInput: input };
       }
       return { behavior: 'deny', message: result.reason };
+    };
+  }
+
+  // T18b 选项A:外部工具(MCP/custom tool)执行转发。把 task.externalTools 注册为 SDK custom tool,
+  // handler 内调 invokeToolWithServer → server /api/internal/tool-invoke 收口 ToolRegistryService.invoke
+  // (审批/凭证/租户隔离/计费/callLog 对外部工具生效)。内置工具仍 SDK 内置执行器跑。
+  // externalTools 由 docker-worker-runner 从 AgentDefinition.boundTools 解析透传(留 runner 接线)。
+  if (task.externalTools?.length && INTERNAL_SECRET && CALLBACK_URL) {
+    const tenantId = task.tenantId ?? 'default';
+    const instanceId = task.instanceId;
+    const sdkTools = task.externalTools.map((t) =>
+      tool(t.name, t.description, t.inputSchema as never, async (args) => {
+        return invokeToolWithServer(CALLBACK_URL, INTERNAL_SECRET, {
+          toolId: t.toolId,
+          params: args as Record<string, unknown>,
+          context: { tenantId, instanceId, callerId: 'worker' },
+        });
+      })
+    );
+    options.mcpServers = {
+      // createSdkMcpServer 期望 SdkMcpToolDefinition<any>[];inputSchema 经 JSON 透传为裸对象,
+      // 运行时 SDK 不深究 schema 形态(MCP 协议内部转 JSON schema),故 as never 绕过 Zod 泛型静态检查。
+      'hmr-external-tools': createSdkMcpServer({
+        name: 'hmr-external-tools',
+        tools: sdkTools as never,
+      }),
     };
   }
 

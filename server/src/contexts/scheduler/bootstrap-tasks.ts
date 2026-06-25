@@ -79,4 +79,16 @@ export const BOOTSTRAP_SCHEDULER_TASKS: EnsureTaskInput[] = [
     cronExpr: '*/5 * * * *',
     timezone: 'Asia/Shanghai',
   },
+  {
+    id: 'scht_usage_alert_scanner',
+    name: '用量阈值告警扫描',
+    description:
+      '每 5 分钟遍历 active 租户调 QuotaService.getDashboard 触发 evaluateAndFireAlerts,' +
+      '用量超阈值主动告警(不依赖有人查面板)。handlerKey=usage-alert-scanner',
+    jobType: 'system',
+    jobPayload: { handlerKey: 'usage-alert-scanner' },
+    scheduleType: 'cron',
+    cronExpr: '*/5 * * * *',
+    timezone: 'Asia/Shanghai',
+  },
 ];

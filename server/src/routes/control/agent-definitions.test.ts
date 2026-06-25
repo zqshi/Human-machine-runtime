@@ -29,14 +29,20 @@ describe('control agent-definitions routes', () => {
     const res = await app.request('/adef-1/instantiate', { method: 'POST' });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.data).toEqual({ agentDefinitionId: 'adef-1', instanceId: 'inst-1', name: '客服助手' });
+    expect(body.data).toEqual({
+      agentDefinitionId: 'adef-1',
+      instanceId: 'inst-1',
+      name: '客服助手',
+    });
     // 用 auth principal 的 tenantId/username 调 service
     expect(svc.instantiateExistingDefinition).toHaveBeenCalledWith('adef-1', 'tn_test', 'admin1');
   });
 
   it('POST /:id/instantiate 服务抛错时返回 500', async () => {
     const svc = {
-      instantiateExistingDefinition: vi.fn().mockRejectedValue(new Error('agent definition not found: adef-x')),
+      instantiateExistingDefinition: vi
+        .fn()
+        .mockRejectedValue(new Error('agent definition not found: adef-x')),
     };
     const app = withAuth(createControlAgentDefinitionRoutes(svc as never));
     const res = await app.request('/adef-x/instantiate', { method: 'POST' });

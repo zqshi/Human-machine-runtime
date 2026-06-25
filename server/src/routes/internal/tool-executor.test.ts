@@ -86,10 +86,7 @@ describe('createInternalToolExecutorRoutes /tool-invoke (T18b 选项A)', () => {
     };
   }
 
-  function toolInvoke(
-    app: ReturnType<typeof createInternalToolExecutorRoutes>,
-    body: unknown
-  ) {
+  function toolInvoke(app: ReturnType<typeof createInternalToolExecutorRoutes>, body: unknown) {
     return app.request('/tool-invoke', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -145,7 +142,12 @@ describe('createInternalToolExecutorRoutes /tool-invoke (T18b 选项A)', () => {
   });
 
   it('invoke 返回 success:false(租户隔离/禁用/错误)→ 转发 error', async () => {
-    const tr = mockToolRegistry({ success: false, error: 'forbidden: tool does not belong to tenant', logId: '', durationMs: 0 });
+    const tr = mockToolRegistry({
+      success: false,
+      error: 'forbidden: tool does not belong to tenant',
+      logId: '',
+      durationMs: 0,
+    });
     const app = createInternalToolExecutorRoutes(mockConfig(false), tr as never);
     const res = await toolInvoke(app, { toolId: 't1', params: {}, context: { tenantId: 'tn_1' } });
     const data = await res.json();
@@ -154,7 +156,11 @@ describe('createInternalToolExecutorRoutes /tool-invoke (T18b 选项A)', () => {
   });
 
   it('invoke 抛错 → 500(不裸露内部错误细节给 worker)', async () => {
-    const tr = { invoke: vi.fn(async () => { throw new Error('db connection lost'); }) };
+    const tr = {
+      invoke: vi.fn(async () => {
+        throw new Error('db connection lost');
+      }),
+    };
     const app = createInternalToolExecutorRoutes(mockConfig(false), tr as never);
     const res = await toolInvoke(app, { toolId: 't1', params: {}, context: { tenantId: 'tn_1' } });
     expect(res.status).toBe(500);

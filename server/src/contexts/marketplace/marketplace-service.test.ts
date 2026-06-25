@@ -386,7 +386,9 @@ describe('MarketplaceService', () => {
 
   it('instantiateExistingDefinition 无依赖时抛错', async () => {
     const svc = new MarketplaceService(makeClient());
-    await expect(svc.instantiateExistingDefinition('adef-1', 'tn_1', 'u1')).rejects.toThrow(/requires/);
+    await expect(svc.instantiateExistingDefinition('adef-1', 'tn_1', 'u1')).rejects.toThrow(
+      /requires/
+    );
   });
 
   it('instantiateExistingDefinition def 不存在抛错', async () => {

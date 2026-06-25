@@ -96,6 +96,7 @@ import { registerEmployeeCleanup } from '../contexts/scheduler/handlers/employee
 import { registerWeeklyReport } from '../contexts/scheduler/handlers/weekly-report.js';
 import { registerInstanceHealthMonitor } from '../contexts/scheduler/handlers/instance-health-monitor.js';
 import { registerInstanceReconciler } from '../contexts/scheduler/handlers/instance-reconciler.js';
+import { registerUsageAlertScanner } from '../contexts/scheduler/handlers/usage-alert-scanner.js';
 import {
   ensureSchedulerTasks,
   BOOTSTRAP_SCHEDULER_TASKS,
@@ -391,6 +392,8 @@ export function createAppContext(db: Database): AppContext {
   );
   // v1.8:声明/运行调和 controller(*/5 spec-diff reconcile;失败兜底复用上方 rebuild)
   registerInstanceReconciler(systemHandler, instanceService);
+  // T10:用量阈值告警定时扫描(*/5 遍历租户调 getDashboard 触发 evaluateAndFireAlerts,线上不盲飞)
+  registerUsageAlertScanner(systemHandler, quotaService, tenantService);
   const jobHandlerRegistry = new JobHandlerRegistry();
   const agentInvoker = new LlmAgentInvoker(litellmClient, {});
   jobHandlerRegistry.register(new AgentJobHandler(agentInvoker));
