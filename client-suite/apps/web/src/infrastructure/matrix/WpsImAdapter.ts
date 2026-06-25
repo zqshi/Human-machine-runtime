@@ -21,6 +21,7 @@ import type {
   MessageContentType,
 } from '../../domain/shared/types';
 import { NotImplementedError } from '../../domain/shared/errors';
+import { isWpsImEnabled } from './wps-im-gate';
 
 /** WPS WebSocket 协议类型 */
 interface WpsMessageContent {
@@ -112,6 +113,14 @@ export class WpsImAdapter implements IMatrixClient {
   private disposed = false;
 
   constructor(farmBaseUrl: string) {
+    // D11 守卫:投产未启用 WPS IM 通道时禁止实例化,防残留 wps-token
+    // 触发会话恢复后调用 7 个未实现方法抛 NotImplementedError。
+    if (!isWpsImEnabled()) {
+      throw new Error(
+        'WPS IM 通道未启用(VITE_WPS_IM_ENABLED≠true)。投产未接入 WPS IM,' +
+          'WpsImAdapter 7 个方法未实现,禁止实例化。启用前须先补齐方法。'
+      );
+    }
     this.farmBaseUrl = farmBaseUrl.replace(/\/+$/, '');
   }
 

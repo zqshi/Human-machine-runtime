@@ -586,6 +586,10 @@ const DEFAULT_WPS_BASE_URL = import.meta.env.VITE_WPS_BASE_URL || 'http://localh
 function ChannelModeSelector() {
   const channelMode = useAuthStore((s) => s.channelMode);
   const setChannelMode = useAuthStore((s) => s.setChannelMode);
+  // D11 守卫:WPS IM 通道未显式启用(VITE_WPS_IM_ENABLED=true)时不暴露 WPS 选项,
+  // 防用户误切到 7 个方法未实现的通道。
+  const wpsImEnabled = import.meta.env.VITE_WPS_IM_ENABLED === 'true';
+  const channelOptions = CHANNEL_MODE_OPTIONS.filter((o) => o.value !== 'wps' || wpsImEnabled);
   const [wpsBaseUrl, setWpsBaseUrl] = useState(() => {
     try {
       return localStorage.getItem(WPS_BASE_URL_KEY) || DEFAULT_WPS_BASE_URL;
@@ -615,7 +619,7 @@ function ChannelModeSelector() {
       <h2 className="text-base font-semibold text-text-primary">消息通道</h2>
       <div className="p-4 bg-bg-white-var rounded-xl border border-border space-y-4">
         <div className="space-y-2">
-          {CHANNEL_MODE_OPTIONS.map((opt) => (
+          {channelOptions.map((opt) => (
             <label
               key={opt.value}
               className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -641,7 +645,7 @@ function ChannelModeSelector() {
         </div>
 
         {/* WPS base URL config */}
-        {channelMode === 'wps' && (
+        {channelMode === 'wps' && wpsImEnabled && (
           <div className="pt-2 border-t border-border space-y-2">
             <label className="text-[10px] text-text-muted block">WPS IM 服务地址</label>
             <div className="flex gap-2">
