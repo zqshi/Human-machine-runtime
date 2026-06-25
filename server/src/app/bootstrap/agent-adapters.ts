@@ -50,6 +50,8 @@ export function buildAgentAdapters(
       defaultModel: config.claude.defaultModel,
       defaultMaxTurns: config.claude.defaultMaxTurns,
       defaultBudgetUsd: config.claude.defaultBudgetUsd,
+      internalToolSecret: config.claude.internalToolSecret,
+      workerCallbackBaseUrl: config.claude.workerCallbackBaseUrl,
     });
     agentAdapterRegistry.register(claudeAdapter);
 

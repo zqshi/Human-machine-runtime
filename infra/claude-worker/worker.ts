@@ -23,7 +23,38 @@
  * 见 T18b-A,需重建本镜像 + CLAUDE_WORKER_E2E=1 容器验证。
  */
 
-import { query, type Options, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { query, type Options, type SDKMessage, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+
+// T18b-A:worker↔server 工具 RPC。env 由 docker-worker-runner --env-file 注入。
+// 未配(空)则 canUseTool 不注入,worker 降级无审批(向后兼容,同 T18b-C 前)。
+const INTERNAL_SECRET = process.env.INTERNAL_TOOL_SECRET ?? '';
+const CALLBACK_URL = process.env.WORKER_CALLBACK_URL ?? '';
+
+/**
+ * checkToolWithServer — worker canUseTool 钩子调 server /api/internal/tool-check 审批(T18b-A)。
+ * 导出为纯函数便于单测(mock fetch)。secret/URL 未配则 allow(降级无审批,向后兼容)。
+ * server 不可达 → 保守 deny(避免无审批执行高风险工具)。
+ */
+export async function checkToolWithServer(
+  url: string,
+  secret: string,
+  payload: { instanceId?: string; tenantId: string; toolName: string; input: Record<string, unknown> }
+): Promise<{ allowed: boolean; reason: string }> {
+  if (!secret || !url) return { allowed: true, reason: 'internal RPC not configured, fallback allow' };
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/api/internal/tool-check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': secret },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return { allowed: false, reason: `tool-check HTTP ${res.status}` };
+    const data = (await res.json()) as { allowed?: boolean; reason?: string };
+    return { allowed: Boolean(data.allowed), reason: data.reason ?? '' };
+  } catch (err) {
+    return { allowed: false, reason: `tool-check failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
 
 interface TaskPayload {
   prompt: string;
@@ -36,6 +67,9 @@ interface TaskPayload {
   ragContext?: string;
   /** v1.4:skill 内容块(组装层 boundSkills 召回),拼 prompt 时前置为 <skills> 块 */
   skillsContext?: string;
+  /** T18b-A:实例 ID + 租户 ID,canUseTool 回连 server tool-check 审批用 */
+  instanceId?: string;
+  tenantId?: string;
 }
 
 function emit(obj: unknown): void {
@@ -81,6 +115,23 @@ async function main(): Promise<void> {
     maxBudgetUsd: task.maxBudgetUsd ?? 5,
     model: task.model ?? 'claude-sonnet-4-6',
   };
+
+  // T18b-A:内部密钥配置时注入 canUseTool 审批钩子(回连 server /api/internal/tool-check)。
+  // 未配则不注入,worker 降级无审批(向后兼容)。让 #7 审批 gate 对实例主链路生效。
+  if (INTERNAL_SECRET && CALLBACK_URL) {
+    options.canUseTool = async (toolName, input): Promise<PermissionResult> => {
+      const result = await checkToolWithServer(CALLBACK_URL, INTERNAL_SECRET, {
+        instanceId: task.instanceId,
+        tenantId: task.tenantId ?? 'default',
+        toolName,
+        input,
+      });
+      if (result.allowed) {
+        return { behavior: 'allow', updatedInput: input };
+      }
+      return { behavior: 'deny', message: result.reason };
+    };
+  }
 
   if (task.sessionId) {
     options.resume = task.sessionId;

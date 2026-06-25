@@ -130,6 +130,14 @@ export const config = {
     defaultModel: optional('CLAUDE_DEFAULT_MODEL', 'claude-sonnet-4-6'),
     defaultMaxTurns: optionalInt('CLAUDE_DEFAULT_MAX_TURNS', 20),
     defaultBudgetUsd: optionalFloat('CLAUDE_DEFAULT_BUDGET_USD', 5),
+    // T18b-A:worker↔server 工具调用 RPC。internalToolSecret 为内部认证共享密钥
+    // (worker 容器调 /api/internal/* 的 X-Internal-Secret);未配则 internal 路由 503 拒绝(防误开)。
+    // workerCallbackBaseUrl 是 worker 容器回连 server 的地址(容器内经 host.docker.internal 访问宿主)。
+    internalToolSecret: optional('CLAUDE_INTERNAL_TOOL_SECRET', ''),
+    workerCallbackBaseUrl: optional(
+      'CLAUDE_WORKER_CALLBACK_URL',
+      'http://host.docker.internal:3002'
+    ),
   },
 
   weknora: {
@@ -196,6 +204,13 @@ export function validateProductionConfig(): void {
   }
   if (INSECURE_DEFAULTS.includes(config.auth.session.secret)) {
     failures.push('SESSION_SECRET is using the insecure development default');
+  }
+  // T18b-A:生产用 claude-agent-sdk(ANTHROPIC_API_KEY 配置)时,worker↔server 工具 RPC
+  // 内部认证密钥必填(防 worker 容器无认证调 /api/internal/*)
+  if (config.claude.apiKey && !config.claude.internalToolSecret) {
+    failures.push(
+      'CLAUDE_INTERNAL_TOOL_SECRET is required in production when ANTHROPIC_API_KEY is set (T18b-A worker tool RPC)'
+    );
   }
   if (failures.length > 0) {
     throw new Error(

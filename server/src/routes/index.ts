@@ -67,6 +67,9 @@ import { createWorkspaceProxyRoutes } from '../contexts/gateway/routes/workspace
 import { createChannelProxyRoutes } from '../contexts/gateway/routes/channel-proxy.js';
 import { createMcpProxyRoutes } from '../contexts/gateway/routes/mcp-proxy.js';
 import { createMcpToolServerRoutes } from './mcp-endpoint/tool-server.js';
+import { createInternalToolExecutorRoutes } from './internal/tool-executor.js';
+import { createInternalAuthMiddleware } from '../middleware/internal-auth.js';
+import { config } from '../config/index.js';
 
 export function registerRoutes(app: Hono, ctx: AppContext) {
   app.use('*', async (c, next) => {
@@ -75,6 +78,12 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   });
 
   app.route('/health', createHealthRoutes(ctx));
+
+  /* ──── Internal (worker↔server RPC,T18b-A;共享密钥认证,非 JWT) ──── */
+  const internal = new Hono();
+  internal.use('*', createInternalAuthMiddleware(config.claude.internalToolSecret));
+  internal.route('/', createInternalToolExecutorRoutes(ctx.systemConfigService));
+  app.route('/api/internal', internal);
 
   app.route('/api/auth', createAuthRoutes(ctx.authService, ctx.oauthStateStore));
 

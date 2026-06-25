@@ -31,6 +31,10 @@ export interface WorkerRunOptions {
   apiKey: string;
   /** 私有化:Anthropic API 基址;有值则注入容器 ANTHROPIC_BASE_URL,让 SDK 经企业代理转发(空则 SDK 直连) */
   anthropicBaseUrl?: string;
+  /** T18b-A:worker↔server 工具 RPC 内部认证密钥(注入容器 INTERNAL_TOOL_SECRET) */
+  internalToolSecret?: string;
+  /** T18b-A:worker 回连 server 的 URL(注入容器 WORKER_CALLBACK_URL) */
+  workerCallbackBaseUrl?: string;
   /** D2:RAG 上下文块(知识库/记忆召回结果),worker 拼 prompt 时前置为 <context> 块 */
   ragContext?: string;
   /** v1.4:skill 内容块(组装层 boundSkills 召回),worker 拼 prompt 时前置为 <skills> 块 */
@@ -107,6 +111,11 @@ export class DockerWorkerRunner implements IWorkerRunner {
     const envLines = [`ANTHROPIC_API_KEY=${opts.apiKey}`];
     if (opts.anthropicBaseUrl) {
       envLines.push(`ANTHROPIC_BASE_URL=${opts.anthropicBaseUrl}`);
+    }
+    // T18b-A:worker canUseTool 回连 server 的内部认证密钥 + 回调地址(空则不注入,worker 降级无审批)
+    if (opts.internalToolSecret) {
+      envLines.push(`INTERNAL_TOOL_SECRET=${opts.internalToolSecret}`);
+      envLines.push(`WORKER_CALLBACK_URL=${opts.workerCallbackBaseUrl ?? ''}`);
     }
     envLines.push(`CLAUDE_TASK_JSON=${JSON.stringify(payload)}`);
     try {
@@ -219,6 +228,9 @@ export class DockerWorkerRunner implements IWorkerRunner {
       model: opts.model,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: opts.maxBudgetUsd,
+      // T18b-A:worker canUseTool 回连 server tool-check 需 instanceId/tenantId 做审批上下文
+      instanceId: opts.instanceId,
+      tenantId: opts.tenantId,
     };
     if (opts.ragContext) {
       payload.ragContext = opts.ragContext;

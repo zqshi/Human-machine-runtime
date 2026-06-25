@@ -35,6 +35,10 @@ export interface ClaudeAdapterConfig {
    * 拿全工具)。完整治本见 docs/architecture/t18-tool-executor-mainline-gap.md T18b-A。
    */
   restrictToReadonlyTools?: boolean;
+  /** T18b-A:worker↔server 工具 RPC 内部认证密钥(空则 worker 不注入 canUseTool,降级无审批) */
+  internalToolSecret?: string;
+  /** T18b-A:worker 容器回连 server 的 URL(http://host.docker.internal:3002) */
+  workerCallbackBaseUrl?: string;
 }
 
 /** 副作用工具(Bash/Write/Edit):T18b 止血开关 restrictToReadonlyTools 时过滤掉 */
@@ -166,6 +170,8 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       traceId,
       resources,
       workerImage: this.config.workerImage,
+      internalToolSecret: this.config.internalToolSecret ?? '',
+      workerCallbackBaseUrl: this.config.workerCallbackBaseUrl ?? '',
     };
 
     // 异步执行,submitTask 立即返回

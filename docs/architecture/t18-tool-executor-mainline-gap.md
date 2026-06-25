@@ -1,6 +1,6 @@
 # T18 诊断 — tool-management executor 与 claude-agent-sdk 主链路脱节
 
-> **状态**: [PARTIAL] 选项 C(止血)已实施 2026-06-25;选项 A(治本)待独立版本承载
+> **状态**: [IMPLEMENTED] canUseTool 审批闭环已实施 2026-06-25(T18b-A);E2E 真生效 + MCP 执行转发(凭证/计费)待后续
 > **债务**: backlog D3（v1.2.1 记录"P2 v1.3+"，本次核实更新）
 > **核实日期**: 2026-06-25（SDK 深度核实于同日补入）
 
@@ -132,3 +132,33 @@ harness.dispatchTask()                    ← 实例任务主链路汇聚点
 - canUseTool 审批闭环(让 #7 审批 + callLog 对主链路生效):1.5-2 天,需 CLAUDE_WORKER_E2E=1 容器验证真生效。
 
 **验证**: tsc/eslint 全过;parseAllowedTools 默认 false 行为兼容,adapter 单测保持通过。
+
+---
+
+## T18b-A 实施记录（2026-06-25，canUseTool 审批闭环已交付）
+
+**用户决策**: T18b 全量完成依次推进。本轮做 canUseTool 审批闭环(plan 选项 A 第一阶段)。
+
+**实施**(9 文件,跨 server + worker):
+- `config/index.ts`:`config.claude` 加 `internalToolSecret` + `workerCallbackBaseUrl`(env `CLAUDE_INTERNAL_TOOL_SECRET` + `CLAUDE_WORKER_CALLBACK_URL`);生产校验 apiKey 配置时 secret 必填。
+- `middleware/internal-auth.ts`(新):X-Internal-Secret 共享密钥校验(非 JWT),secret 未配 503 拒绝(防误开)。
+- `routes/internal/tool-executor.ts`(新):POST /tool-check,内置工具风险表(Bash/Write/Edit=high→deny, Read/Glob/Grep/WebSearch/WebFetch=low→allow, 未识别→deny 保守) + `tool.approval.enforce` flag(向后兼容)。
+- `routes/index.ts`:/api/internal 挂载,挂 internal-auth 不挂 JWT(同 /health 公开模式 + 密钥)。
+- `claude-agent-sdk-adapter.ts` + `docker-worker-runner.ts`:ClaudeAdapterConfig + WorkerRunOptions 透传 secret/url;envLines 注入容器 `INTERNAL_TOOL_SECRET` + `WORKER_CALLBACK_URL`;buildPayload 传 instanceId/tenantId。
+- `worker.ts`:env 读密钥;`options.canUseTool` 钩子 fetch /api/internal/tool-check → allow/deny(PermissionResult);导出 `checkToolWithServer` 纯函数。
+
+**关键设计决策(技术约束驱动)**:
+1. **canUseTool 同步审批 = deny,非 pending**:SDK canUseTool 是工具执行前同步钩子,无法暂停等人工审批(approvalGate 原设计 pending 仅 invoke 异步用例可行)。故 high-risk 工具 enforce 开启时 deny(Agent 失去 Bash 能力,除非关 enforce,同 T18b-C restrictToReadonlyTools 方向)。
+2. **内置工具风险表**:claude-agent-sdk 内置工具无 ToolDefinition,approvalGate.checkAndMaybeBlock 不认识(invoke:109 getDefinition 返回 null),故 tool-check 用 BUILTIN_TOOL_RISK 表自判定,不调 invoke。
+3. **server 不可达 → deny(保守)**:checkToolWithServer fetch 失败/超时返回 deny,避免无审批执行高风险工具。
+
+**范围收窄(plan 偏差,实现中发现)**:
+- **不含 tool-log(callLog 落库)**:worker canUseTool 是执行前钩子拿不到工具结果;内置工具 `tool_call_logs` schema `definitionId` notNull 无 `toolName` 列。完整 callLog 需 worker 捕获 SDK `tool_use_result` message + schema 加 toolName 列(migration),留后续独立任务。
+- **不含 MCP custom tool 执行转发(凭证/计费)**:外部工具经 MCP 注入属 T18a 第二阶段(3-5 天),本闭环对外部工具保守 deny。
+- **不含外部工具 approvalGate 调用**:实例路径主要用 SDK 内置工具,外部工具审批留第二阶段。
+
+**未覆盖(留用户侧 E2E + 后续)**:
+- **真生效验证**:worker 容器→server 跨进程真实调用需 `CLAUDE_WORKER_E2E=1` 重建镜像 + `host.docker.internal` 网络。当前环境无法 E2E,代码+单测 done,真审批对主链路真生效靠用户侧容器验证(类 D10/T16)。
+- **worker checkToolWithServer 单测**:claude-worker 无 vitest 基建(靠 build tsc + docker E2E,与现状一致),靠 tsc 类型 + E2E 验证,不强行加 vitest。
+
+**验证**: server tsc / claude-worker tsc / eslint 全过;server 1589 测含 internal-auth 4 + tool-executor 7 新测;无回归。
