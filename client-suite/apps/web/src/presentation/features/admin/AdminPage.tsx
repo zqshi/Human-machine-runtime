@@ -17,6 +17,7 @@ import { MemorySection } from './memory';
 import { ToolApprovalsSection } from './ToolApprovalsSection';
 import { FeatureFlagSection } from './FeatureFlagSection';
 import { RuntimeTemplatesSection } from './RuntimeTemplatesSection';
+import { CredentialSection } from './CredentialSection';
 
 type NavItem = { key: AdminSection; icon: string; label: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -55,6 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'logs', icon: 'receipt_long', label: '日志' },
       { key: 'auth', icon: 'admin_panel_settings', label: '权限管理' },
       { key: 'notifications', icon: 'notifications', label: '通知' },
+      { key: 'credentials', icon: 'key', label: '凭证管理' },
     ],
   },
   {
@@ -103,6 +105,8 @@ function SectionContent({ section }: { section: AdminSection }) {
       return <FeatureFlagSection />;
     case 'runtime-templates':
       return <RuntimeTemplatesSection />;
+    case 'credentials':
+      return <CredentialSection />;
   }
 }
 

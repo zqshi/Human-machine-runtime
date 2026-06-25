@@ -27,7 +27,8 @@ export type AdminSection =
   | 'scheduled-task-detail'
   | 'tool-approvals'
   | 'feature-flags'
-  | 'runtime-templates';
+  | 'runtime-templates'
+  | 'credentials';
 
 export type PlatformSection =
   | 'tenants'
@@ -63,6 +64,7 @@ const HASHABLE_ADMIN_SECTIONS: readonly AdminSection[] = [
   'channel-admin',
   'employee-memory',
   'scheduled-tasks',
+  'credentials',
 ];
 
 /** 从 URL hash 读取 section（硬刷新后恢复当前页）；非法或缺失返回 'employees'。 */
