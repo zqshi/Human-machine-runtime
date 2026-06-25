@@ -175,6 +175,15 @@ export class SkillRepository implements ISkillRepository {
     const rows = await this.db.select().from(assetBindings);
     return rows.map(toBindingDomain);
   }
+
+  /** T13 studio:按 tenantId 列已安装资产绑定 */
+  async listBindingsByTenant(tenantId: string): Promise<AssetBinding[]> {
+    const rows = await this.db
+      .select()
+      .from(assetBindings)
+      .where(eq(assetBindings.tenantId, tenantId));
+    return rows.map(toBindingDomain);
+  }
 }
 
 function toReportRow(r: SkillReport) {

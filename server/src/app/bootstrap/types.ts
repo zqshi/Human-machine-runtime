@@ -65,6 +65,8 @@ import type { ReceiptManager } from '../../contexts/runtime-engine/receipt-manag
 import type { IOAuthStateStore } from '../../contexts/identity-access/oauth-state-store.js';
 import type { BillingService } from '../../contexts/billing/billing-service.js';
 import type { AgentDefinitionService } from '../../contexts/agent-core/application/agent-definition-service.js';
+import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
+import type { StudioService } from '../../contexts/agent-core/application/studio-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -88,6 +90,10 @@ export interface AppContext {
   credentialService: CredentialService;
   leaseService: LeaseService;
   credentialManagementService: CredentialManagementService;
+  /** v1.9 T3 PersonaProvider(人设 + guardrails);T15 openclaw chat route 复用作后端 guardrail 兜底 */
+  personaProvider: IPersonaProvider;
+  /** T13 openclaw Studio 资产聚合 service(替代 studio route STUB) */
+  studioService: StudioService;
   channelService: ChannelService;
   decisionConsole: DecisionConsole;
   mcpService: McpService;

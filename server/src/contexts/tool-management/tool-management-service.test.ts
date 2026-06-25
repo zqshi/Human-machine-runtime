@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ToolManagementService } from './tool-management-service.js';
+import { getExecutor } from './executors/executor-factory.js';
+
+vi.mock('./executors/executor-factory.js');
 
 function mockRepos() {
   return {
@@ -40,9 +43,12 @@ function mockRepos() {
         .fn()
         .mockResolvedValue({ totalCalls: 0, successCalls: 0, failedCalls: 0, avgDurationMs: 0 }),
     },
-    credentialService: {
-      encrypt: vi.fn().mockReturnValue('encrypted'),
-      decrypt: vi.fn().mockReturnValue('decrypted'),
+    credentialSecretProvider: {
+      getCredentialSecret: vi.fn().mockImplementation((_id: number, secretType: string) => {
+        if (secretType === 'username') return Promise.resolve('dbuser');
+        if (secretType === 'password') return Promise.resolve('dbpass');
+        return Promise.resolve(null);
+      }),
     },
   };
 }
@@ -53,7 +59,7 @@ function createService(mocks: ReturnType<typeof mockRepos>) {
     mocks.definitionRepo as never,
     mocks.instanceRepo as never,
     mocks.callLogRepo as never,
-    mocks.credentialService as never
+    mocks.credentialSecretProvider as never
   );
 }
 
@@ -163,5 +169,103 @@ describe('ToolManagementService', () => {
     const svc = createService(mocks);
     await svc.deleteSource('tsrc_1');
     expect(mocks.sourceRepo.delete).toHaveBeenCalledWith('tsrc_1');
+  });
+
+  /* ──── T1: DB 凭证解密链路(接口漂移修复) ──── */
+
+  const dbSource = {
+    id: 'tsrc_1',
+    tenantId: 'tn_1',
+    sourceType: 'database',
+    dbType: 'postgresql',
+    dbHost: 'localhost',
+    dbPort: 5432,
+    dbName: 'test',
+    dbSchemaName: 'public',
+    credentialId: '42',
+  };
+
+  it('syncDatabase credentialId 非数字→解密失败报错,不调端口', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue({ ...dbSource, credentialId: 'not-a-number' });
+    const svc = createService(mocks);
+    const result = await svc.syncSource('tsrc_1');
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toMatch(/解密失败/);
+    expect(mocks.credentialSecretProvider.getCredentialSecret).not.toHaveBeenCalled();
+  });
+
+  it('syncDatabase 解密返回 null(username/password secret 不存在)→报错', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue(dbSource);
+    mocks.credentialSecretProvider.getCredentialSecret.mockResolvedValue(null);
+    const svc = createService(mocks);
+    const result = await svc.syncSource('tsrc_1');
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toMatch(/解密失败/);
+  });
+
+  it('syncDatabase 解密成功→username/password 注入 introspect config', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue(dbSource);
+    mocks.definitionRepo.findBySource.mockResolvedValue([]);
+    const svc = createService(mocks);
+    const introspectSpy = vi
+      .spyOn(
+        (svc as unknown as { dbIntrospector: { introspect: Function } }).dbIntrospector,
+        'introspect'
+      )
+      .mockResolvedValue({ tables: [], errors: [] });
+    vi.spyOn(
+      (svc as unknown as { dbIntrospector: { generateTools: Function } }).dbIntrospector,
+      'generateTools'
+    ).mockReturnValue([]);
+    const result = await svc.syncSource('tsrc_1');
+    expect(result.success).toBe(true);
+    expect(mocks.credentialSecretProvider.getCredentialSecret).toHaveBeenCalledWith(42, 'username');
+    expect(mocks.credentialSecretProvider.getCredentialSecret).toHaveBeenCalledWith(42, 'password');
+    expect(introspectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'dbuser', password: 'dbpass' })
+    );
+  });
+
+  it('executeTool source 无 credentialId→不调解密,credential=undefined', async () => {
+    const mocks = mockRepos();
+    mocks.definitionRepo.findById.mockResolvedValue({
+      id: 'tdef_1',
+      sourceId: 'tsrc_1',
+      executionType: 'http_proxy',
+      executionConfig: { url: 'http://example.com' },
+      enabled: true,
+    });
+    mocks.sourceRepo.findById.mockResolvedValue({ id: 'tsrc_1', credentialId: null });
+    const executeFn = vi.fn().mockResolvedValue({ success: true, data: {}, durationMs: 1 });
+    (getExecutor as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ execute: executeFn });
+    const svc = createService(mocks);
+    await svc.executeTool('tdef_1', {}, { tenantId: 'tn_1' });
+    expect(mocks.credentialSecretProvider.getCredentialSecret).not.toHaveBeenCalled();
+    expect(executeFn).toHaveBeenCalledWith(expect.anything(), expect.anything(), undefined);
+  });
+
+  it('executeTool source 有 credentialId→解密注入 executor', async () => {
+    const mocks = mockRepos();
+    mocks.definitionRepo.findById.mockResolvedValue({
+      id: 'tdef_1',
+      sourceId: 'tsrc_1',
+      executionType: 'db_query',
+      executionConfig: {},
+      enabled: true,
+    });
+    mocks.sourceRepo.findById.mockResolvedValue({ id: 'tsrc_1', credentialId: '42' });
+    const executeFn = vi.fn().mockResolvedValue({ success: true, data: {}, durationMs: 1 });
+    (getExecutor as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ execute: executeFn });
+    const svc = createService(mocks);
+    await svc.executeTool('tdef_1', {}, { tenantId: 'tn_1' });
+    expect(mocks.credentialSecretProvider.getCredentialSecret).toHaveBeenCalledWith(42, 'username');
+    expect(executeFn).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ type: 'basic', username: 'dbuser', password: 'dbpass' })
+    );
   });
 });

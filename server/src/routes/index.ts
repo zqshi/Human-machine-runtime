@@ -48,6 +48,7 @@ import { createAdminCredentialRoutes } from './admin/credentials.js';
 import { createAdminAgentDefinitionRoutes } from './admin/agent-definitions.js';
 import { createAdminToolApprovalRoutes } from './admin/tool-approvals.js';
 import { createAdminRuntimeTemplateRoutes } from './admin/runtime-templates.js';
+import { createAdminFeatureFlagRoutes } from './admin/feature-flags.js';
 import { createOpenclawTaskRoutes } from './openclaw/tasks.js';
 import { createOpenclawDecisionRoutes } from './openclaw/decisions.js';
 import { createOpenclawSignalRoutes } from './openclaw/signals.js';
@@ -202,6 +203,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
     createAdminToolApprovalRoutes(ctx.toolApprovalRepo, ctx.toolManagementService, ctx.auditService)
   );
   admin.route('/runtime-templates', createAdminRuntimeTemplateRoutes());
+  admin.route('/feature-flags', createAdminFeatureFlagRoutes(ctx.systemConfigService));
   app.route('/api/admin', admin);
 
   /* ──── Control (L2 管理控制面) ──── */
@@ -241,10 +243,15 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   openclaw.route('/', createOpenclawWorkspaceRoutes(ctx.workspaceService));
   openclaw.route('/', createOpenclawOrchestrationRoutes(ctx.openclawRepo));
   openclaw.route('/', createOpenclawEvaluationRoutes(ctx.openclawRepo));
-  openclaw.route('/studio', createStudioRoutes());
+  openclaw.route('/studio', createStudioRoutes(ctx.studioService));
   openclaw.route(
     '/',
-    createOpenclawChatRoutes(ctx.litellmClient, ctx.aiGatewayRepo, ctx.modelGrantChecker)
+    createOpenclawChatRoutes(
+      ctx.litellmClient,
+      ctx.aiGatewayRepo,
+      ctx.modelGrantChecker,
+      ctx.personaProvider
+    )
   );
   app.route('/api/openclaw', openclaw);
 

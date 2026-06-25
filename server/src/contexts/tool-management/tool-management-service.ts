@@ -10,7 +10,6 @@
  */
 
 import { newId } from '../../shared/utils.js';
-import type { CredentialService } from '../credential-vault/credential-service.js';
 import type {
   ToolSourceRepository,
   ToolDefinitionRepository,
@@ -25,6 +24,7 @@ import type {
   ExecutionContext,
   ExecutionType,
   DecryptedCredential,
+  CredentialSecretProvider,
   TestConnectionResult,
   ToolStats,
 } from './types.js';
@@ -38,20 +38,32 @@ export class ToolManagementService {
   private openapiParser: OpenApiParser;
   private dbIntrospector: DbIntrospector;
   private gatewayDiscoverer: GatewayDiscoverer;
-  private credentialSvc: CredentialService;
 
   constructor(
     private sourceRepo: ToolSourceRepository,
     private definitionRepo: ToolDefinitionRepository,
     private instanceRepo: ToolInstanceRepository,
     private callLogRepo: ToolCallLogRepository,
-    credentialService: CredentialService
+    private credentialSecretProvider: CredentialSecretProvider
   ) {
-    // 保留引用供后续凭证解密使用
-    this.credentialSvc = credentialService;
     this.openapiParser = new OpenApiParser();
     this.dbIntrospector = new DbIntrospector();
     this.gatewayDiscoverer = new GatewayDiscoverer();
+  }
+
+  /**
+   * 解密凭证(依赖倒置端口 CredentialSecretProvider)。
+   * credentialId 在 tool source/instance 是 varchar string,credential-vault authz.id
+   * 是 serial number——此处 Number() 转换,非整数返回 undefined(调用方报错,不静默)。
+   * DB 工具约定 secretType='username'/'password' 两个 secret。
+   */
+  private async resolveCredential(credentialId: string): Promise<DecryptedCredential | undefined> {
+    const id = Number(credentialId);
+    if (!Number.isInteger(id)) return undefined;
+    const username = await this.credentialSecretProvider.getCredentialSecret(id, 'username');
+    const password = await this.credentialSecretProvider.getCredentialSecret(id, 'password');
+    if (username === null && password === null) return undefined;
+    return { type: 'basic', username: username ?? undefined, password: password ?? undefined };
   }
 
   /* ──── Source CRUD ──── */
@@ -270,26 +282,18 @@ export class ToolManagementService {
       };
     }
 
-    // 凭证解密链路探测：CredentialService 当前仅 encrypt/decrypt、无按 credentialId 查询能力
-    // （CredentialStore 亦无 db 实现）。能力缺失时显式失败，避免用 credentialId 占位 + 空密码
-    // 静默连接产生误导。链路接通（CredentialService.getCredential 实装）后自动走真实凭证。
-    const getCredential = (
-      this.credentialSvc as {
-        getCredential?: (id: string) => Promise<{ username: string; password: string }>;
-      }
-    ).getCredential;
-    if (typeof getCredential !== 'function') {
+    // 凭证解密(接口漂移修复):经 CredentialSecretProvider 端口解密 source.credentialId。
+    // credentialId string → authz.id number 转换;解密失败(id 非法或无 username/password secret)显式报错。
+    const credential = await this.resolveCredential(source.credentialId);
+    if (!credential) {
       return {
         success: false,
         toolsCreated: 0,
         toolsUpdated: 0,
         toolsRemoved: 0,
-        errors: [
-          '数据库凭证解密链路未实装（credential-vault 查询/解密待接入），DB 工具同步暂不可用',
-        ],
+        errors: ['数据库凭证解密失败(credentialId 非法或未配置 username/password secret)'],
       };
     }
-    const credential = await getCredential.call(this.credentialSvc, source.credentialId);
 
     const config = {
       type: (source.dbType || 'postgresql') as 'postgresql' | 'mysql',
@@ -297,8 +301,8 @@ export class ToolManagementService {
       port: source.dbPort || 5432,
       database: source.dbName,
       schema: source.dbSchemaName || 'public',
-      username: credential.username,
-      password: credential.password,
+      username: credential.username ?? '',
+      password: credential.password ?? '',
     };
 
     const introspectResult = await this.dbIntrospector.introspect(config);
@@ -426,14 +430,18 @@ export class ToolManagementService {
       }
       case 'database': {
         if (!source.dbHost || !source.dbName) return { success: false, message: '连接配置不完整' };
+        if (!source.credentialId) return { success: false, message: '缺少数据库凭证' };
+        // 凭证解密(接口漂移修复):不再用 credentialId 当 username + 空密码占位。
+        const credential = await this.resolveCredential(source.credentialId);
+        if (!credential) return { success: false, message: '数据库凭证解密失败' };
         return this.dbIntrospector.testConnection({
           type: (source.dbType || 'postgresql') as 'postgresql' | 'mysql',
           host: source.dbHost,
           port: source.dbPort || 5432,
           database: source.dbName,
           schema: source.dbSchemaName || 'public',
-          username: source.credentialId || '',
-          password: '',
+          username: credential.username ?? '',
+          password: credential.password ?? '',
         });
       }
       case 'gateway': {
@@ -514,10 +522,15 @@ export class ToolManagementService {
 
     const executor = getExecutor(definition.executionType as ExecutionType);
 
-    // 解密凭证（如有）
-    // 凭证链路未实装：待 credential-vault 提供 getCredential(id) 后，按 source.credentialId
-    // 解密获取真实 DB 凭证并注入（见 syncDatabase STUB 注释）。当前恒为 undefined。
-    const credential: DecryptedCredential | undefined = undefined;
+    // 解密凭证(如有):definition.sourceId → source.credentialId → 端口解密。
+    // 无 source 或 source 无 credentialId(如 openapi/mcp_native)时 credential=undefined,不影响无凭证工具。
+    let credential: DecryptedCredential | undefined = undefined;
+    if (definition.sourceId) {
+      const source = await this.sourceRepo.findById(definition.sourceId);
+      if (source?.credentialId) {
+        credential = await this.resolveCredential(source.credentialId);
+      }
+    }
 
     const result = await executor.execute(
       definition.executionConfig as Record<string, unknown>,

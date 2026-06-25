@@ -9,6 +9,7 @@ import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
 import { buildPersonaProvider } from './bootstrap/persona-provider.js';
+import { StudioService } from '../contexts/agent-core/application/studio-service.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
 import { buildEvalBundle } from './bootstrap/eval-bundle.js';
 import { buildMemoryBundle } from './bootstrap/memory-bundle.js';
@@ -289,7 +290,7 @@ export function createAppContext(db: Database): AppContext {
   const notificationService = new NotificationService(operationalRepo);
   const { toolManagementService, toolRegistryService, toolApprovalRepo } = buildToolBundle(
     db,
-    credentialService,
+    credentialManagementService,
     notificationService,
     agentHarness,
     systemConfigService,
@@ -347,7 +348,16 @@ export function createAppContext(db: Database): AppContext {
   );
 
   // v1.9:激活 PersonaProvider(人设注入 + guardrail 拦截,#1)。复用 createAppContext 顶层 agentDefinitionRepo(T2)。
-  agentHarness.setPersonaProvider(buildPersonaProvider(instanceRepo, agentDefinitionRepo));
+  // T15:同一实例亦注入 openclaw chat route 作后端 guardrail 兜底(chat 经 LiteLLM 不经 harness)。
+  const personaProvider = buildPersonaProvider(instanceRepo, agentDefinitionRepo);
+  agentHarness.setPersonaProvider(personaProvider);
+
+  // T13:openclaw Studio 资产聚合 service(替代 studio route STUB 假数据)。
+  const studioService = new StudioService(
+    agentDefinitionRepo,
+    new ToolDefinitionRepository(db),
+    skillRepo
+  );
 
   // v1.6:激活 trace 记录器(dispatchTask 全链路 trace 串联)。aiGatewayRepo 早实例化。
   agentHarness.setTraceRecorder(buildTraceRecorder(aiGatewayRepo));
@@ -482,6 +492,8 @@ export function createAppContext(db: Database): AppContext {
     credentialService,
     leaseService,
     credentialManagementService,
+    personaProvider,
+    studioService,
     channelService,
     decisionConsole,
     mcpService,

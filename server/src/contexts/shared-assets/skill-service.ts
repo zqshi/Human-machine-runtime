@@ -29,6 +29,8 @@ export interface ISkillRepository {
   removeAssetBinding(bindingId: string): Promise<boolean>;
   listAssetBindings(assetType?: string): Promise<AssetBinding[]>;
   findBindingsByAsset(assetId: string): Promise<AssetBinding[]>;
+  /** T13 studio:按 tenantId 列已安装资产绑定(资产聚合 installed 项) */
+  listBindingsByTenant(tenantId: string): Promise<AssetBinding[]>;
 }
 
 interface IAudit {

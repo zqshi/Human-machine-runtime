@@ -8,6 +8,8 @@ import { Hono } from 'hono';
 import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
 import type { ModelGrantChecker } from '../../contexts/gateway/model-grant-checker.js';
+import { checkGuardrails } from '../../contexts/agent-core/domain/guardrail-checker.js';
+import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
 import { newId } from '../../shared/utils.js';
 import { stream } from 'hono/streaming';
 
@@ -88,9 +90,39 @@ function generateMockReply(message: string): MockReply {
 export function createOpenclawChatRoutes(
   litellmClient: LiteLLMClient | null,
   aiGatewayRepo: AiGatewayRepository | null,
-  grantChecker?: ModelGrantChecker | null
+  grantChecker?: ModelGrantChecker | null,
+  personaProvider?: IPersonaProvider | null
 ) {
   const app = new Hono();
+
+  /**
+   * 后端 guardrail 兜底(T15,#1):openclaw chat 经 LiteLLM 不经 harness,
+   * 复用 v1.9 T3 PersonaProvider 取 instance guardrails + checkGuardrails。
+   * 命中 block → 返回拒答话术;容错不抛(任何失败放行,不阻断主链路)。
+   * 无 personaProvider/instanceId/guardrails → 放行。
+   */
+  async function checkGuardrail(
+    instanceId: string | null | undefined,
+    message: string
+  ): Promise<{ blocked: boolean; refusal: string }> {
+    if (!personaProvider || !instanceId) return { blocked: false, refusal: '' };
+    try {
+      const persona = await personaProvider.getPersona(instanceId);
+      if (!persona.hasPersona || !persona.guardrails?.length) {
+        return { blocked: false, refusal: '' };
+      }
+      const result = checkGuardrails(message, persona.guardrails);
+      if (result.blocked) {
+        return {
+          blocked: true,
+          refusal: persona.refusalResponse || '抱歉,该请求不在我的服务范围内。',
+        };
+      }
+      return { blocked: false, refusal: '' };
+    } catch {
+      return { blocked: false, refusal: '' };
+    }
+  }
 
   /**
    * 授权校验：enforce 模式下未授权返回 false（调用方应 403）。
@@ -126,6 +158,10 @@ export function createOpenclawChatRoutes(
   app.post('/chat', async (c) => {
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);
+
+    // T15 后端 guardrail 兜底(覆盖 LiteLLM + mock 两条路径,#1)
+    const guard = await checkGuardrail(body.instanceId, body.message);
+    if (guard.blocked) return c.json({ reply: guard.refusal, model: 'guardrail', blocked: true });
 
     // 尝试 LiteLLM
     if (litellmClient && litellmClient.isConfigured()) {
@@ -205,6 +241,19 @@ export function createOpenclawChatRoutes(
   app.post('/chat/stream', async (c) => {
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);
+
+    // T15 后端 guardrail 兜底
+    const guard = await checkGuardrail(body.instanceId, body.message);
+    if (guard.blocked) {
+      return stream(c, async (s) => {
+        c.header('Content-Type', 'text/event-stream');
+        c.header('Cache-Control', 'no-cache');
+        await s.write(
+          `data: ${JSON.stringify({ choices: [{ delta: { content: guard.refusal } }] })}\n\n`
+        );
+        await s.write('data: [DONE]\n\n');
+      });
+    }
 
     // 尝试 LiteLLM
     if (litellmClient && litellmClient.isConfigured()) {

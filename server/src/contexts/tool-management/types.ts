@@ -123,6 +123,18 @@ export interface DecryptedCredential {
   connectionString?: string;
 }
 
+/**
+ * 凭证解密端口(依赖倒置,§1)。
+ * tool-management 解密 DB/API 凭证时依赖此端口,credential-vault 的
+ * CredentialManagementService 实现之(getCredentialSecret 已就绪)。
+ * 避免 tool-management 跨聚合直接依赖 credential-vault application 层,
+ * 亦避免依赖 domain CredentialService(仅 encrypt/decrypt 原语,无"按 id 查"能力)。
+ */
+export interface CredentialSecretProvider {
+  /** 按 credentialId + secretType 解密返回明文;密文不存在返回 null。 */
+  getCredentialSecret(id: number, secretType: string): Promise<string | null>;
+}
+
 /* ──── Test Connection ──── */
 
 export interface TestConnectionResult {

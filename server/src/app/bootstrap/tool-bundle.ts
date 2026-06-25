@@ -30,7 +30,7 @@ import {
   ApprovalGate,
   type IInstanceApprovalPolicyPort,
 } from '../../contexts/tool-management/application/approval-gate.js';
-import type { CredentialService } from '../../contexts/credential-vault/credential-service.js';
+import type { CredentialSecretProvider } from '../../contexts/tool-management/types.js';
 import type { NotificationService } from '../../contexts/notification/notification-service.js';
 import type { AgentHarness } from '../../contexts/agent-core/harness/harness.js';
 import type { SystemConfigService } from '../../contexts/system-config/system-config-service.js';
@@ -55,7 +55,7 @@ function adaptInstanceApprovalPolicy(repo: InstanceRepository): IInstanceApprova
 
 export function buildToolBundle(
   db: Database,
-  credentialService: CredentialService,
+  credentialSecretProvider: CredentialSecretProvider,
   notificationService: NotificationService,
   agentHarness: AgentHarness,
   systemConfigService: SystemConfigService,
@@ -66,7 +66,7 @@ export function buildToolBundle(
     new ToolDefinitionRepository(db),
     new ToolInstanceRepository(db),
     new ToolCallLogRepository(db),
-    credentialService
+    credentialSecretProvider
   );
   // v1.9:审批 gate(#7)。feature flag tool.approval.enforce 默认 off → 不拦截(向后兼容)。
   const toolApprovalRepo = new ToolApprovalRepository(db);
