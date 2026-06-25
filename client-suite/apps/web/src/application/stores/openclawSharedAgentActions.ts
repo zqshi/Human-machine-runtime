@@ -72,9 +72,13 @@ export function sharedAgentActions(set: StoreSet, get: StoreGet) {
       get().switchConversation(convId);
     },
 
+    setActiveInstanceId(instanceId: string | null) {
+      set({ activeInstanceId: instanceId });
+    },
+
     returnToPrimaryAgent() {
       const sessionId = `session-${Date.now()}`;
-      set({ activeSharedAgentId: null, sessionId });
+      set({ activeSharedAgentId: null, activeInstanceId: null, sessionId });
       get().switchConversation('primary');
     },
 
@@ -90,6 +94,7 @@ export function sharedAgentActions(set: StoreSet, get: StoreGet) {
         discussingGoalId: null,
         discussingWorkOrderId: null,
         activeSharedAgentId: null,
+        activeInstanceId: null,
         bColumnTaskId: null,
         bColumnGoalId: null,
         bColumnDecisionId: null,

@@ -156,4 +156,75 @@ describe('MarketplaceService', () => {
     const svc = new MarketplaceService(client);
     await expect(svc.listSkills()).rejects.toThrow(/not configured/);
   });
+
+  it('installAgent 落 AgentDefinition + instance,返回 instanceId(T20b-A)', async () => {
+    const client = makeClient();
+    const audit = { log: vi.fn() };
+    const agentDefinitionService = {
+      create: vi.fn(async (input: any) => ({
+        id: 'adef-1',
+        tenantId: input.tenantId,
+        name: input.name,
+        generation: 1,
+        spec: input.spec,
+        description: input.description,
+        status: 'active',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      })),
+    };
+    const instanceService = {
+      create: vi.fn(async (input: any) => ({
+        id: 'inst-1',
+        tenantId: input.tenantId,
+        name: input.name,
+        agentDefinitionId: input.agentDefinitionId,
+      })),
+    };
+    const svc = new MarketplaceService(
+      client,
+      audit,
+      undefined,
+      agentDefinitionService as any,
+      instanceService as any
+    );
+    const result = await svc.installAgent(
+      { id: 'mka-1', name: '客服助手', description: '处理客户咨询' },
+      'tn_1',
+      'user1'
+    );
+
+    expect(result.instanceId).toBe('inst-1');
+    expect(result.agentDefinitionId).toBe('adef-1');
+    expect(result.name).toBe('客服助手');
+
+    // spec 转换:persona.systemPrompt 含 name+description,runtime=openclaw,boundTools 空
+    const createdSpec = agentDefinitionService.create.mock.calls[0][0].spec;
+    expect(createdSpec.persona.systemPrompt).toContain('客服助手');
+    expect(createdSpec.persona.systemPrompt).toContain('处理客户咨询');
+    expect(createdSpec.runtime.runtimeType).toBe('openclaw');
+    expect(createdSpec.boundTools).toEqual([]);
+
+    // instance 关联 agentDefinitionId,source=marketplace,creator=actor
+    expect(instanceService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentDefinitionId: 'adef-1',
+        source: 'marketplace',
+        creator: 'user1',
+        tenantId: 'tn_1',
+      })
+    );
+    // 审计留痕
+    expect(audit.log).toHaveBeenCalledWith(
+      'marketplace.agent.installed',
+      expect.objectContaining({ instanceId: 'inst-1', marketplaceAgentId: 'mka-1' })
+    );
+  });
+
+  it('installAgent 无 agentDefinitionService/instanceService 时抛错', async () => {
+    const svc = new MarketplaceService(makeClient());
+    await expect(
+      svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u')
+    ).rejects.toThrow(/requires/);
+  });
 });

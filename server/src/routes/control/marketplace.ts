@@ -9,6 +9,10 @@ const installSchema = z.object({
   version: z.string().optional(),
 });
 
+const installAgentSchema = z.object({
+  agentId: z.string().min(1),
+});
+
 const publishSchema = z.object({
   skillSlug: z.string().min(1),
   version: z.string().optional(),
@@ -128,6 +132,31 @@ export function createControlMarketplaceRoutes(marketplaceService: MarketplaceSe
   app.get('/agents/:id', async (c) => {
     const agent = await marketplaceService.getAgent(c.req.param('id'));
     return c.json({ success: true, data: agent });
+  });
+
+  app.post('/agents/install', async (c) => {
+    const body = await c.req.json();
+    const parsed = installAgentSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'invalid request', details: parsed.error.flatten() }, 400);
+    }
+    const user = getUser(c);
+    const tenantId = user.tenantId || 'default';
+    // 先从市场拉 agent 模板(name/description),再落 AgentDefinition + instance(T20b-A)
+    const raw = (await marketplaceService.getAgent(parsed.data.agentId)) as {
+      name?: string;
+      description?: string;
+    };
+    const result = await marketplaceService.installAgent(
+      {
+        id: parsed.data.agentId,
+        name: raw.name || parsed.data.agentId,
+        description: raw.description,
+      },
+      tenantId,
+      user.username
+    );
+    return c.json({ success: true, data: result });
   });
 
   app.get('/moderation', async (c) => {

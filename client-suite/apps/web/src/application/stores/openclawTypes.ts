@@ -198,6 +198,8 @@ export interface OpenClawState {
   updateBoard(boardId: string, updater: (b: ProjectBoard) => ProjectBoard): void;
   setSharedAgentMeta(agentId: string, name: string): void;
   startSharedAgentChat(agentId: string): void;
+  /** T20b-A:设当前对话 instanceId,让 useAgentChat chat 请求带真 instanceId(chat route 拉 persona/apiKey) */
+  setActiveInstanceId(instanceId: string | null): void;
   returnToPrimaryAgent(): void;
   setComposerPrefill(text: string | null): void;
   setDiscussingNotificationId(id: string | null): void;

@@ -259,7 +259,13 @@ export function createAppContext(db: Database): AppContext {
       auditService.log(type, payload);
     },
   };
-  const marketplaceService = new MarketplaceService(marketplaceClient, marketplaceAudit);
+  const marketplaceService = new MarketplaceService(
+    marketplaceClient,
+    marketplaceAudit,
+    undefined,
+    agentDefinitionService,
+    instanceService
+  );
   const workspaceRepo = new WorkspaceRepository(db);
   const workspaceService = new WorkspaceService(
     workspaceRepo,

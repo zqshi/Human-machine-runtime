@@ -11,6 +11,8 @@ import { useStudioStore } from '../../../application/stores/studioStore';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { useUIStore } from '../../../application/stores/uiStore';
 import { appCatalogApi, type AppCatalogItem } from '../../../application/services/adminApi';
+import { marketplaceApi } from '../../../infrastructure/api/marketplaceApiClient';
+import { sharedAgentChatService } from '../../../application/services/sharedAgentChatService';
 import { SkillDetailView } from './marketplace/SkillDetailView';
 import { McpDetailView } from './marketplace/McpDetailView';
 import { AgentDetailView } from './marketplace/AgentDetailView';
@@ -256,9 +258,19 @@ export function MarketplacePage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    useUIStore.getState().setDock('openclaw');
-                    useToastStore.getState().addToast(`与「${agent.name}」的对话已打开`, 'info');
+                  onClick={async () => {
+                    try {
+                      const res = await marketplaceApi.installAgent(agent.id);
+                      if (!res.success || !res.data) {
+                        useToastStore.getState().addToast('安装失败，请重试', 'error');
+                        return;
+                      }
+                      sharedAgentChatService.openInstalledInstance(res.data.instanceId, res.data.name);
+                      useUIStore.getState().setDock('messages');
+                      useToastStore.getState().addToast(`已安装「${res.data.name}」并打开对话`, 'success');
+                    } catch {
+                      useToastStore.getState().addToast('安装失败，请重试', 'error');
+                    }
                   }}
                   className="h-7 px-3 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90"
                 >
@@ -399,9 +411,19 @@ export function MarketplacePage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
-                    onClick={() => {
-                      useUIStore.getState().setDock('messages');
-                      useToastStore.getState().addToast(`与「${agent.name}」的对话已打开`, 'info');
+                    onClick={async () => {
+                      try {
+                        const res = await marketplaceApi.installAgent(agent.id);
+                        if (!res.success || !res.data) {
+                          useToastStore.getState().addToast('安装失败，请重试', 'error');
+                          return;
+                        }
+                        sharedAgentChatService.openInstalledInstance(res.data.instanceId, res.data.name);
+                        useUIStore.getState().setDock('messages');
+                        useToastStore.getState().addToast(`已安装「${res.data.name}」并打开对话`, 'success');
+                      } catch {
+                        useToastStore.getState().addToast('安装失败，请重试', 'error');
+                      }
                     }}
                     className="h-7 px-3 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90 transition-opacity"
                   >

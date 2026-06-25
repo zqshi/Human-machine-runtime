@@ -1,4 +1,10 @@
 import type { MarketplaceClient } from '../gateway/clients/marketplace-client.js';
+import type { AgentDefinitionService } from '../agent-core/application/agent-definition-service.js';
+import type { InstanceService } from '../tenant-instance/instance-service.js';
+import {
+  defaultAgentDefinitionSpec,
+  type AgentDefinitionSpec,
+} from '../agent-core/domain/agent-definition.js';
 
 export interface MarketplaceSkill {
   id: string;
@@ -50,11 +56,21 @@ export class MarketplaceService {
   private client: MarketplaceClient;
   private audit: IAuditSink | null;
   private approvalStore: IApprovalStore | null;
+  private agentDefinitionService: AgentDefinitionService | null;
+  private instanceService: InstanceService | null;
 
-  constructor(client: MarketplaceClient, audit?: IAuditSink, approvalStore?: IApprovalStore) {
+  constructor(
+    client: MarketplaceClient,
+    audit?: IAuditSink,
+    approvalStore?: IApprovalStore,
+    agentDefinitionService?: AgentDefinitionService,
+    instanceService?: InstanceService
+  ) {
     this.client = client;
     this.audit = audit ?? null;
     this.approvalStore = approvalStore ?? null;
+    this.agentDefinitionService = agentDefinitionService ?? null;
+    this.instanceService = instanceService ?? null;
   }
 
   /** 技能市场后端（marketplace）未配置时明确拒绝，而非崩溃。 */
@@ -238,5 +254,58 @@ export class MarketplaceService {
   ): Promise<unknown> {
     this.requireConfigured();
     return this.client.adminModerationQueue(params, authToken);
+  }
+
+  /**
+   * 安装市场 Agent 为可运行实例(T20b-A,治本 D9):
+   * marketplace agent 模板 → AgentDefinition(声明式 CRD,persona/runtime/boundTools 填默认)
+   * → createInstance 关联 agentDefinitionId。跨 context 编排 agent-core + tenant-instance。
+   *
+   * 返回 instanceId 供前端 sharedAgentChatService.openInstalledInstance → 设置 openclawStore
+   * .activeInstanceId → useAgentChat chat 请求带真 instanceId → chat route 拉 persona/apiKey/guardrail
+   * 真响应(替代原 setDock 空跳转)。详见 docs/architecture/t20a-marketplace-chat-decision.md。
+   *
+   * 不调 requireConfigured:agent 数据由 route 层先 getAgent 拉取传入,本方法纯本地落库。
+   */
+  async installAgent(
+    agent: { id: string; name: string; description?: string },
+    tenantId: string,
+    actor: string
+  ): Promise<{ agentDefinitionId: string; instanceId: string; name: string }> {
+    if (!this.agentDefinitionService || !this.instanceService) {
+      throw new Error(
+        'installAgent requires agentDefinitionService + instanceService (not configured in bootstrap)'
+      );
+    }
+    const base = defaultAgentDefinitionSpec();
+    const spec: AgentDefinitionSpec = {
+      ...base,
+      persona: {
+        ...base.persona,
+        systemPrompt: `你是${agent.name}，${agent.description || '一个 AI 助手'}。`,
+      },
+      // marketplace agent 走 openclaw chat 对话路径(chat route 按 instanceId 拉 persona/apiKey)
+      runtime: { runtimeType: 'openclaw' },
+      boundTools: [], // 市场模板未声明工具;需工具时走 AgentDefinition 编辑
+    };
+    const def = await this.agentDefinitionService.create(
+      { tenantId, name: agent.name, spec, description: agent.description ?? null },
+      actor
+    );
+    const inst = await this.instanceService.create({
+      tenantId,
+      name: agent.name,
+      source: 'marketplace',
+      creator: actor,
+      agentDefinitionId: def.id,
+    });
+    this.audit?.log('marketplace.agent.installed', {
+      marketplaceAgentId: agent.id,
+      agentDefinitionId: def.id,
+      instanceId: inst.id,
+      tenantId,
+      actor,
+    });
+    return { agentDefinitionId: def.id, instanceId: inst.id, name: agent.name };
   }
 }

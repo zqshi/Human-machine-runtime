@@ -122,6 +122,17 @@ export const marketplaceApi = {
     return request(`/api/control/marketplace/agents/${encodeURIComponent(id)}`);
   },
 
+  /** T20b-A:安装市场 Agent 为可运行实例(后端落 AgentDefinition + createInstance),返回 instanceId */
+  installAgent(agentId: string): Promise<{
+    success: boolean;
+    data: { agentDefinitionId: string; instanceId: string; name: string };
+  }> {
+    return request('/api/control/marketplace/agents/install', {
+      method: 'POST',
+      body: JSON.stringify({ agentId }),
+    });
+  },
+
   getModerationQueue(params?: {
     type?: string;
     page?: number;

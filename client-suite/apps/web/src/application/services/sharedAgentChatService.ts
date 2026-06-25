@@ -33,6 +33,17 @@ export const sharedAgentChatService = {
     useUIStore.getState().setImChatAgentId(agentId);
   },
 
+  /**
+   * 安装市场 Agent 后打开对话(T20b-A,治本 D9):复用 open 的对话上下文 + 设
+   * activeInstanceId,让 useAgentChat chat 请求带真 instanceId → openclaw chat route
+   * 按 instanceId 拉 persona/apiKey/guardrail 真响应(替代原 setDock 空跳转)。
+   * 详见 docs/architecture/t20a-marketplace-chat-decision.md。
+   */
+  openInstalledInstance(instanceId: string, name: string): void {
+    this.open(instanceId, name);
+    useOpenClawStore.getState().setActiveInstanceId(instanceId);
+  },
+
   /** 关闭 IM 内共享 Agent 对话，回到 Agent Team 列表 */
   close(): void {
     useUIStore.getState().setImChatAgentId(null);
