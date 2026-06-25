@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "tsx watch --env-file .env src/app/index.ts",
+    "dev": "tsx src/db/migrate.ts && tsx watch --env-file .env src/app/index.ts",
     "build": "tsc -b",
     "start": "node dist/app/index.js",
     "type-check": "tsc --noEmit",
