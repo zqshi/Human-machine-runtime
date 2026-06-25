@@ -140,8 +140,6 @@ interface AdminState {
   aiGatewayTab: AIGatewayTab;
   aiGatewayDateFrom: string;
   aiGatewayDateTo: string;
-  /** AI Gateway 模型管理演示模式：开启后用本地 mock 数据驱动列表与授权 UI（显式开关，非静默降级） */
-  aiGatewayDemoMode: boolean;
   searchQuery: string;
   selectedId: string | null;
   selectedRunId: string | null;
@@ -151,7 +149,6 @@ interface AdminState {
   setSection: (section: AdminSection) => void;
   setPlatformSection: (section: PlatformSection) => void;
   setAIGatewayTab: (tab: AIGatewayTab) => void;
-  toggleAIGatewayDemoMode: () => void;
   setAIGatewayDateRange: (from: string, to: string) => void;
   setAIGatewayDateThisWeek: () => void;
   setAIGatewayDateRecentDays: (days: number) => void;
@@ -172,7 +169,6 @@ export const useAdminStore = create<AdminState>((set) => ({
   aiGatewayTab: 'models',
   aiGatewayDateFrom: initialAiGatewayWeek.from,
   aiGatewayDateTo: initialAiGatewayWeek.to,
-  aiGatewayDemoMode: false,
   searchQuery: '',
   selectedId: null,
   selectedRunId: null,
@@ -188,7 +184,6 @@ export const useAdminStore = create<AdminState>((set) => ({
     set({ platformSection: section, searchQuery: '' });
   },
   setAIGatewayTab: (tab) => set({ aiGatewayTab: tab }),
-  toggleAIGatewayDemoMode: () => set((s) => ({ aiGatewayDemoMode: !s.aiGatewayDemoMode })),
   setAIGatewayDateRange: (from, to) => set({ aiGatewayDateFrom: from, aiGatewayDateTo: to }),
   setAIGatewayDateThisWeek: () => {
     const { from, to } = computeThisWeekRange();

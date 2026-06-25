@@ -86,7 +86,7 @@ export function createOpenclawChatRoutes(
     return undefined;
   }
 
-  /** 非流式 chat completion — LiteLLM 优先，不可用则 mock */
+  /** 非流式 chat completion — LiteLLM 真实调用,未配置/失败返 503/502 */
   app.post('/chat', async (c) => {
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);
@@ -165,7 +165,7 @@ export function createOpenclawChatRoutes(
     }
   });
 
-  /** 流式 chat completion (SSE) — mock 模式逐字输出 */
+  /** 流式 chat completion (SSE) — LiteLLM 真实调用,未配置/失败返 503/502 */
   app.post('/chat/stream', async (c) => {
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);

@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import { aiGatewayApi } from '../../../application/services/adminApi';
-import { useAdminStore } from '../../../application/stores/adminStore';
-import { mockListGrantsByModel } from '../../../application/mock/aiGatewayMock';
 import { Drawer } from '../../components/ui/Drawer';
 import { ToggleSwitch } from '../../components/ui/ToggleSwitch';
 import { Icon } from '../../components/ui/Icon';
@@ -68,26 +66,21 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
   }
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const demoMode = useAdminStore((s) => s.aiGatewayDemoMode);
   const [grantCount, setGrantCount] = useState<number | null>(null);
   const [grantsDrawerOpen, setGrantsDrawerOpen] = useState(false);
 
-  // 已保存模型：加载授权数（演示模式走 mock）
+  // 已保存模型：加载授权数
   useEffect(() => {
     if (!model) {
       setGrantCount(null);
       return;
     }
     const mid = String(model.id);
-    if (demoMode) {
-      setGrantCount(mockListGrantsByModel(mid).length);
-      return;
-    }
     aiGatewayApi
       .listModelGrants(mid)
       .then((r) => setGrantCount(r.grants.length))
       .catch(() => setGrantCount(null));
-  }, [model, demoMode]);
+  }, [model]);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -437,7 +430,6 @@ export function ModelEditor({ model, providers, onClose, onSaved }: ModelEditorP
         <AgentGrantsDrawer
           modelId={grantsDrawerOpen ? String(model.id) : null}
           modelName={String(model.displayName || model.name || '')}
-          demoMode={demoMode}
           onClose={() => setGrantsDrawerOpen(false)}
           onSaved={(count) => setGrantCount(count)}
         />

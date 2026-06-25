@@ -1,10 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { aiGatewayApi, type GrantInstanceDTO } from '../../../application/services/adminApi';
-import {
-  MOCK_INSTANCES,
-  mockListGrantsByModel,
-  mockSetModelGrants,
-} from '../../../application/mock/aiGatewayMock';
 import { Drawer } from '../../components/ui/Drawer';
 import { Icon } from '../../components/ui/Icon';
 
@@ -12,8 +7,6 @@ interface Props {
   /** 模型 id；null/undefined 表示抽屉关闭 */
   modelId: string | null;
   modelName: string;
-  /** 演示模式：true 时走 mock 数据，不调后端 */
-  demoMode: boolean;
   onClose: () => void;
   onSaved?: (grantedCount: number) => void;
 }
@@ -21,13 +14,10 @@ interface Props {
 /**
  * 模型授权抽屉 —— 配置哪些数字员工(Agent)可使用该模型。
  *
- * 数据源：
- * - demoMode → 内存 mock（aiGatewayMock）
- * - 否则 → GET /models/:id/grants（instances 全量 + 当前 grants）
- *
+ * 数据源：GET /models/:id/grants（instances 全量 + 当前 grants）
  * 存储：白名单语义，全量覆盖 instanceIds，调 PUT /models/:id/grants。
  */
-export function AgentGrantsDrawer({ modelId, modelName, demoMode, onClose, onSaved }: Props) {
+export function AgentGrantsDrawer({ modelId, modelName, onClose, onSaved }: Props) {
   const [instances, setInstances] = useState<GrantInstanceDTO[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -40,20 +30,15 @@ export function AgentGrantsDrawer({ modelId, modelName, demoMode, onClose, onSav
     if (!modelId) return;
     setLoading(true);
     try {
-      if (demoMode) {
-        setInstances(MOCK_INSTANCES);
-        setSelected(new Set(mockListGrantsByModel(modelId)));
-      } else {
-        const { grants, instances: list } = await aiGatewayApi.listModelGrants(modelId);
-        setInstances(list);
-        setSelected(new Set(grants));
-      }
+      const { grants, instances: list } = await aiGatewayApi.listModelGrants(modelId);
+      setInstances(list);
+      setSelected(new Set(grants));
     } catch {
       setInstances([]);
     } finally {
       setLoading(false);
     }
-  }, [modelId, demoMode]);
+  }, [modelId]);
 
   useEffect(() => {
     void load();
@@ -122,11 +107,7 @@ export function AgentGrantsDrawer({ modelId, modelName, demoMode, onClose, onSav
     setSaving(true);
     try {
       const ids = Array.from(selected);
-      if (demoMode) {
-        mockSetModelGrants(modelId, ids);
-      } else {
-        await aiGatewayApi.setModelGrants(modelId, ids);
-      }
+      await aiGatewayApi.setModelGrants(modelId, ids);
       onSaved?.(ids.length);
       onClose();
     } catch {
@@ -151,7 +132,6 @@ export function AgentGrantsDrawer({ modelId, modelName, demoMode, onClose, onSav
           <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px] text-amber-700 mb-3">
             <Icon name="lock" size={14} className="shrink-0" />
             白名单授权 · 默认关闭：未被勾选的数字员工将无法调用该模型
-            {demoMode && <span className="ml-auto text-amber-600 font-medium">演示数据</span>}
           </div>
 
           <div className="flex items-center gap-2 mb-2">

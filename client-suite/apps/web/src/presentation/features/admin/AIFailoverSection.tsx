@@ -15,27 +15,12 @@ const EMPTY_FORM: FailoverForm = {
 };
 
 /**
- * 演示用 mock 模型 — 仅当模型管理无真实数据时用于 UI 演示。
- * 非数据源降级：真实环境由模型管理提供，此处仅 UI 层兜底，并显式标注「演示数据」。
- */
-const MOCK_MODELS: Record<string, unknown>[] = [
-  { id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', providerType: 'anthropic' },
-  { id: 'gpt-4o', displayName: 'GPT-4o', providerType: 'openai' },
-  { id: 'glm-4.6', displayName: 'GLM-4.6', providerType: 'zhipu' },
-  { id: 'deepseek-v3', displayName: 'DeepSeek V3', providerType: 'deepseek' },
-  { id: 'qwen-max', displayName: 'Qwen Max', providerType: 'alibaba' },
-  { id: 'claude-haiku-4-5', displayName: 'Claude Haiku 4.5', providerType: 'anthropic' },
-];
-
-/**
  * 故障转移 — 全局单条规则的内联配置。
  * 主模型异常（欠费/限流/挂了/超时/报错）时按备用链自动切换，用户无感知。
  * 系统级能力，故全局仅一条规则：展示态 + 编辑态切换，无列表/新建/删除。
  */
 export function FailoverSection({ models: modelsProp }: { models: Record<string, unknown>[] }) {
-  // 真实模型优先；模型管理无数据时用 mock 兜底（仅 UI 演示，非数据源降级）
-  const models = modelsProp.length > 0 ? modelsProp : MOCK_MODELS;
-  const usingMock = modelsProp.length === 0;
+  const models = modelsProp;
   const [rule, setRule] = useState<Record<string, unknown> | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<FailoverForm>(EMPTY_FORM);
@@ -149,11 +134,6 @@ export function FailoverSection({ models: modelsProp }: { models: Record<string,
         <div>
           <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
             故障转移
-            {usingMock && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 font-normal">
-                演示数据
-              </span>
-            )}
           </h3>
           <p className="text-[11px] text-gray-400 mt-0.5">
             主模型异常时，按备用链自动切换，保障调用可用性

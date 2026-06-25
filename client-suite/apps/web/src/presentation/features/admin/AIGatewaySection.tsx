@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAdminStore, type AIGatewayTab } from '../../../application/stores/adminStore';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { aiGatewayApi } from '../../../application/services/adminApi';
-import { MOCK_MODELS, mockCountDeptGrantsByModel } from '../../../application/mock/aiGatewayMock';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { StatCard } from '../../components/ui/StatCard';
 import { Icon } from '../../components/ui/Icon';
@@ -12,7 +11,6 @@ import { RiskRulesTab } from './AIGatewayRulesTab';
 import { ModelEditor } from './AIModelEditor';
 import { FailoverSection } from './AIFailoverSection';
 import { AgentGrantsDrawer } from './AgentGrantsDrawer';
-import { DeptGrantDrawer } from './DeptGrantDrawer';
 
 const TABS: { key: AIGatewayTab; label: string }[] = [
   { key: 'models', label: '模型管理' },
@@ -69,8 +67,6 @@ function fmtPrice(v: unknown): string {
 // ─── Models Tab ───────────────────────────────────────────────────────
 
 function ModelsTab() {
-  const demoMode = useAdminStore((s) => s.aiGatewayDemoMode);
-  const toggleDemo = useAdminStore((s) => s.toggleAIGatewayDemoMode);
   const [models, setModels] = useState<Record<string, unknown>[]>([]);
   const [grantsCount, setGrantsCount] = useState<Record<string, number>>({});
   const [providers, setProviders] = useState<Record<string, unknown>[]>([]);
@@ -83,12 +79,6 @@ function ModelsTab() {
   const [grantTarget, setGrantTarget] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(() => {
-    if (demoMode) {
-      setModels(MOCK_MODELS as unknown as Record<string, unknown>[]);
-      // 部门级授权原型：用声明式规则展开后的实际人数
-      setGrantsCount(mockCountDeptGrantsByModel());
-      return;
-    }
     aiGatewayApi
       .listModels()
       .then((r) => {
@@ -121,7 +111,7 @@ function ModelsTab() {
       .listProviders()
       .then((r) => setProviders(r.providers || []))
       .catch(() => {});
-  }, [demoMode]);
+  }, []);
   useEffect(load, [load]);
 
   const handleDelete = async () => {
@@ -138,12 +128,6 @@ function ModelsTab() {
   };
 
   const handleToggle = async (id: string) => {
-    if (demoMode) {
-      setModels((prev) =>
-        prev.map((m) => (String(m.id) === id ? { ...m, isActive: !m.isActive } : m))
-      );
-      return;
-    }
     try {
       await aiGatewayApi.toggleModel(id);
     } catch {
@@ -156,51 +140,32 @@ function ModelsTab() {
     setCheckingHealth(id);
     const addToast = useToastStore.getState().addToast;
     try {
-      if (demoMode) {
-        // 演示模式：在 正常 → 降级 → 异常 间循环，预览三种状态颜色与提示
-        const target = models.find((m) => String(m.id) === id);
-        const prev = String(target?.healthStatus);
-        const next = prev === 'healthy' ? 'degraded' : prev === 'degraded' ? 'unreachable' : 'healthy';
-        setModels((cur) =>
-          cur.map((m) =>
-            String(m.id) === id
-              ? { ...m, healthStatus: next, lastHealthCheckAt: new Date().toISOString() }
-              : m
-          )
-        );
-        setHealthLatency((cur) => ({ ...cur, [id]: next === 'unreachable' ? undefined : 142 }));
+      const result = await aiGatewayApi.healthCheck(id);
+      const status = String(result.status);
+      const latency = result.latencyMs != null ? Number(result.latencyMs) : undefined;
+      setModels((cur) =>
+        cur.map((m) =>
+          String(m.id) === id
+            ? { ...m, healthStatus: status, lastHealthCheckAt: String(result.checkedAt ?? '') }
+            : m
+        )
+      );
+      setHealthLatency((cur) => ({ ...cur, [id]: latency }));
+      if (status === 'healthy') {
+        addToast(`健康检查完成：正常${latency != null ? `（${latency}ms）` : ''}`, 'success');
+      } else if (status === 'degraded') {
+        const http = result.httpStatus != null ? `HTTP ${result.httpStatus} · ` : '';
         addToast(
-          `健康检查完成：${healthMeta(next).label}`,
-          next === 'unreachable' ? 'error' : 'success'
+          `健康检查完成：降级（${http}${latency != null ? `${latency}ms` : '—'}）`,
+          'info'
         );
+      } else if (status === 'unconfigured') {
+        addToast('健康检查失败：模型未配置 baseUrl', 'error');
+      } else if (status === 'unreachable') {
+        const err = result.error ? `（${result.error}）` : '';
+        addToast(`健康检查失败：无法连接${err}`, 'error');
       } else {
-        const result = await aiGatewayApi.healthCheck(id);
-        const status = String(result.status);
-        const latency = result.latencyMs != null ? Number(result.latencyMs) : undefined;
-        setModels((cur) =>
-          cur.map((m) =>
-            String(m.id) === id
-              ? { ...m, healthStatus: status, lastHealthCheckAt: String(result.checkedAt ?? '') }
-              : m
-          )
-        );
-        setHealthLatency((cur) => ({ ...cur, [id]: latency }));
-        if (status === 'healthy') {
-          addToast(`健康检查完成：正常${latency != null ? `（${latency}ms）` : ''}`, 'success');
-        } else if (status === 'degraded') {
-          const http = result.httpStatus != null ? `HTTP ${result.httpStatus} · ` : '';
-          addToast(
-            `健康检查完成：降级（${http}${latency != null ? `${latency}ms` : '—'}）`,
-            'info'
-          );
-        } else if (status === 'unconfigured') {
-          addToast('健康检查失败：模型未配置 baseUrl', 'error');
-        } else if (status === 'unreachable') {
-          const err = result.error ? `（${result.error}）` : '';
-          addToast(`健康检查失败：无法连接${err}`, 'error');
-        } else {
-          addToast('健康检查完成', 'info');
-        }
+        addToast('健康检查完成', 'info');
       }
     } catch {
       addToast('健康检查失败，请稍后重试', 'error');
@@ -214,25 +179,8 @@ function ModelsTab() {
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500">
           {models.length} 个模型
-          {demoMode && (
-            <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px] font-medium border border-amber-100">
-              演示数据
-            </span>
-          )}
         </span>
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleDemo}
-            className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
-              demoMode
-                ? 'border-amber-300 text-amber-600 bg-amber-50'
-                : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-            }`}
-            title="切换演示模式：开启后用本地 mock 数据，便于预览授权 UI"
-          >
-            <Icon name="science" size={13} className="mr-1 align-[-2px]" />
-            {demoMode ? '演示模式：开' : '演示模式'}
-          </button>
           <button
             onClick={() => {
               setEditTarget(null);
@@ -405,22 +353,12 @@ function ModelsTab() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {demoMode ? (
-        <DeptGrantDrawer
-          modelId={grantTarget?.id ?? null}
-          modelName={grantTarget?.name ?? ''}
-          onClose={() => setGrantTarget(null)}
-          onSaved={() => load()}
-        />
-      ) : (
-        <AgentGrantsDrawer
-          modelId={grantTarget?.id ?? null}
-          modelName={grantTarget?.name ?? ''}
-          demoMode={demoMode}
-          onClose={() => setGrantTarget(null)}
-          onSaved={() => load()}
-        />
-      )}
+      <AgentGrantsDrawer
+        modelId={grantTarget?.id ?? null}
+        modelName={grantTarget?.name ?? ''}
+        onClose={() => setGrantTarget(null)}
+        onSaved={() => load()}
+      />
     </div>
   );
 }
