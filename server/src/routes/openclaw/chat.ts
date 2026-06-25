@@ -57,6 +57,29 @@ export function createOpenclawChatRoutes(
   }
 
   /**
+   * 解析 systemPrompt(T24,#1 人设软约束注入):persona.systemPrompt 优先,
+   * 次选 body.systemPrompt(调用方显式传入),最后降级默认。
+   * v1.9 T15 交付声明"注入 PersonaProvider"的完整实现——guardrails 拦截 + 人设软约束注入。
+   * 容错不抛(persona 查询失败/无 personaProvider → 用 body/默认,不阻断主链路)。
+   */
+  async function resolveSystemPrompt(
+    instanceId: string | null | undefined,
+    bodySystemPrompt?: string
+  ): Promise<string> {
+    if (personaProvider && instanceId) {
+      try {
+        const persona = await personaProvider.getPersona(instanceId);
+        if (persona.hasPersona && persona.systemPrompt) {
+          return persona.systemPrompt;
+        }
+      } catch {
+        /* 降级到 body/默认 */
+      }
+    }
+    return bodySystemPrompt || DEFAULT_SYSTEM_PROMPT;
+  }
+
+  /**
    * 授权校验：enforce 模式下未授权返回 false（调用方应 403）。
    * off/log 模式或缺校验器时放行。
    */
@@ -101,7 +124,7 @@ export function createOpenclawChatRoutes(
     }
 
     try {
-      const systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      const systemPrompt = await resolveSystemPrompt(body.instanceId, body.systemPrompt);
       const history = Array.isArray(body.history) ? body.history : [];
       const modelName = body.model || DEFAULT_MODEL;
 
@@ -189,7 +212,7 @@ export function createOpenclawChatRoutes(
     }
 
     try {
-      const systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      const systemPrompt = await resolveSystemPrompt(body.instanceId, body.systemPrompt);
       const history = Array.isArray(body.history) ? body.history : [];
       const modelName = body.model || DEFAULT_MODEL;
 

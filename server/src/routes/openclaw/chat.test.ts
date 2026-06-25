@@ -3,15 +3,30 @@ import { createOpenclawChatRoutes } from './chat.js';
 import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
 import type { GuardrailRule } from '../../contexts/agent-core/domain/agent-definition.js';
 
-function mockPersona(guardrails: GuardrailRule[] = [], hasPersona = true) {
+function mockPersona(guardrails: GuardrailRule[] = [], hasPersona = true, systemPrompt = '') {
   return {
     getPersona: vi.fn().mockResolvedValue({
-      systemPrompt: '',
+      systemPrompt,
       guardrails,
       refusalResponse: '已拒绝',
       hasPersona,
     }),
   } as unknown as IPersonaProvider;
+}
+
+/** mock LiteLLMClient,捕获 chatCompletion 入参 messages(验证 persona.systemPrompt 注入) */
+function mockLitellmCapturing(captured: { systemPrompt: string }) {
+  return {
+    isConfigured: () => true,
+    chatCompletion: vi.fn().mockImplementation((params: { messages: { role: string; content: string }[] }) => {
+      const sys = params.messages.find((m) => m.role === 'system');
+      if (sys) captured.systemPrompt = sys.content;
+      return Promise.resolve({
+        choices: [{ message: { content: 'mock reply' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      });
+    }),
+  } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
 }
 
 const blockRule: GuardrailRule = {
@@ -110,5 +125,57 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     });
     const body = await res.json();
     expect(body.blocked).toBeUndefined();
+  });
+
+  // T24:persona.systemPrompt 必须注入 LLM system 消息(v1.9 T15 交付声明"注入 PersonaProvider"的完整实现)
+  it('/chat persona.systemPrompt 非空 → 注入 LLM system 消息(优先于 body.systemPrompt 与默认)', async () => {
+    const captured = { systemPrompt: '' };
+    const persona = mockPersona([], true, '你是 Alice,财务助手,只回答财务问题');
+    const litellm = mockLitellmCapturing(captured);
+    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
+    });
+    expect(captured.systemPrompt).toBe('你是 Alice,财务助手,只回答财务问题');
+  });
+
+  it('/chat persona.systemPrompt 空 → 用 body.systemPrompt,再降级默认(向后兼容)', async () => {
+    const captured = { systemPrompt: '' };
+    const persona = mockPersona([], true, '');
+    const litellm = mockLitellmCapturing(captured);
+    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1', systemPrompt: '自定义人设' }),
+    });
+    expect(captured.systemPrompt).toBe('自定义人设');
+  });
+
+  it('/chat/stream persona.systemPrompt 非空 → 注入 LLM system 消息', async () => {
+    const captured = { systemPrompt: '' };
+    const persona = mockPersona([], true, '你是 Carol,HR 助手');
+    const litellm = mockLitellmCapturing(captured);
+    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    await app.request('/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
+    });
+    expect(captured.systemPrompt).toBe('你是 Carol,HR 助手');
+  });
+
+  it('/chat 无 personaProvider → 用默认 systemPrompt(向后兼容,不抛错)', async () => {
+    const captured = { systemPrompt: '' };
+    const litellm = mockLitellmCapturing(captured);
+    const app = createOpenclawChatRoutes(litellm, null, null, null);
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
+    });
+    expect(captured.systemPrompt).toBe('你是企业 AI 助手，负责回答用户的问题并协助完成工作任务。\n保持专业、简洁、有用的回复风格。如果不确定答案，请明确说明。');
   });
 });
