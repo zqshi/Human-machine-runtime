@@ -513,7 +513,16 @@ describe('ClaudeAgentSdkAdapter - T18b-C restrictToReadonlyTools 止血开关', 
     await tick();
 
     expect(runner.lastOpts!.allowedTools).toEqual(
-      expect.arrayContaining(['Bash', 'Write', 'Edit', 'Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'])
+      expect.arrayContaining([
+        'Bash',
+        'Write',
+        'Edit',
+        'Read',
+        'Glob',
+        'Grep',
+        'WebSearch',
+        'WebFetch',
+      ])
     );
   });
 

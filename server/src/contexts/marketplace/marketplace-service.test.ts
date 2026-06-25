@@ -223,8 +223,8 @@ describe('MarketplaceService', () => {
 
   it('installAgent 无 agentDefinitionService/instanceService 时抛错', async () => {
     const svc = new MarketplaceService(makeClient());
-    await expect(
-      svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u')
-    ).rejects.toThrow(/requires/);
+    await expect(svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u')).rejects.toThrow(
+      /requires/
+    );
   });
 });

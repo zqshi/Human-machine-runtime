@@ -225,9 +225,7 @@ export function MarketplacePage() {
                 安装
               </button>
             </header>
-            <McpDetailView
-              mcp={mcp}
-            />
+            <McpDetailView mcp={mcp} />
           </div>
         );
       }
@@ -265,9 +263,14 @@ export function MarketplacePage() {
                         useToastStore.getState().addToast('安装失败，请重试', 'error');
                         return;
                       }
-                      sharedAgentChatService.openInstalledInstance(res.data.instanceId, res.data.name);
+                      sharedAgentChatService.openInstalledInstance(
+                        res.data.instanceId,
+                        res.data.name
+                      );
                       useUIStore.getState().setDock('messages');
-                      useToastStore.getState().addToast(`已安装「${res.data.name}」并打开对话`, 'success');
+                      useToastStore
+                        .getState()
+                        .addToast(`已安装「${res.data.name}」并打开对话`, 'success');
                     } catch {
                       useToastStore.getState().addToast('安装失败，请重试', 'error');
                     }
@@ -278,9 +281,7 @@ export function MarketplacePage() {
                 </button>
               </div>
             </header>
-            <AgentDetailView
-              agent={agent}
-            />
+            <AgentDetailView agent={agent} />
           </div>
         );
       }
@@ -418,9 +419,14 @@ export function MarketplacePage() {
                           useToastStore.getState().addToast('安装失败，请重试', 'error');
                           return;
                         }
-                        sharedAgentChatService.openInstalledInstance(res.data.instanceId, res.data.name);
+                        sharedAgentChatService.openInstalledInstance(
+                          res.data.instanceId,
+                          res.data.name
+                        );
                         useUIStore.getState().setDock('messages');
-                        useToastStore.getState().addToast(`已安装「${res.data.name}」并打开对话`, 'success');
+                        useToastStore
+                          .getState()
+                          .addToast(`已安装「${res.data.name}」并打开对话`, 'success');
                       } catch {
                         useToastStore.getState().addToast('安装失败，请重试', 'error');
                       }
