@@ -251,7 +251,11 @@ describe('MarketplaceService', () => {
 
   function makeInstallSvc(keySyncDeps?: ReturnType<typeof makeInstallDeps>) {
     const agentDefinitionService = {
-      create: vi.fn(async (input: any) => ({ id: 'adef-1', tenantId: input.tenantId, name: input.name })),
+      create: vi.fn(async (input: any) => ({
+        id: 'adef-1',
+        tenantId: input.tenantId,
+        name: input.name,
+      })),
     };
     const instanceService = {
       create: vi.fn(async (input: any) => ({

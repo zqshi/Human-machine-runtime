@@ -11,7 +11,14 @@ import { logger } from '../../app/logger.js';
 /** T25:installAgent 后同步默认模型 grant + LiteLLM key 的依赖(setter 延后注入,复用 PersonaProvider 模式) */
 export interface MarketplaceKeySyncDeps {
   aiGatewayRepo: {
-    listModels(): Promise<{ id: number; modelName: string | null; providerModelName: string | null; displayName: string }[]>;
+    listModels(): Promise<
+      {
+        id: number;
+        modelName: string | null;
+        providerModelName: string | null;
+        displayName: string;
+      }[]
+    >;
     listGrantsByModel(modelId: number): Promise<string[]>;
     setModelGrants(
       modelId: number,
@@ -345,7 +352,10 @@ export class MarketplaceService {
     // T25:安装即对话——为新 instance 授予默认模型 grant + 同步 LiteLLM key,否则无 key→chat 502。
     // 容错:任一步失败不阻断 install 返回(同 syncOne 容错语义),仅记日志。
     await this.syncDefaultModelKey(inst.id, tenantId).catch((err) => {
-      logger.warn({ instanceId: inst.id, err: err instanceof Error ? err.message : String(err) }, '[marketplace] installAgent key sync failed (non-blocking)');
+      logger.warn(
+        { instanceId: inst.id, err: err instanceof Error ? err.message : String(err) },
+        '[marketplace] installAgent key sync failed (non-blocking)'
+      );
     });
     return { agentDefinitionId: def.id, instanceId: inst.id, name: agent.name };
   }

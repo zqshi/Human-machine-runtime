@@ -18,14 +18,16 @@ function mockPersona(guardrails: GuardrailRule[] = [], hasPersona = true, system
 function mockLitellmCapturing(captured: { systemPrompt: string }) {
   return {
     isConfigured: () => true,
-    chatCompletion: vi.fn().mockImplementation((params: { messages: { role: string; content: string }[] }) => {
-      const sys = params.messages.find((m) => m.role === 'system');
-      if (sys) captured.systemPrompt = sys.content;
-      return Promise.resolve({
-        choices: [{ message: { content: 'mock reply' } }],
-        usage: { prompt_tokens: 1, completion_tokens: 1 },
-      });
-    }),
+    chatCompletion: vi
+      .fn()
+      .mockImplementation((params: { messages: { role: string; content: string }[] }) => {
+        const sys = params.messages.find((m) => m.role === 'system');
+        if (sys) captured.systemPrompt = sys.content;
+        return Promise.resolve({
+          choices: [{ message: { content: 'mock reply' } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        });
+      }),
   } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
 }
 
@@ -176,6 +178,8 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
     });
-    expect(captured.systemPrompt).toBe('你是企业 AI 助手，负责回答用户的问题并协助完成工作任务。\n保持专业、简洁、有用的回复风格。如果不确定答案，请明确说明。');
+    expect(captured.systemPrompt).toBe(
+      '你是企业 AI 助手，负责回答用户的问题并协助完成工作任务。\n保持专业、简洁、有用的回复风格。如果不确定答案，请明确说明。'
+    );
   });
 });
