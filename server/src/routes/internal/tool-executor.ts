@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { SystemConfigService } from '../../contexts/system-config/system-config-service.js';
+import type {
+  ToolInvocationRequest,
+  ToolInvocationResult,
+} from '../../contexts/tool-management/tool-registry.js';
 
 const toolCheckSchema = z.object({
   instanceId: z.string().optional(),
@@ -8,6 +12,26 @@ const toolCheckSchema = z.object({
   toolName: z.string().min(1),
   input: z.record(z.unknown()).default({}),
 });
+
+/**
+ * T18b 选项A:/tool-invoke 入参 schema(对齐 ToolInvocationRequest)。
+ * worker 外部/MCP 工具执行转发:toolId(definitionId)+params+context(tenantId/instanceId/callerId)。
+ */
+const toolInvokeSchema = z.object({
+  toolId: z.string().min(1),
+  params: z.record(z.unknown()).default({}),
+  context: z.object({
+    tenantId: z.string().min(1),
+    instanceId: z.string().optional(),
+    callerId: z.string().optional(),
+    timeout: z.number().optional(),
+  }),
+});
+
+/** worker 外部工具执行转发的 ToolRegistryService 最小接口(结构化类型,便于 mock + 解耦)。 */
+interface ToolExecutorPort {
+  invoke(req: ToolInvocationRequest): Promise<ToolInvocationResult>;
+}
 
 /**
  * 内置工具风险策略(T18b-A)。
@@ -46,7 +70,10 @@ const BUILTIN_TOOL_RISK: Record<string, 'high' | 'low'> = {
  *
  * 详见 docs/architecture/t18-tool-executor-mainline-gap.md T18b-A 实施记录。
  */
-export function createInternalToolExecutorRoutes(configService: SystemConfigService) {
+export function createInternalToolExecutorRoutes(
+  configService: SystemConfigService,
+  toolRegistryService?: ToolExecutorPort
+) {
   const app = new Hono();
 
   /**
@@ -84,6 +111,33 @@ export function createInternalToolExecutorRoutes(configService: SystemConfigServ
       allowed: false,
       reason: `tool "${toolName}" not in builtin risk table; denied (external tool approval留 T18a 第二阶段)`,
     });
+  });
+
+  /**
+   * POST /tool-invoke — T18b 选项A:worker 外部/MCP 工具执行转发,收口到 ToolRegistryService.invoke。
+   *
+   * 让 #7 审批 gate / 凭证解密 / 租户隔离 / 调用计数对外部工具生效(内置工具 Bash/Read 等仍由
+   * SDK 内置执行器跑 + canUseTool 审批)。invoke 内部落 tool_call_logs(definitionId),
+   * 外部工具 callLog 经此端点覆盖;内置工具 callLog 留后续(T18a 已记)。
+   * 详见 docs/architecture/t18-tool-executor-mainline-gap.md T18b-A。
+   */
+  app.post('/tool-invoke', async (c) => {
+    if (!toolRegistryService) {
+      return c.json({ error: 'tool registry service not configured' }, 503);
+    }
+    const body = await c.req.json().catch(() => null);
+    if (!body) return c.json({ error: 'json body required' }, 400);
+    const parsed = toolInvokeSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'invalid request', details: parsed.error.flatten() }, 400);
+    }
+    try {
+      const result = await toolRegistryService.invoke(parsed.data);
+      return c.json(result);
+    } catch {
+      // 不裸露内部错误细节给 worker(跨进程调用,错误可能含敏感信息)
+      return c.json({ error: 'tool invocation failed' }, 500);
+    }
   });
 
   return app;

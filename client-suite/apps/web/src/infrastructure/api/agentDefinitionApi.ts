@@ -205,4 +205,18 @@ export const agentDefinitionApi = {
   archive(id: string): Promise<{ success: boolean }> {
     return request(`/api/admin/agent-definitions/${id}`, { method: 'DELETE' });
   },
+
+  /**
+   * D10:为已存在 AgentDefinition 实例化对话 instance + 同步默认 LiteLLM key。
+   * 管理后台声明式向导创建 Agent 后「去对话」调用:后端生成 instance + key,
+   * 前端凭返回的 instanceId 进入对话(sharedAgentChatService.openInstalledInstance)。
+   * 走 control 路由(管理操作面),非 admin CRUD 路由。
+   */
+  instantiate(id: string): Promise<{
+    agentDefinitionId: string;
+    instanceId: string;
+    name: string;
+  }> {
+    return request(`/api/control/agent-definitions/${id}/instantiate`, { method: 'POST' });
+  },
 };

@@ -12,6 +12,7 @@ import { createPlatformMonitoringRoutes } from './platform/monitoring.js';
 import { createPlatformRoleRoutes } from './platform/roles.js';
 import { createPlanRoutes } from './platform/plans.js';
 import { createBillingRoutes } from './platform/billing.js';
+import { createControlAgentDefinitionRoutes } from './control/agent-definitions.js';
 import { createInstanceRoutes } from './control/instances.js';
 import { createDepartmentRoutes } from './control/departments.js';
 import { createSkillRoutes } from './control/skills.js';
@@ -82,7 +83,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   /* ──── Internal (worker↔server RPC,T18b-A;共享密钥认证,非 JWT) ──── */
   const internal = new Hono();
   internal.use('*', createInternalAuthMiddleware(config.claude.internalToolSecret));
-  internal.route('/', createInternalToolExecutorRoutes(ctx.systemConfigService));
+  internal.route('/', createInternalToolExecutorRoutes(ctx.systemConfigService, ctx.toolRegistryService));
   app.route('/api/internal', internal);
 
   app.route('/api/auth', createAuthRoutes(ctx.authService, ctx.oauthStateStore));
@@ -221,6 +222,10 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   control.use('*', authMiddleware);
   control.use('*', requireRole('platform_admin', 'tenant_admin'));
   control.route('/instances', createInstanceRoutes(ctx.instanceService, ctx.clusterInstanceClient));
+  control.route(
+    '/agent-definitions',
+    createControlAgentDefinitionRoutes(ctx.marketplaceService)
+  );
   control.route('/departments', createDepartmentRoutes(ctx.departmentService));
   control.route('/skills', createSkillRoutes(ctx.skillService));
   control.route('/documents', createDocumentRoutes(ctx.documentService));

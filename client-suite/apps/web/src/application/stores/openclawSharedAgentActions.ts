@@ -24,6 +24,13 @@ export function sharedAgentActions(set: StoreSet, get: StoreGet) {
       (set as (partial: Record<string, unknown>) => void)({ _sharedAgentMeta: meta });
     },
 
+    /**
+     * ⚠️ D10 遗留:sa-* 共享 Agent 直聊路径,不设 activeInstanceId(与 marketplace 安装即对话、
+     * AgentCreateFlow 新建→instantiate 两条已接通 instanceId 的路径不同)。
+     * 真实投产 sharedAgents 不预置(agentStore 不 mock 填充),本路径无数据不触发;
+     * 对话入口已统一为「管理后台新建 Agent→instantiate→openInstalledInstance」(见 AgentCreateFlow)。
+     * 死代码清理(useAgentChat sa-* 能力路由分支 + AgentsHub sharedAgents UI)记 backlog,不本次清理(避免主路径回归)。
+     */
     startSharedAgentChat(agentId: string) {
       const sessionId = `session-${Date.now()}`;
       const convId = `shared-${agentId}`;

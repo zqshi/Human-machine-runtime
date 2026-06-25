@@ -330,4 +330,77 @@ describe('MarketplaceService', () => {
     const result = await svc.installAgent({ id: 'mka-1', name: 'A' }, 'tn_1', 'u1');
     expect(result.instanceId).toBe('inst-1');
   });
+
+  // D10:instantiateExistingDefinition — 为已存在 AgentDefinition 实例化对话 instance + 同步 key(管理后台新建Agent→对话)
+  function makeInstantiateSvc(opts: {
+    def?: { id: string; name: string } | null;
+    keySyncDeps?: ReturnType<typeof makeInstallDeps>;
+  }) {
+    const def = opts.def === undefined ? { id: 'adef-1', name: '客服助手' } : opts.def;
+    const agentDefinitionService = {
+      get: vi.fn(async () => def),
+    };
+    const instanceService = {
+      create: vi.fn(async (input: any) => ({
+        id: 'inst-1',
+        tenantId: input.tenantId,
+        agentDefinitionId: input.agentDefinitionId,
+        name: input.name,
+      })),
+    };
+    const svc = new MarketplaceService(
+      makeClient(),
+      { log: vi.fn() },
+      undefined,
+      agentDefinitionService as any,
+      instanceService as any
+    );
+    if (opts.keySyncDeps) svc.setKeySyncDeps(opts.keySyncDeps as any);
+    return { svc, agentDefinitionService, instanceService };
+  }
+
+  it('instantiateExistingDefinition 落 instance + 同步 key,返回 instanceId(D10)', async () => {
+    const deps = makeInstallDeps({ existingModel: { id: 7, modelName: 'claude-sonnet-4-6' } });
+    const { svc, instanceService } = makeInstantiateSvc({ keySyncDeps: deps });
+    const result = await svc.instantiateExistingDefinition('adef-1', 'tn_1', 'u1');
+    expect(result).toEqual({ agentDefinitionId: 'adef-1', instanceId: 'inst-1', name: '客服助手' });
+    // instance 关联 agentDefinitionId,source=studio(管理后台创建),creator=actor
+    expect(instanceService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentDefinitionId: 'adef-1',
+        source: 'studio',
+        creator: 'u1',
+        tenantId: 'tn_1',
+        name: '客服助手',
+      })
+    );
+    // 同步默认 key(同 installAgent):grant + syncInstance
+    expect(deps.aiGatewayRepo.setModelGrants).toHaveBeenCalledWith(
+      7,
+      expect.arrayContaining(['inst-1']),
+      'tn_1',
+      'marketplace-install'
+    );
+    expect(deps.syncInstance).toHaveBeenCalledWith('inst-1', 'tn_1');
+  });
+
+  it('instantiateExistingDefinition 无依赖时抛错', async () => {
+    const svc = new MarketplaceService(makeClient());
+    await expect(svc.instantiateExistingDefinition('adef-1', 'tn_1', 'u1')).rejects.toThrow(/requires/);
+  });
+
+  it('instantiateExistingDefinition def 不存在抛错', async () => {
+    const { svc } = makeInstantiateSvc({ def: null });
+    await expect(svc.instantiateExistingDefinition('adef-x', 'tn_1', 'u1')).rejects.toThrow(
+      /not found/
+    );
+  });
+
+  it('instantiateExistingDefinition key 同步失败不阻断(容错)', async () => {
+    const deps = makeInstallDeps({ existingModel: { id: 7, modelName: 'claude-sonnet-4-6' } });
+    deps.syncInstance.mockRejectedValueOnce(new Error('litellm down'));
+    const { svc } = makeInstantiateSvc({ keySyncDeps: deps });
+    const result = await svc.instantiateExistingDefinition('adef-1', 'tn_1', 'u1');
+    expect(result.instanceId).toBe('inst-1');
+  });
 });

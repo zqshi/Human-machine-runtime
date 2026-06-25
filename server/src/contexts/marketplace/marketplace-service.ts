@@ -361,6 +361,54 @@ export class MarketplaceService {
   }
 
   /**
+   * D10:为已存在的 AgentDefinition 实例化一个对话 instance + 同步默认 key。
+   *
+   * 供管理后台「新建 Agent → 去对话」调用:声明式向导(AgentCreateFlow)创建
+   * AgentDefinition 后,调本方法生成 instance + LiteLLM key,前端即可凭 instanceId
+   * 进入对话(复用 sharedAgentChatService.openInstalledInstance)。复用 installAgent
+   * 的 instance+key sync 后半段逻辑(source='studio' 标注来源,区别于 marketplace 安装)。
+   *
+   * 与 installAgent 区别:installAgent 从市场 agent 模板自建 def+instance;本方法为
+   * 用户已声明式创建的 def 补建对话 instance(不重建 def)。
+   */
+  async instantiateExistingDefinition(
+    definitionId: string,
+    tenantId: string,
+    actor: string
+  ): Promise<{ agentDefinitionId: string; instanceId: string; name: string }> {
+    if (!this.agentDefinitionService || !this.instanceService) {
+      throw new Error(
+        'instantiateExistingDefinition requires agentDefinitionService + instanceService (not configured in bootstrap)'
+      );
+    }
+    const def = await this.agentDefinitionService.get(definitionId);
+    if (!def) {
+      throw new Error(`agent definition not found: ${definitionId}`);
+    }
+    const inst = await this.instanceService.create({
+      tenantId,
+      name: def.name,
+      source: 'studio',
+      creator: actor,
+      agentDefinitionId: def.id,
+    });
+    this.audit?.log('agent-definition.instantiated', {
+      agentDefinitionId: def.id,
+      instanceId: inst.id,
+      tenantId,
+      actor,
+    });
+    // 同步默认 key(同 installAgent,容错不阻断:无 key 时对话 502,但实例化本身成功)
+    await this.syncDefaultModelKey(inst.id, tenantId).catch((err) => {
+      logger.warn(
+        { instanceId: inst.id, err: err instanceof Error ? err.message : String(err) },
+        '[marketplace] instantiateExistingDefinition key sync failed (non-blocking)'
+      );
+    });
+    return { agentDefinitionId: def.id, instanceId: inst.id, name: def.name };
+  }
+
+  /**
    * T25:为新 instance 授予默认模型 grant + 同步 LiteLLM key。
    * 1. findOrCreateDefaultModel 解析默认模型(llm_models 无记录则建)
    * 2. listGrantsByModel 取现有 + 合并新 instance(setModelGrants 全量覆盖语义,需合并避免删别人授权)

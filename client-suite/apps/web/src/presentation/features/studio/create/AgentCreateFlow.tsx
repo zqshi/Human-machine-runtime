@@ -13,7 +13,9 @@
 import { useRef, useState } from 'react';
 import { useStudioStore } from '../../../../application/stores/studioStore';
 import { useToastStore } from '../../../../application/stores/toastStore';
+import { useUIStore } from '../../../../application/stores/uiStore';
 import { useAuthStore } from '../../../../application/stores/authStore';
+import { sharedAgentChatService } from '../../../../application/services/sharedAgentChatService';
 import { Icon } from '../../../components/ui/Icon';
 import {
   agentDefinitionApi,
@@ -134,12 +136,27 @@ export function AgentCreateFlow({ onBack, definitionId, initial }: Props) {
             spec,
             description: description.trim() || null,
           });
-      toast(
-        `${definitionId ? '更新' : '创建'} Agent「${def.name}」成功(generation ${def.generation})`,
-        'success'
-      );
       exitCreateFlow();
-      openAgentManagement(def.id);
+
+      if (definitionId) {
+        // 更新模式:已有 instance 关联,跳管理页(不重建 instance)
+        toast(`更新 Agent「${def.name}」成功(generation ${def.generation})`, 'success');
+        openAgentManagement(def.id);
+      } else {
+        // D10:新建→实例化对话 instance + 同步默认 key + 跳对话页
+        // (管理后台新建Agent→页面可对话;复用 marketplace 安装即对话的 openInstalledInstance 接线)
+        toast(`已创建 Agent「${def.name}」,正在打开对话...`, 'success');
+        try {
+          const inst = await agentDefinitionApi.instantiate(def.id);
+          sharedAgentChatService.openInstalledInstance(inst.instanceId, inst.name);
+          useUIStore.getState().setDock('messages');
+          toast(`已创建「${inst.name}」并打开对话`, 'success');
+        } catch (ie) {
+          // 实例化/打开对话失败→降级跳管理页,不阻断创建成功(Agent 已落库)
+          openAgentManagement(def.id);
+          toast(`Agent「${def.name}」已创建,打开对话失败: ${(ie as Error).message}`, 'error');
+        }
+      }
     } catch (e) {
       toast(`Agent ${definitionId ? '更新' : '创建'}失败: ${(e as Error).message}`, 'error');
     } finally {
