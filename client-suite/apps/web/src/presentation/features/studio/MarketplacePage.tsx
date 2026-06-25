@@ -12,6 +12,7 @@ import { useToastStore } from '../../../application/stores/toastStore';
 import { useUIStore } from '../../../application/stores/uiStore';
 import { appCatalogApi, type AppCatalogItem } from '../../../application/services/adminApi';
 import { marketplaceApi } from '../../../infrastructure/api/marketplaceApiClient';
+import { marketplaceApi as upstreamMarketplaceApi } from '../../../infrastructure/api/upstreamApiClient';
 import { sharedAgentChatService } from '../../../application/services/sharedAgentChatService';
 import { SkillDetailView } from './marketplace/SkillDetailView';
 import { McpDetailView } from './marketplace/McpDetailView';
@@ -26,88 +27,18 @@ const MARKET_TABS: { key: MarketTab; label: string; icon: string }[] = [
   { key: 'apps', label: 'App', icon: 'grid_view' },
 ];
 
-const MOCK_MCP_TOOLS = [
-  {
-    id: 'mcp-db-query',
-    name: 'db-query',
-    description: '数据库查询工具，支持 MySQL/PostgreSQL/SQLite',
-    mode: 'Database',
-    icon: 'storage',
-    color: 'bg-emerald-500/10',
-    toolCount: 6,
-    installs: 1240,
-  },
-  {
-    id: 'mcp-storage',
-    name: 'object-storage',
-    description: 'S3 兼容对象存储，文件上传/下载/管理',
-    mode: 'Gateway',
-    icon: 'cloud',
-    color: 'bg-sky-500/10',
-    toolCount: 8,
-    installs: 650,
-  },
-  {
-    id: 'mcp-email',
-    name: 'email-sender',
-    description: '邮件发送工具，支持模板渲染和附件',
-    mode: 'OpenAPI',
-    icon: 'email',
-    color: 'bg-violet-500/10',
-    toolCount: 4,
-    installs: 420,
-  },
-  {
-    id: 'mcp-calendar',
-    name: 'calendar-sync',
-    description: '日程同步，读写日历事件和会议邀请',
-    mode: 'OpenAPI',
-    icon: 'calendar_month',
-    color: 'bg-amber-500/10',
-    toolCount: 5,
-    installs: 380,
-  },
-  {
-    id: 'mcp-search',
-    name: 'web-search',
-    description: '联网搜索工具，支持多引擎聚合搜索',
-    mode: 'Gateway',
-    icon: 'search',
-    color: 'bg-primary/10',
-    toolCount: 3,
-    installs: 2100,
-  },
-  {
-    id: 'mcp-sheet',
-    name: 'spreadsheet-rw',
-    description: '多维表格读写，支持 Excel/CSV/Google Sheets',
-    mode: 'OpenAPI',
-    icon: 'table_chart',
-    color: 'bg-green-500/10',
-    toolCount: 7,
-    installs: 890,
-  },
-  {
-    id: 'mcp-jira',
-    name: 'jira-connector',
-    description: 'Jira 项目管理工具，Issue CRUD + 看板操作',
-    mode: 'OpenAPI',
-    icon: 'task_alt',
-    color: 'bg-blue-500/10',
-    toolCount: 12,
-    installs: 560,
-  },
-  {
-    id: 'mcp-github',
-    name: 'github-tools',
-    description: 'GitHub 仓库操作，PR/Issue/Actions 管理',
-    mode: 'OpenAPI',
-    icon: 'code',
-    color: 'bg-slate-500/10',
-    toolCount: 15,
-    installs: 1850,
-  },
-];
+/** MCP 列表项(真实 listMcpTools 返回的工具映射;mode/icon/color/toolCount/installs 无真实值时默认) */
+interface McpListItem {
+  id: string;
+  name: string;
+  description: string;
+  mode: string;
+  icon: string;
+  color: string;
+  toolCount: number;
+  installs: number;
+}
+
 
 export function MarketplacePage() {
   const [activeTab, setActiveTab] = useState<MarketTab>('skills');
@@ -124,6 +55,9 @@ export function MarketplacePage() {
   // App catalog
   const [apps, setApps] = useState<AppCatalogItem[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
+
+  // MCP 工具列表(去 mock:真实 listMcpTools,失败 toast+空)
+  const [mcpTools, setMcpTools] = useState<McpListItem[]>([]);
 
   useEffect(() => {
     fetchSkills();
@@ -142,6 +76,34 @@ export function MarketplacePage() {
   useEffect(() => {
     if (activeTab === 'apps' && apps.length === 0) fetchApps();
   }, [activeTab, apps.length, fetchApps]);
+
+  const fetchMcpTools = useCallback(() => {
+    upstreamMarketplaceApi
+      .listMcpTools()
+      .then((res) => {
+        const tools = (res.tools ?? []).map(
+          (t: Record<string, unknown>, i: number): McpListItem => ({
+            id: String(t.id ?? t.name ?? `mcp-${i}`),
+            name: String(t.name ?? t.id ?? 'MCP 工具'),
+            description: String(t.description ?? ''),
+            mode: String(t.mode ?? t.type ?? 'MCP'),
+            icon: 'build',
+            color: 'bg-primary/10',
+            toolCount: Number(t.toolCount ?? t.tool_count ?? 0),
+            installs: Number(t.installs ?? 0),
+          })
+        );
+        setMcpTools(tools);
+      })
+      .catch(() => {
+        useToastStore.getState().addToast('MCP 服务不可用,请检查后端', 'error');
+        setMcpTools([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'mcp' && mcpTools.length === 0) fetchMcpTools();
+  }, [activeTab, mcpTools.length, fetchMcpTools]);
 
   const handleSearch = (keyword: string) => {
     setSearch(keyword);
@@ -200,7 +162,7 @@ export function MarketplacePage() {
     }
 
     if (detailView.type === 'mcp') {
-      const mcp = MOCK_MCP_TOOLS.find((m) => m.id === detailView.id);
+      const mcp = mcpTools.find((m) => m.id === detailView.id);
       if (mcp) {
         return (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -444,7 +406,7 @@ export function MarketplacePage() {
         {/* MCP */}
         {!loading && activeTab === 'mcp' && (
           <div className="grid grid-cols-1 gap-2">
-            {MOCK_MCP_TOOLS.filter(
+            {mcpTools.filter(
               (m) =>
                 !search ||
                 m.name.toLowerCase().includes(search.toLowerCase()) ||

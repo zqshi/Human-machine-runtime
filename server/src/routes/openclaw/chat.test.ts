@@ -37,7 +37,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     expect(body.model).toBe('guardrail');
   });
 
-  it('/chat 正常输入放行 → 走 mock 回复', async () => {
+  it('/chat 正常输入放行但 LiteLLM 未配置 → 503(去 mock 后故障暴露)', async () => {
     const persona = mockPersona([blockRule]);
     const app = createOpenclawChatRoutes(null, null, null, persona);
     const res = await app.request('/chat', {
@@ -45,10 +45,10 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.blocked).toBeUndefined();
-    expect(body.mock).toBe(true);
+    expect(body.error).toContain('LiteLLM');
   });
 
   it('/chat 无 personaProvider → 放行(向后兼容)', async () => {

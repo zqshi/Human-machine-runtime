@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { adminLogsApi } from '../../../application/services/adminApi';
+import { useToastStore } from '../../../application/stores/toastStore';
 import { FilterBar } from '../../components/ui/FilterBar';
 import { StatCard } from '../../components/ui/StatCard';
 import { Icon } from '../../components/ui/Icon';
 import { buildTimeRange } from './logsFilters';
-import { MOCK_LOGS, mockFilterLogs } from './logsMock';
-
-// ⚠️ 临时 MOCK 开关：后端（:3002）未启动，用 mock 数据查看 UI；验证后改回 false 并删除 logsMock.ts
-const USE_MOCK = true;
 
 const ACTION_SUMMARIES: Record<string, string> = {
   'employee.create': '创建员工',
@@ -179,12 +176,6 @@ export function LogsSection() {
   }
 
   const fetchLogs = useCallback(() => {
-    // ⚠️ 临时 MOCK：后端（:3002）未启动，用 mock 数据查看 UI；验证后改 USE_MOCK=false 并删除 logsMock.ts
-    if (USE_MOCK) {
-      setLogs(mockFilterLogs(MOCK_LOGS, filters));
-      setLoading(false);
-      return;
-    }
     adminLogsApi
       .list({
         scope: 'admin',
@@ -193,7 +184,10 @@ export function LogsSection() {
         timeRange: buildTimeRange(filters.dateFrom || '', filters.dateTo || ''),
       })
       .then((r) => setLogs(Array.isArray(r) ? r : []))
-      .catch(() => setLogs([]))
+      .catch(() => {
+        useToastStore.getState().addToast('日志服务不可用,请检查后端', 'error');
+        setLogs([]);
+      })
       .finally(() => setLoading(false));
   }, [filters]);
 

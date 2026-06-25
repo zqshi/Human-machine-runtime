@@ -21,8 +21,6 @@ interface Props {
   mcp: McpItem;
 }
 
-/* ─── Mock 接口数据 ─── */
-
 interface ToolEndpoint {
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -31,115 +29,6 @@ interface ToolEndpoint {
   params: { name: string; type: string; required: boolean; desc: string }[];
   response: string;
 }
-
-const MOCK_TOOLS: Record<string, ToolEndpoint[]> = {
-  'mcp-db-query': [
-    {
-      name: 'query',
-      method: 'POST',
-      path: '/query',
-      desc: '执行 SQL 查询并返回结果集',
-      params: [
-        { name: 'sql', type: 'string', required: true, desc: 'SQL 查询语句' },
-        { name: 'database', type: 'string', required: false, desc: '目标数据库名' },
-        { name: 'limit', type: 'number', required: false, desc: '返回行数限制，默认 100' },
-      ],
-      response: '{"rows": [...], "columns": [...], "rowCount": 42, "executionMs": 120}',
-    },
-    {
-      name: 'list_tables',
-      method: 'GET',
-      path: '/tables',
-      desc: '列出所有可用表',
-      params: [
-        { name: 'database', type: 'string', required: false, desc: '数据库名' },
-        { name: 'schema', type: 'string', required: false, desc: 'Schema 名称' },
-      ],
-      response: '{"tables": [{"name": "users", "rowCount": 15000, "columns": 12}, ...]}',
-    },
-    {
-      name: 'describe_table',
-      method: 'GET',
-      path: '/tables/:name',
-      desc: '获取表结构详情',
-      params: [{ name: 'name', type: 'string', required: true, desc: '表名' }],
-      response:
-        '{"columns": [{"name": "id", "type": "int", "nullable": false, "primary": true}, ...], "indexes": [...]}',
-    },
-    {
-      name: 'explain',
-      method: 'POST',
-      path: '/explain',
-      desc: '返回查询执行计划',
-      params: [{ name: 'sql', type: 'string', required: true, desc: 'SQL 语句' }],
-      response: '{"plan": [...], "estimatedCost": 0.5, "warnings": []}',
-    },
-    {
-      name: 'execute',
-      method: 'POST',
-      path: '/execute',
-      desc: '执行写操作（INSERT/UPDATE/DELETE）',
-      params: [
-        { name: 'sql', type: 'string', required: true, desc: 'DML 语句' },
-        { name: 'confirm', type: 'boolean', required: true, desc: '确认执行' },
-      ],
-      response: '{"affectedRows": 1, "executionMs": 45}',
-    },
-    {
-      name: 'list_databases',
-      method: 'GET',
-      path: '/databases',
-      desc: '列出所有数据库',
-      params: [],
-      response: '{"databases": ["app_prod", "app_staging", "analytics"]}',
-    },
-  ],
-  default: [
-    {
-      name: 'list',
-      method: 'GET',
-      path: '/resources',
-      desc: '列出可用资源',
-      params: [],
-      response: '{"items": [...]}',
-    },
-    {
-      name: 'get',
-      method: 'GET',
-      path: '/resources/:id',
-      desc: '获取资源详情',
-      params: [{ name: 'id', type: 'string', required: true, desc: '资源 ID' }],
-      response: '{"data": {...}}',
-    },
-    {
-      name: 'create',
-      method: 'POST',
-      path: '/resources',
-      desc: '创建新资源',
-      params: [{ name: 'body', type: 'object', required: true, desc: '资源数据' }],
-      response: '{"id": "...", "created": true}',
-    },
-    {
-      name: 'update',
-      method: 'PUT',
-      path: '/resources/:id',
-      desc: '更新资源',
-      params: [
-        { name: 'id', type: 'string', required: true, desc: '资源 ID' },
-        { name: 'body', type: 'object', required: true, desc: '更新数据' },
-      ],
-      response: '{"updated": true}',
-    },
-    {
-      name: 'delete',
-      method: 'DELETE',
-      path: '/resources/:id',
-      desc: '删除资源',
-      params: [{ name: 'id', type: 'string', required: true, desc: '资源 ID' }],
-      response: '{"deleted": true}',
-    },
-  ],
-};
 
 const METHOD_STYLE: Record<string, string> = {
   GET: 'bg-emerald-500/15 text-emerald-400',
@@ -154,7 +43,7 @@ export function McpDetailView({ mcp }: Props) {
   const [tab, setTab] = useState<DetailTab>('overview');
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
 
-  const tools = MOCK_TOOLS[mcp.id] || MOCK_TOOLS.default;
+  const tools: ToolEndpoint[] = []; // 去 mock:接口列表待接 mcpApi.getToolSchema 真实 schema
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -203,22 +92,12 @@ export function McpDetailView({ mcp }: Props) {
 
             <div className="border border-white/[0.08] bg-white/[0.03] rounded-2xl p-4 space-y-3">
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-400">端点</span>
-                <span className="text-slate-200 font-mono text-[10px]">
-                  https://mcp.clawmate.cn/{mcp.name}/sse
-                </span>
+                <span className="text-slate-400">名称</span>
+                <span className="text-slate-200 font-mono text-[10px]">{mcp.name}</span>
               </div>
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-400">认证</span>
-                <span className="text-slate-200">Bearer Token</span>
-              </div>
-              <div className="flex justify-between text-[12px]">
-                <span className="text-slate-400">超时</span>
-                <span className="text-slate-200">30s</span>
-              </div>
-              <div className="flex justify-between text-[12px]">
-                <span className="text-slate-400">限流</span>
-                <span className="text-slate-200">100 req/min</span>
+                <span className="text-slate-400">模式</span>
+                <span className="text-slate-200">{mcp.mode}</span>
               </div>
             </div>
 

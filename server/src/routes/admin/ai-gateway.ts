@@ -13,7 +13,6 @@ import { newId } from '../../shared/utils.js';
 import { parseBody, badRequest } from '../../shared/validation.js';
 import { logger } from '../../app/logger.js';
 import { registerRiskRuleRoutes } from './ai-gateway/risk-rule-routes.js';
-import { seedMockDistributedTraces } from './ai-gateway/mock-trace-seeder.js';
 
 const createModelSchema = z.object({
   displayName: z.string().min(1).optional(),
@@ -509,17 +508,6 @@ export function createAdminAiGatewayRoutes(
     const detail = await repo.getDistributedTraceDetail(traceId);
     if (!detail) return c.json({ error: 'trace not found' }, 404);
     return c.json({ trace: detail });
-  });
-
-  /* ──── Mock Data Seed ──── */
-
-  app.post('/seed-dist-traces', async (c) => {
-    // Mock 数据播种：仅开发/演示用，生产环境禁用（避免 mock 数据污染线上 trace）
-    if (process.env.NODE_ENV === 'production') {
-      return c.json({ error: 'seed endpoint disabled in production' }, 403);
-    }
-    const result = await seedMockDistributedTraces(repo);
-    return c.json(result, 201);
   });
 
   return app;

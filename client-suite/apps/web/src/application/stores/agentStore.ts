@@ -3,6 +3,7 @@ import { Agent, type AgentProps } from '../../domain/agent/Agent';
 import { CapabilityRegistry } from '../../domain/agent/CapabilityRegistry';
 import type { ModelId } from '../../domain/shared/types';
 import { useAuthStore } from './authStore';
+import { useToastStore } from './toastStore';
 
 /**
  * SharedAgent — backward-compatible DTO for IM-mode components (AgentsHub, AgentCard).
@@ -65,74 +66,6 @@ interface AgentState {
 
 /* ─── Mock 演示数据 ─── */
 
-const MOCK_SHARED_AGENTS: SharedAgent[] = [
-  {
-    id: 'sa-dev',
-    name: 'Code Assistant',
-    role: '代码审查、Bug 分析、技术文档生成',
-    description: '专业代码审查、Bug 分析与技术文档生成，支持多语言',
-    category: 'dev',
-    invokeCount: 128,
-    tags: ['代码审查', 'Bug 分析', '技术文档'],
-    icon: 'code',
-    creator: 'system',
-  },
-  {
-    id: 'sa-data',
-    name: '数析 · 数据分析师',
-    role: 'SQL 生成、数据可视化、报表输出',
-    description: '对话式数据探索，自动生成 SQL 查询和可视化图表',
-    category: 'data',
-    invokeCount: 96,
-    tags: ['SQL', '数据可视化', '报表'],
-    icon: 'bar_chart',
-    creator: 'system',
-  },
-  {
-    id: 'sa-docs',
-    name: 'Doc Writer',
-    role: '文档撰写、内容编辑、多格式输出',
-    description: '智能文档撰写助手，支持会议纪要、周报、技术方案等',
-    category: 'docs',
-    invokeCount: 75,
-    tags: ['文档撰写', '会议纪要', '周报'],
-    icon: 'edit_note',
-    creator: 'system',
-  },
-  {
-    id: 'sa-ops',
-    name: '运维哨兵',
-    role: '日志分析、告警处理、自动化运维',
-    description: '监控系统状态，分析异常日志，自动执行运维操作',
-    category: 'ops',
-    invokeCount: 42,
-    tags: ['日志分析', '告警', '自动化'],
-    icon: 'shield',
-    creator: 'system',
-  },
-  {
-    id: 'sa-translate',
-    name: '译通 · 翻译专家',
-    role: '多语言互译、术语管理、本地化',
-    description: '支持 20+ 语言互译，自动管理专业术语表',
-    category: 'translate',
-    invokeCount: 63,
-    tags: ['多语言', '术语管理', '本地化'],
-    icon: 'translate',
-    creator: 'system',
-  },
-  {
-    id: 'sa-design',
-    name: '小画 · 设计助手',
-    role: 'UI 审查、设计规范检查、配色方案',
-    description: '审查界面设计稿，检查设计规范一致性，推荐配色方案',
-    category: 'design',
-    invokeCount: 31,
-    tags: ['UI 审查', '设计规范', '配色'],
-    icon: 'palette',
-    creator: 'me',
-  },
-];
 
 export const useAgentStore = create<AgentState>((set, get) => ({
   primaryAgent: null,
@@ -339,15 +272,10 @@ export const useAgentStore = create<AgentState>((set, get) => ({
         set({ sharedAgents: agents });
         return;
       }
+      set({ sharedAgents: [] }); // 后端返回空 → 空(真实投产:不 mock 填充)
     } catch {
-      /* 后端不可用 — 继续走 mock */
-    }
-
-    // Mock agents — 后端不可用或返回空时填充演示数据
-    if (get().sharedAgents.length === 0) {
-      set({
-        sharedAgents: MOCK_SHARED_AGENTS,
-      });
+      useToastStore.getState().addToast('共享 Agent 服务不可用,请检查后端', 'error');
+      set({ sharedAgents: [] });
     }
   },
 
