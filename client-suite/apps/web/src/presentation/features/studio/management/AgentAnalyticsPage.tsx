@@ -1,38 +1,73 @@
 /**
  * AgentAnalyticsPage — 运营监控
  *
- * 时间范围选择器 / 指标卡片 / 对话趋势图 / 热门查询 Top 5
+ * 时间范围选择器 / 指标卡片 / 对话趋势图 / 热门查询
+ *
+ * 去mock:接 analyticsApi 真接口(logStats 调用统计 + dauTrend 对话趋势)。
+ * 热门查询无真接口(analytics 无 top-queries 端点)→ 空态,接真接口后恢复。
  */
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../../components/ui/Icon';
+import { analyticsApi } from '../../../../infrastructure/api/adminApiClient';
 
 type TimeRange = '7d' | '30d' | '90d';
 
-const MOCK_METRICS = {
-  '7d': { conversations: 342, activeUsers: 89, avgResponseMs: 1200, satisfaction: 4.5 },
-  '30d': { conversations: 1580, activeUsers: 210, avgResponseMs: 1100, satisfaction: 4.3 },
-  '90d': { conversations: 4260, activeUsers: 385, avgResponseMs: 1250, satisfaction: 4.2 },
-};
+const RANGE_DAYS: Record<TimeRange, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
-const MOCK_TOP_QUERIES = [
-  { query: '帮我优化这条 SQL', count: 67 },
-  { query: '为什么这个查询慢？', count: 45 },
-  { query: '添加索引的最佳实践', count: 38 },
-  { query: '解释执行计划', count: 31 },
-  { query: '如何减少全表扫描', count: 24 },
-];
-
-// 模拟趋势数据
-function mockTrend(range: TimeRange): number[] {
-  const len = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-  return Array.from({ length: len }, () => Math.floor(Math.random() * 80) + 20);
+interface Metrics {
+  conversations: number;
+  activeUsers: number;
+  avgResponseMs: number;
+  satisfaction: number;
 }
+
+interface TrendData {
+  days: string[];
+  values: number[];
+}
+
+const EMPTY_TREND: TrendData = { days: [], values: [] };
 
 export function AgentAnalyticsPage() {
   const [range, setRange] = useState<TimeRange>('7d');
-  const metrics = MOCK_METRICS[range];
-  const trend = mockTrend(range);
-  const maxTrend = Math.max(...trend);
+  const [metrics, setMetrics] = useState<Metrics>({
+    conversations: 0,
+    activeUsers: 0,
+    avgResponseMs: 0,
+    satisfaction: 0,
+  });
+  const [trend, setTrend] = useState<TrendData>(EMPTY_TREND);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async (r: TimeRange) => {
+    const days = RANGE_DAYS[r];
+    setLoading(true);
+    try {
+      const [stats, dau] = await Promise.all([
+        analyticsApi.logStats({ days }).catch(() => ({})),
+        analyticsApi.dauTrend(days).catch(() => EMPTY_TREND),
+      ]);
+      // logStats 后端返 { totalCalls, successCalls, avgDurationMs, ... }
+      const s = stats as Record<string, unknown>;
+      setMetrics({
+        conversations: Number(s.totalCalls ?? 0),
+        activeUsers: Number(s.activeUsers ?? 0),
+        avgResponseMs: Number(s.avgDurationMs ?? 0),
+        satisfaction: 0, // 无满意度指标,0 表示未采集
+      });
+      setTrend((dau as TrendData) ?? EMPTY_TREND);
+    } catch {
+      // 容错:保持空态
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchData(range);
+  }, [range, fetchData]);
+
+  const maxTrend = trend.values.length > 0 ? Math.max(...trend.values) : 0;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -73,13 +108,13 @@ export function AgentAnalyticsPage() {
             },
             {
               label: '平均响应',
-              value: `${metrics.avgResponseMs}ms`,
+              value: metrics.avgResponseMs > 0 ? `${metrics.avgResponseMs}ms` : '—',
               icon: 'timer',
               color: 'text-amber-400',
             },
             {
               label: '满意度',
-              value: `${metrics.satisfaction}/5`,
+              value: metrics.satisfaction > 0 ? `${metrics.satisfaction}/5` : '未采集',
               icon: 'star',
               color: 'text-purple-400',
             },
@@ -92,53 +127,39 @@ export function AgentAnalyticsPage() {
                 <Icon name={m.icon} size={14} className="text-slate-500" />
                 <span className="text-[10px] text-slate-400">{m.label}</span>
               </div>
-              <div className={`text-[20px] font-bold ${m.color}`}>{m.value}</div>
+              <div className={`text-[20px] font-bold ${m.color}`}>
+                {loading ? '—' : m.value}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* 对话趋势 */}
+        {/* 对话趋势(DAU) */}
         <div className="border border-white/[0.08] bg-white/[0.03] rounded-2xl p-4 mb-6">
-          <div className="text-[12px] font-semibold text-slate-100 mb-4">对话趋势</div>
-          <div className="flex items-end gap-[2px] h-[120px]">
-            {trend.map((v, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-primary/40 hover:bg-primary/70 rounded-t-sm transition-colors cursor-pointer"
-                style={{ height: `${(v / maxTrend) * 100}%` }}
-                title={`${v} 次对话`}
-              />
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-[9px] text-slate-500">
-            <span>{range === '7d' ? '7 天前' : range === '30d' ? '30 天前' : '90 天前'}</span>
-            <span>今天</span>
-          </div>
+          <div className="text-[12px] font-semibold text-slate-100 mb-4">对话趋势(DAU)</div>
+          {trend.values.length > 0 ? (
+            <div className="flex items-end gap-[2px] h-[120px]">
+              {trend.values.map((v, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-primary/40 hover:bg-primary/70 rounded-t-sm transition-colors cursor-pointer"
+                  style={{ height: maxTrend > 0 ? `${(v / maxTrend) * 100}%` : '0%' }}
+                  title={`${trend.days[i] ?? ''}: ${v} 次对话`}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="h-[120px] flex items-center justify-center text-slate-500 text-sm">
+              {loading ? '加载中...' : '暂无趋势数据'}
+            </div>
+          )}
         </div>
 
-        {/* 热门查询 Top 5 */}
+        {/* 热门查询:无真接口(analytics 无 top-queries 端点),空态 */}
         <div className="border border-white/[0.08] bg-white/[0.03] rounded-2xl p-4 w-full max-w-3xl">
-          <div className="text-[12px] font-semibold text-slate-100 mb-3">热门查询 Top 5</div>
-          <div className="space-y-2">
-            {MOCK_TOP_QUERIES.map((q, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-slate-400 shrink-0">
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] text-slate-200 truncate">{q.query}</div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="w-16 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className="h-full bg-primary/60 rounded-full"
-                      style={{ width: `${(q.count / MOCK_TOP_QUERIES[0].count) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-500 w-6 text-right">{q.count}</span>
-                </div>
-              </div>
-            ))}
+          <div className="text-[12px] font-semibold text-slate-100 mb-3">热门查询</div>
+          <div className="py-8 text-center text-slate-500 text-sm">
+            暂无热门查询数据(待接 top-queries 端点)
           </div>
         </div>
       </div>

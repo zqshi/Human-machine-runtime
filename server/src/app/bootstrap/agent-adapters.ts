@@ -1,17 +1,17 @@
 /**
  * Agent Runtime Adapter 依赖组装(执行引擎注册 + 任务完成回调)。
  *
- * 从 `bootstrap.ts` 拆出:AgentRuntimeAdapterRegistry + OpenClawAdapter(无条件)
- * + ClaudeAgentSdkAdapter(条件,config.claude.apiKey)。两个 onTaskComplete 闭包
- * 在此注册——闭包捕获 receiptManager/tokenUsageService/billingService(由 runtime-engine
- * 产出,作为输入注入),用于任务完成后回执 + token 用量入账 + billing 记账。
+ * 从 `bootstrap.ts` 拆出:AgentRuntimeAdapterRegistry + ClaudeAgentSdkAdapter(条件,
+ * config.claude.apiKey)。实例任务真执行走 tool-loop(在 bootstrap.ts 注册,经 LiteLLM
+ * 国产模型+registry.invoke 真闭环,替代已注销的 OpenClawAdapter 假桩)。onTaskComplete
+ * 闭包捕获 receiptManager/tokenUsageService/billingService(由 runtime-engine 产出,
+ * 作为输入注入),用于任务完成后回执 + token 用量入账 + billing 记账。
  */
 import { config } from '../../config/index.js';
 import { Database } from '../../db/client.js';
 import { logger } from '../logger.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import { AgentRuntimeAdapterRegistry } from '../../contexts/agent-core/sandbox/adapter-registry.js';
-import { OpenClawAdapter } from '../../contexts/agent-core/sandbox/openclaw-adapter.js';
 import { ClaudeAgentSdkAdapter } from '../../contexts/agent-core/sandbox/claude-agent-sdk-adapter.js';
 import { DockerWorkerRunner } from '../../contexts/agent-core/sandbox/infrastructure/docker-worker-runner.js';
 import { DbInstanceSessionStore } from '../../contexts/agent-core/sandbox/infrastructure/instance-session-store.js';
@@ -33,11 +33,13 @@ export function buildAgentAdapters(
   clusterInstanceClient: ClusterInstanceClient
 ): AgentAdapters {
   const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
-  const openClawAdapter = new OpenClawAdapter(clusterInstanceClient);
-  agentAdapterRegistry.register(openClawAdapter);
+  // OpenClawAdapter 假桩(simulateProgress)已注销——实例任务真执行走 tool-loop
+  // (在 bootstrap.ts 注册,经 LiteLLM 国产模型+registry.invoke 真闭环)。假桩不应共存投产。
+  // clusterInstanceClient 保留入参(未来真 openclaw runtime 接入时用),当前未消费。
+  void clusterInstanceClient;
 
   // Claude Agent SDK adapter(主执行引擎)。env 不配 ANTHROPIC_API_KEY 时跳过,
-  // 系统降级到只有 OpenClaw 的旧行为。
+  // 系统降级到只有 tool-loop 的行为(worker 路径A 作可选增强)。
   if (config.claude.apiKey) {
     const claudeSessionStore = new DbInstanceSessionStore(db);
     const claudeWorkerRunner = new DockerWorkerRunner();
@@ -110,31 +112,6 @@ export function buildAgentAdapters(
       });
     });
   }
-
-  openClawAdapter.onTaskComplete((result) => {
-    const receipt = receiptManager.getReceipt(result.taskId);
-    if (receipt) {
-      if (result.success) {
-        receiptManager
-          .sendSuccessReceipt(receipt.id, receipt.summary, JSON.stringify(result.output))
-          .catch((err) => logger.warn({ err: String(err) }, 'receipt send failed'));
-      } else {
-        receiptManager
-          .sendFailureReceipt(
-            receipt.id,
-            receipt.summary,
-            (result.output?.error as string) ?? 'unknown error'
-          )
-          .catch((err) => logger.warn({ err: String(err) }, 'receipt send failed'));
-      }
-    }
-    appEventBus.publish('receipt:sent', {
-      receiptId: result.taskId,
-      taskId: result.taskId,
-      channel: receipt?.originChannel ?? 'unknown',
-      success: result.success,
-    });
-  });
 
   return { agentAdapterRegistry };
 }
