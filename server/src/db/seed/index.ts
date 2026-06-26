@@ -178,6 +178,33 @@ async function seed() {
   `);
   console.log('  ✓ Default role "platform_admin" ensured');
 
+  // ──── Tool Sources + Definitions seed(v1.2.2 P0-1:实例任务工具闭环验证) ────
+  // tool_definitions 表空时 ToolLoopExecutor.discover 返回空 → LLM 无工具可调直返 content,
+  // 审批/凭证/计费/callLog 全不触发(T33 自陈的空转断点)。seed 1 个 enabled 工具让闭环可触发。
+  // 工具指向 server 自身 /health(只读、无副作用、不依赖外网),invoke 时 server 在跑即可验证闭环。
+  // 投产可替换为真实业务工具(MCP sync 入库或管理后台绑定)。
+  await db.execute(sql`
+    INSERT INTO tool_sources (id, tenant_id, source_type, name, description, status, health_status, tool_count, sync_strategy)
+    VALUES ('tsrc_seed_demo', 'default', 'openapi', 'Demo Tool Source (seed)',
+            '种子工具源:实例任务工具闭环验证(v1.2.2 P0-1)', 'active', 'healthy', 1, 'manual')
+    ON CONFLICT (id) DO NOTHING
+  `);
+  await db.execute(sql`
+    INSERT INTO tool_definitions (id, source_id, tenant_id, name, description, execution_type, execution_config, input_schema, enabled, status, risk_level, tags)
+    VALUES (
+      'tdef_seed_health', 'tsrc_seed_demo', 'default', 'check_system_health',
+      '检查 HMR 服务健康状态(无参数,返回 JSON 健康指标)。种子工具,用于实例任务工具闭环验证。',
+      'http_proxy',
+      '{"baseUrl":"http://localhost:3002","path":"/health","method":"GET"}'::jsonb,
+      '{"type":"object","properties":{},"additionalProperties":false}'::jsonb,
+      true, 'active', 'low', '[]'::jsonb
+    )
+    ON CONFLICT (id) DO NOTHING
+  `);
+  console.log(
+    '  ✓ Seed tool_source "tsrc_seed_demo" + tool_definition "check_system_health" ensured (实例任务工具闭环)'
+  );
+
   // App Catalog: 不预置 mock 数据，由用户在管理后台或 AI 创建真实轻应用
 
   console.log('Login credentials:');
