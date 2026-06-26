@@ -21,6 +21,21 @@ import {
 } from './domain/memory.js';
 import { logger } from '../../app/logger.js';
 
+/** addFragment 入参(提取为命名类型,供 syncFragmentToMem0 复用;§3.2 单方法拆分) */
+type AddFragmentInput = {
+  storeId: string;
+  tenantId: string;
+  userId: string;
+  type: FragmentType;
+  content: string;
+  source?: 'auto_extracted' | 'manual' | 'rule_generated';
+  importance?: number;
+  expiresAt?: string | null;
+  metadata?: Record<string, unknown>;
+  scope?: FragmentScope;
+  departmentId?: string | null;
+};
+
 /* ---------- Service ---------- */
 
 export class MemoryService {
@@ -109,7 +124,9 @@ export class MemoryService {
     return updated;
   }
 
-  async getStoreFragmentStats(storeId: string): Promise<{ orgCount: number; personalCount: number }> {
+  async getStoreFragmentStats(
+    storeId: string
+  ): Promise<{ orgCount: number; personalCount: number }> {
     const [orgCount, personalCount] = await Promise.all([
       this.repo.countFragmentsByScope(storeId, 'org'),
       this.repo.countFragmentsByScope(storeId, 'personal'),
@@ -121,7 +138,15 @@ export class MemoryService {
 
   async listFragments(
     storeId: string,
-    opts?: { userId?: string; type?: FragmentType; keyword?: string; limit?: number; offset?: number; scope?: FragmentScope; departmentId?: string }
+    opts?: {
+      userId?: string;
+      type?: FragmentType;
+      keyword?: string;
+      limit?: number;
+      offset?: number;
+      scope?: FragmentScope;
+      departmentId?: string;
+    }
   ): Promise<MemoryFragment[]> {
     // If Mem0 is enabled and we have a userId filter (not scope-based), try Mem0 first for richer results
     if (this.mem0?.isEnabled() && opts?.userId && !opts?.scope) {
@@ -141,7 +166,9 @@ export class MemoryService {
             memoryStoreId: storeId,
             tenantId: store.tenantId,
             userId: m.user_id,
-            scope: (m.user_id === ORG_USER_ID ? FRAGMENT_SCOPE.ORG : FRAGMENT_SCOPE.PERSONAL) as FragmentScope,
+            scope: (m.user_id === ORG_USER_ID
+              ? FRAGMENT_SCOPE.ORG
+              : FRAGMENT_SCOPE.PERSONAL) as FragmentScope,
             departmentId: null,
             type: 'fact' as FragmentType,
             content: m.memory,
@@ -161,26 +188,17 @@ export class MemoryService {
           return merged;
         }
       } catch (err) {
-        logger.warn({ err: String(err) }, '[memory-service] Mem0 listFragments failed, falling back to local');
+        logger.warn(
+          { err: String(err) },
+          '[memory-service] Mem0 listFragments failed, falling back to local'
+        );
       }
     }
 
     return this.repo.listFragments(storeId, opts);
   }
 
-  async addFragment(input: {
-    storeId: string;
-    tenantId: string;
-    userId: string;
-    type: FragmentType;
-    content: string;
-    source?: 'auto_extracted' | 'manual' | 'rule_generated';
-    importance?: number;
-    expiresAt?: string | null;
-    metadata?: Record<string, unknown>;
-    scope?: FragmentScope;
-    departmentId?: string | null;
-  }): Promise<MemoryFragment> {
+  async addFragment(input: AddFragmentInput): Promise<MemoryFragment> {
     const fragment = createMemoryFragment({
       memoryStoreId: input.storeId,
       tenantId: input.tenantId,
@@ -196,61 +214,86 @@ export class MemoryService {
     });
     await this.repo.saveFragment(fragment);
 
-    // Dual-write to Mem0
+    // Dual-write to Mem0(提取为 syncFragmentToMem0;原 addFragment 84 行超 80 红线,§3.2 拆分)
     const store = await this.repo.findStoreById(input.storeId);
-    if (this.mem0?.isEnabled() && store) {
-      const deptId = await this.getDepartmentIdByStore(store);
-      try {
-        if (input.userId === ORG_USER_ID) {
-          // Shared memory: no user_id → agent-level shared memory in Mem0
-          await this.mem0.addShared({
-            messages: [
-              { role: 'user', content: input.content },
-              { role: 'assistant', content: `已记住（共享）：${input.content}` },
-            ],
-            agentId: store.instanceId,
-            orgId: store.tenantId,
-            projectId: deptId ?? undefined,
-            metadata: {
-              storeId: input.storeId,
-              type: input.type,
-              source: input.source || 'manual',
-              consensus: true,
-            },
-          });
-          logger.info({ fragmentId: fragment.id }, '[memory-service] synced shared fragment to Mem0 (agent-level)');
-        } else {
-          // Personal memory: scoped to user + agent
-          await this.mem0.add({
-            messages: [
-              { role: 'user', content: input.content },
-              { role: 'assistant', content: `已记住：${input.content}` },
-            ],
-            userId: input.userId,
-            agentId: store.instanceId,
-            orgId: store.tenantId,
-            projectId: deptId ?? undefined,
-            metadata: {
-              storeId: input.storeId,
-              type: input.type,
-              source: input.source || 'manual',
-            },
-          });
-          logger.info({ fragmentId: fragment.id, userId: input.userId }, '[memory-service] synced fragment to Mem0');
-        }
-      } catch (err) {
-        logger.warn({ err: String(err) }, '[memory-service] Mem0 add failed, local DB write succeeded');
-      }
-    }
+    await this.syncFragmentToMem0(fragment, input, store);
 
-    // Update store counters
+    // Update store counters(提取为 updateStoreCounters)
     if (store) {
-      const totalFragments = await this.repo.countFragmentsByStore(input.storeId);
-      const totalProfiles = await this.repo.countDistinctUsersByStore(input.storeId);
-      await this.repo.saveStore({ ...store, totalFragments, totalProfiles });
+      await this.updateStoreCounters(input.storeId, store);
     }
 
     return fragment;
+  }
+
+  /**
+   * Mem0 dual-write:共享记忆(userId=ORG_USER_ID)走 addShared(agent 级),个人记忆走 add(user 级)。
+   * 失败仅 warn 不阻断本地 DB 写(本地已落库,Mem0 为旁路增强)。
+   */
+  private async syncFragmentToMem0(
+    fragment: MemoryFragment,
+    input: AddFragmentInput,
+    store: MemoryStore | null
+  ): Promise<void> {
+    if (!this.mem0?.isEnabled() || !store) return;
+    const deptId = await this.getDepartmentIdByStore(store);
+    try {
+      if (input.userId === ORG_USER_ID) {
+        // Shared memory: no user_id → agent-level shared memory in Mem0
+        await this.mem0.addShared({
+          messages: [
+            { role: 'user', content: input.content },
+            { role: 'assistant', content: `已记住（共享）：${input.content}` },
+          ],
+          agentId: store.instanceId,
+          orgId: store.tenantId,
+          projectId: deptId ?? undefined,
+          metadata: {
+            storeId: input.storeId,
+            type: input.type,
+            source: input.source || 'manual',
+            consensus: true,
+          },
+        });
+        logger.info(
+          { fragmentId: fragment.id },
+          '[memory-service] synced shared fragment to Mem0 (agent-level)'
+        );
+      } else {
+        // Personal memory: scoped to user + agent
+        await this.mem0.add({
+          messages: [
+            { role: 'user', content: input.content },
+            { role: 'assistant', content: `已记住：${input.content}` },
+          ],
+          userId: input.userId,
+          agentId: store.instanceId,
+          orgId: store.tenantId,
+          projectId: deptId ?? undefined,
+          metadata: {
+            storeId: input.storeId,
+            type: input.type,
+            source: input.source || 'manual',
+          },
+        });
+        logger.info(
+          { fragmentId: fragment.id, userId: input.userId },
+          '[memory-service] synced fragment to Mem0'
+        );
+      }
+    } catch (err) {
+      logger.warn(
+        { err: String(err) },
+        '[memory-service] Mem0 add failed, local DB write succeeded'
+      );
+    }
+  }
+
+  /** 更新 store 的 fragment/user 计数器(写后聚合,非实时精确)。 */
+  private async updateStoreCounters(storeId: string, store: MemoryStore): Promise<void> {
+    const totalFragments = await this.repo.countFragmentsByStore(storeId);
+    const totalProfiles = await this.repo.countDistinctUsersByStore(storeId);
+    await this.repo.saveStore({ ...store, totalFragments, totalProfiles });
   }
 
   async deleteFragment(fragmentId: string): Promise<void> {
@@ -328,7 +371,10 @@ export class MemoryService {
           '[memory-service] synced dept-shared fragment to Mem0 (app-level)'
         );
       } catch (err) {
-        logger.warn({ err: String(err) }, '[memory-service] Mem0 addDeptShared failed, local DB write succeeded');
+        logger.warn(
+          { err: String(err) },
+          '[memory-service] Mem0 addDeptShared failed, local DB write succeeded'
+        );
       }
     }
 
@@ -342,10 +388,7 @@ export class MemoryService {
 
   /* ──── Rule ──── */
 
-  async listRules(
-    storeId: string,
-    opts?: { ruleType?: MemoryRuleType }
-  ): Promise<MemoryRule[]> {
+  async listRules(storeId: string, opts?: { ruleType?: MemoryRuleType }): Promise<MemoryRule[]> {
     return this.repo.listRules(storeId, opts);
   }
 
@@ -377,7 +420,9 @@ export class MemoryService {
 
   async updateRule(
     ruleId: string,
-    patch: Partial<Pick<MemoryRule, 'name' | 'description' | 'trigger' | 'action' | 'priority' | 'enabled'>>
+    patch: Partial<
+      Pick<MemoryRule, 'name' | 'description' | 'trigger' | 'action' | 'priority' | 'enabled'>
+    >
   ): Promise<MemoryRule> {
     const rule = await this.repo.findRuleById(ruleId);
     if (!rule) throw new Error(`rule not found: ${ruleId}`);
@@ -411,23 +456,46 @@ export class MemoryService {
     if (this.mem0?.isEnabled()) {
       mem0Used = true;
       const deptId = await this.getDepartmentIdByStore(store);
-      const layers: Array<{ name: 'personal' | 'agent' | 'dept'; boost: number; params: Mem0SearchParams }> = [
+      const layers: Array<{
+        name: 'personal' | 'agent' | 'dept';
+        boost: number;
+        params: Mem0SearchParams;
+      }> = [
         {
           name: 'personal',
           boost: 1.0,
-          params: { query, userId: opts?.userId, agentId: store.instanceId, orgId: store.tenantId, projectId: deptId ?? undefined, limit: topK * 2 },
+          params: {
+            query,
+            userId: opts?.userId,
+            agentId: store.instanceId,
+            orgId: store.tenantId,
+            projectId: deptId ?? undefined,
+            limit: topK * 2,
+          },
         },
         {
           name: 'agent',
           boost: 0.85,
-          params: { query, agentId: store.instanceId, orgId: store.tenantId, projectId: deptId ?? undefined, limit: topK * 2 },
+          params: {
+            query,
+            agentId: store.instanceId,
+            orgId: store.tenantId,
+            projectId: deptId ?? undefined,
+            limit: topK * 2,
+          },
         },
       ];
       if (deptId) {
         layers.push({
           name: 'dept',
           boost: 0.7,
-          params: { query, appId: `app_${deptId}`, orgId: store.tenantId, projectId: deptId, limit: topK * 2 },
+          params: {
+            query,
+            appId: `app_${deptId}`,
+            orgId: store.tenantId,
+            projectId: deptId,
+            limit: topK * 2,
+          },
         });
       }
       for (const layer of layers) {
@@ -460,7 +528,10 @@ export class MemoryService {
             }
           }
         } catch (err) {
-          logger.warn({ err: String(err), layer: layer.name }, '[memory-service] Mem0 search layer failed');
+          logger.warn(
+            { err: String(err), layer: layer.name },
+            '[memory-service] Mem0 search layer failed'
+          );
         }
       }
     }
