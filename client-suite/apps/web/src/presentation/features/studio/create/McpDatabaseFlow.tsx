@@ -3,10 +3,16 @@
  *
  * 设计源模式：左表单配置 + 右表结构/工具预览（两Tab）
  * 流程：填写连接信息 → 测试连接 → 探测表结构 → 勾选表 → 确认发布
+ *
+ * 去mock(T37):删 MOCK_TABLES,接真 API(createSource→testConnection→introspectSource→syncSource)。
+ * 凭证经 credential-vault createCredentialWithSecrets 建 authz+username/password 两 secret,
+ * 拿 authz.id 作 createSource.credentialId(修 ToolSourceCreateWizard 的 credentialId=dbUser bug)。
  */
 import { useState } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
 import { Icon } from '../../../components/ui/Icon';
+import { toolApi } from '../../../../infrastructure/api/adminApiClient';
+import { credentialManagementApi } from '../../../../infrastructure/api/credentialManagementApi';
 
 interface Props {
   onBack: () => void;
@@ -17,47 +23,17 @@ interface TableInfo {
   columns: { name: string; type: string; pk: boolean }[];
 }
 
-const MOCK_TABLES: TableInfo[] = [
-  {
-    name: 'users',
-    columns: [
-      { name: 'id', type: 'INT', pk: true },
-      { name: 'name', type: 'VARCHAR(100)', pk: false },
-      { name: 'email', type: 'VARCHAR(200)', pk: false },
-      { name: 'department', type: 'VARCHAR(50)', pk: false },
-    ],
-  },
-  {
-    name: 'orders',
-    columns: [
-      { name: 'id', type: 'BIGINT', pk: true },
-      { name: 'user_id', type: 'INT', pk: false },
-      { name: 'amount', type: 'DECIMAL', pk: false },
-      { name: 'status', type: 'ENUM', pk: false },
-    ],
-  },
-  {
-    name: 'products',
-    columns: [
-      { name: 'id', type: 'INT', pk: true },
-      { name: 'name', type: 'VARCHAR(200)', pk: false },
-      { name: 'price', type: 'DECIMAL', pk: false },
-    ],
-  },
-  {
-    name: 'departments',
-    columns: [
-      { name: 'id', type: 'INT', pk: true },
-      { name: 'name', type: 'VARCHAR(100)', pk: false },
-      { name: 'manager_id', type: 'INT', pk: false },
-    ],
-  },
-];
-
-const DB_TYPES = ['MySQL', 'PostgreSQL', 'SQLite'] as const;
+const DB_TYPES = ['MySQL', 'PostgreSQL'] as const;
 
 type RightTab = 'schema' | 'tools';
 type Step = 'form' | 'testing' | 'introspecting' | 'done';
+
+// DB 工具源凭证的 provider 约定(auth_providers 表需 seed code='db-tools' 的记录,
+// 见后端 db provider seed 待补)。credential-vault 不依赖 provider 语义,仅存 authz+secret。
+// userId 用约定 1(系统管理员);后端 createCredentialWithSecrets 的 userId 待改为从 auth
+// principal 取(目前 body 传,与 createCredential 一致),届时此处移除约定值。
+const DB_TOOL_PROVIDER_ID = 1;
+const SYSTEM_USER_ID = 1;
 
 export function McpDatabaseFlow({ onBack }: Props) {
   const toast = useToastStore((s) => s.addToast);
@@ -69,9 +45,12 @@ export function McpDatabaseFlow({ onBack }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [step, setStep] = useState<Step>('form');
+  const [tables, setTables] = useState<TableInfo[]>([]);
   const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
   const [rightTab, setRightTab] = useState<RightTab>('schema');
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
+  // createSource 返回的 sourceId(测试连接时建,发布时 sync)
+  const [sourceId, setSourceId] = useState<string | null>(null);
 
   const handleTestConnection = async () => {
     if (!host.trim()) {
@@ -82,13 +61,67 @@ export function McpDatabaseFlow({ onBack }: Props) {
       toast('请输入数据库名', 'error');
       return;
     }
+    if (!username.trim()) {
+      toast('请输入用户名', 'error');
+      return;
+    }
     setStep('testing');
-    await new Promise((r) => setTimeout(r, 1200));
-    setStep('introspecting');
-    await new Promise((r) => setTimeout(r, 1500));
-    setSelectedTables(new Set(MOCK_TABLES.map((t) => t.name)));
-    setStep('done');
-    toast('连接成功，表结构探测完成', 'success');
+    try {
+      // 1. 建 DB 凭证(authz + username/password 两 secret),拿 credentialId
+      const cred = await credentialManagementApi.createCredentialWithSecrets({
+        userId: SYSTEM_USER_ID,
+        providerId: DB_TOOL_PROVIDER_ID,
+        secrets: [
+          { secretType: 'username', plaintext: username },
+          { secretType: 'password', plaintext: password },
+        ],
+      });
+
+      // 2. 建 tool source(database 类型,关联 credentialId)
+      const source = await toolApi.createSource({
+        sourceType: 'database',
+        name: `${dbType}:${host}/${dbName}`,
+        dbType: dbType === 'MySQL' ? 'mysql' : 'postgresql',
+        dbHost: host,
+        dbPort: Number(port) || undefined,
+        dbName,
+        dbSchemaName: dbType === 'PostgreSQL' ? 'public' : undefined,
+        credentialId: String(cred.id),
+      });
+      setSourceId(source.id);
+
+      // 3. 测试连接
+      setStep('introspecting');
+      const testRes = await toolApi.testConnection(source.id);
+      if (!testRes.success) {
+        toast(`连接失败: ${testRes.message}`, 'error');
+        setStep('form');
+        return;
+      }
+
+      // 4. 探测表结构(不落库,用户勾选后再 sync)
+      const introspect = await toolApi.introspectSource(source.id);
+      if (introspect.errors.length > 0 && introspect.tables.length === 0) {
+        toast(`探测失败: ${introspect.errors.join('; ')}`, 'error');
+        setStep('form');
+        return;
+      }
+      const detected: TableInfo[] = introspect.tables.map((t) => ({
+        name: t.tableName,
+        columns: t.columns.map((c) => ({
+          name: c.name,
+          type: c.dataType,
+          pk: c.isPrimaryKey,
+        })),
+      }));
+      setTables(detected);
+      setSelectedTables(new Set(detected.map((t) => t.name)));
+      setStep('done');
+      toast(`连接成功，发现 ${detected.length} 张表`, 'success');
+    } catch (e) {
+      toast(`连接失败: ${(e as Error).message}`, 'error');
+      setStep('form');
+    }
   };
 
   const toggleTable = (name: string) => {
@@ -105,13 +138,27 @@ export function McpDatabaseFlow({ onBack }: Props) {
 
   const generatedTools = [...selectedTables].flatMap((t) => [`query_${t}`, `count_${t}`]);
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (selectedTables.size === 0) {
       toast('请至少选择一张表', 'error');
       return;
     }
-    toast(`MCP 工具集已创建（${generatedTools.length} 个工具）`, 'success');
-    onBack();
+    if (!sourceId) {
+      toast('请先测试连接', 'error');
+      return;
+    }
+    try {
+      // sync 探测结果落库生成 query/count 工具
+      const result = await toolApi.syncSource(sourceId);
+      if (result.errors.length > 0 && result.toolsCreated === 0) {
+        toast(`发布失败: ${result.errors.join('; ')}`, 'error');
+        return;
+      }
+      toast(`MCP 工具集已创建（${result.toolsCreated} 个工具）`, 'success');
+      onBack();
+    } catch (e) {
+      toast(`发布失败: ${(e as Error).message}`, 'error');
+    }
   };
 
   return (
@@ -141,7 +188,7 @@ export function McpDatabaseFlow({ onBack }: Props) {
                     key={t}
                     onClick={() => {
                       setDbType(t);
-                      setPort(t === 'MySQL' ? '3306' : t === 'PostgreSQL' ? '5432' : '');
+                      setPort(t === 'MySQL' ? '3306' : '5432');
                     }}
                     className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                       dbType === t
@@ -202,7 +249,7 @@ export function McpDatabaseFlow({ onBack }: Props) {
 
             {step === 'done' && (
               <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-3 text-[11px] text-emerald-400 flex items-center gap-2">
-                ✓ 连接成功，发现 {MOCK_TABLES.length} 张表，将生成 {generatedTools.length} 个工具
+                ✓ 连接成功，发现 {tables.length} 张表，将生成 {generatedTools.length} 个工具
               </div>
             )}
           </div>
@@ -235,7 +282,7 @@ export function McpDatabaseFlow({ onBack }: Props) {
               </div>
             ) : rightTab === 'schema' ? (
               <div className="space-y-2">
-                {MOCK_TABLES.map((t) => (
+                {tables.map((t) => (
                   <div
                     key={t.name}
                     className="border border-white/[0.08] bg-white/[0.03] rounded-xl overflow-hidden"
@@ -308,7 +355,7 @@ export function McpDatabaseFlow({ onBack }: Props) {
           {step === 'done' && (
             <div className="px-4 pb-3 pt-2 border-t border-white/[0.06] flex justify-between items-center">
               <span className="text-[10px] text-slate-500">
-                已选 {selectedTables.size} / {MOCK_TABLES.length} 张表
+                已选 {selectedTables.size} / {tables.length} 张表
               </span>
               <button
                 onClick={handlePublish}
