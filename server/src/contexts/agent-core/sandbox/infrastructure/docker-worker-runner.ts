@@ -279,6 +279,11 @@ export class DockerWorkerRunner implements IWorkerRunner {
       res.cpus,
       '--network',
       'bridge',
+      // worker 容器经 host.docker.internal 回连宿主 LiteLLM/server(ANTHROPIC_BASE_URL/WORKER_CALLBACK_URL)。
+      // mac docker desktop 多数内置解析,但 linux/部分 mac 配置需 host-gateway 注入;统一加确保跨平台可达。
+      // 不加则 bridge 网络内 host.docker.internal 解析失败 → worker 访问宿主 LLM/server 报错 exit 1。
+      '--add-host',
+      'host.docker.internal:host-gateway',
       '--cap-drop',
       'ALL',
       '--security-opt',

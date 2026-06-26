@@ -38,6 +38,9 @@ model_list:
 litellm_settings:
   drop_params: true
   telemetry: false
+  # T43: anthropic /v1/messages 端点对 openai 兼容模型(glm)默认走 Responses API(/v4/responses),
+  # glm 只支持 chat/completions。开此开关让 /v1/messages 经 chat/completions 转发(路径A 用 glm 必需)。
+  use_chat_completions_url_for_anthropic_messages: true
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

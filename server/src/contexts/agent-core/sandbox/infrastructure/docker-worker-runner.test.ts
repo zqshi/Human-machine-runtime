@@ -75,6 +75,9 @@ describe('DockerWorkerRunner - 命令构造', () => {
     expect(args).toContain('1.0');
     expect(args).toContain('--network');
     expect(args).toContain('bridge');
+    // T43:worker 容器经 host.docker.internal 回连宿主 LiteLLM/server,需 host-gateway 注入
+    expect(args).toContain('--add-host');
+    expect(args).toContain('host.docker.internal:host-gateway');
     expect(args).toContain('--cap-drop');
     expect(args).toContain('ALL');
     expect(args).toContain('--security-opt');
