@@ -160,6 +160,16 @@ async function seed() {
   }
   console.log(`  ✓ ${planSeeds.length} service plans seeded`);
 
+  // ──── auth_providers: DB 工具源凭证 provider(T37 McpDatabaseFlow 真连接依赖) ────
+  // credential-vault 的 createAuthorization 需 providerId(FK auth_providers.id)。
+  // DB 工具源凭证(username/password)归属此 provider,不依赖 provider 的 auth 语义,仅作 FK 占位。
+  await db.execute(sql`
+    INSERT INTO auth_providers (code, name, auth_type, tenant_id, enabled, config)
+    VALUES ('db-tools', 'Database Tool Source', 'basic', NULL, true, '{}'::jsonb)
+    ON CONFLICT (code) DO NOTHING
+  `);
+  console.log('  ✓ auth_provider "db-tools" ensured (DB tool source credentials)');
+
   // ──── Default Roles seed ────
   await db.execute(sql`
     INSERT INTO user_roles (name, display_name, permissions)
