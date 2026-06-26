@@ -159,6 +159,9 @@ export class ClaudeAgentSdkAdapter implements IAgentRuntimeAdapter {
       tenantId: task.tenantId,
       cwd,
       allowedTools: parseAllowedTools(input.allowedTools, this.config.restrictToReadonlyTools),
+      // T18b-A:boundTools 解析出的外部工具定义 → worker 注册为 SDK custom tool
+      // (handler 调 server /tool-invoke 收口执行)。无绑定工具时 undefined,worker 走 SDK 内置执行器。
+      externalTools: resolveExternalTools(input.externalTools),
       model: typeof input.model === 'string' ? input.model : this.config.defaultModel,
       maxTurns: typeof input.maxTurns === 'number' ? input.maxTurns : this.config.defaultMaxTurns,
       maxBudgetUsd: budgetUsd,
@@ -384,4 +387,48 @@ function parseAllowedTools(value: unknown, restrictToReadonly = false): string[]
       : value.filter((t): t is string => typeof t === 'string');
   // T18b-C 止血:开关开启时过滤副作用工具,仅留只读工具
   return restrictToReadonly ? base.filter((t) => !SIDE_EFFECT_TOOLS.has(t)) : base;
+}
+
+/**
+ * T18b-A:从 task.input.externalTools(组装层 AssemblyProvider 产出)解析 worker externalTools。
+ *
+ * input.externalTools 元素格式(AssemblyResult.externalTools):{toolId,name,description,inputSchema}。
+ * 校验 toolId/name 必填,description 缺省降级 name,inputSchema 缺省空 schema(无参工具)。
+ * 非数组/空数组 → undefined(worker 不注入 custom tool,走 SDK 内置执行器)。
+ */
+function resolveExternalTools(value: unknown):
+  | Array<{
+      toolId: string;
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }>
+  | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const tools: Array<{
+    toolId: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }> = [];
+  for (const t of value) {
+    if (!t || typeof t !== 'object') continue;
+    const v = t as {
+      toolId?: unknown;
+      name?: unknown;
+      description?: unknown;
+      inputSchema?: unknown;
+    };
+    if (typeof v.toolId !== 'string' || typeof v.name !== 'string') continue;
+    tools.push({
+      toolId: v.toolId,
+      name: v.name,
+      description: typeof v.description === 'string' ? v.description : v.name,
+      inputSchema:
+        v.inputSchema && typeof v.inputSchema === 'object'
+          ? (v.inputSchema as Record<string, unknown>)
+          : {},
+    });
+  }
+  return tools.length > 0 ? tools : undefined;
 }

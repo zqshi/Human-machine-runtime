@@ -191,10 +191,15 @@ export class AgentHarness {
           if (asm.allowedTools !== undefined && input.allowedTools === undefined) {
             input.allowedTools = asm.allowedTools;
           }
+          // T18b-A:透传 externalTools 给 worker 路径(claude-agent-sdk adapter),让 boundTools
+          // 注册为 SDK custom tool 并回调 server /tool-invoke 收口(审批/凭证/计费/日志生效)。
+          if (asm.externalTools && input.externalTools === undefined) {
+            input.externalTools = asm.externalTools;
+          }
           if (asm.skillsContext && input.skillsContext === undefined) {
             input.skillsContext = asm.skillsContext;
           }
-          if (asm.allowedTools !== undefined || asm.skillsContext) {
+          if (asm.allowedTools !== undefined || asm.externalTools || asm.skillsContext) {
             task.input = input;
           }
           if (asm.degraded) {

@@ -19,12 +19,24 @@ export interface IAgentDefinitionPort {
   getById(id: string): Promise<AgentDefinition | null>;
 }
 
-/** 工具定义批查 port(返回 name/enabled/status/tenantId) */
+/**
+ * 工具定义批查 port(返回 name/enabled/status/tenantId + T18b-A externalTools 所需的
+ * description/inputSchema)。
+ *
+ * T18b-A:externalTools 接线需要工具的完整定义(description + inputSchema),不再只取 name。
+ * 见 docs/architecture/t18-tool-executor-mainline-gap.md。
+ */
 export interface IBoundToolsPort {
-  findByIds(
-    ids: string[]
-  ): Promise<
-    Array<{ id: string; name: string; enabled: boolean; status: string; tenantId: string }>
+  findByIds(ids: string[]): Promise<
+    Array<{
+      id: string;
+      name: string;
+      enabled: boolean;
+      status: string;
+      tenantId: string;
+      description: string | null;
+      inputSchema: Record<string, unknown> | null;
+    }>
   >;
 }
 
@@ -51,6 +63,17 @@ export interface AssemblyRequest {
 export interface AssemblyResult {
   /** 映射后的 SDK 工具名;undefined = 不覆盖(走 adapter 默认);空数组语义见下方陷阱 */
   allowedTools?: string[];
+  /**
+   * T18b-A:外部工具定义(worker 路径注入为 SDK custom tool,handler 调 server /tool-invoke 收口执行)。
+   * 与 allowedTools 同源(均来自 boundTools 解析),但携带 description/inputSchema 供 worker 注册。
+   * undefined = 无有效工具(不覆盖);仅对 claude-agent-sdk adapter(worker 路径)生效,tool-loop 路径走 registry.discover 不消费此字段。
+   */
+  externalTools?: Array<{
+    toolId: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }>;
   /** skill 内容拼成的 <skills> 块内容;undefined = 无 skill */
   skillsContext?: string;
   sources: {
@@ -124,6 +147,7 @@ export class AssemblyProvider implements IAssemblyProvider {
     const [toolsResult, skillsResult] = await Promise.all([
       this.assembleTools(req, boundTools).catch(() => ({
         allowedTools: undefined,
+        externalTools: undefined,
         bound: boundTools.length,
         resolved: 0,
         skipped: boundTools.length,
@@ -141,6 +165,7 @@ export class AssemblyProvider implements IAssemblyProvider {
 
     return {
       allowedTools: toolsResult.allowedTools,
+      externalTools: toolsResult.externalTools,
       skillsContext: skillsResult.skillsContext,
       sources: {
         tools: {
@@ -164,16 +189,36 @@ export class AssemblyProvider implements IAssemblyProvider {
     boundTools: string[]
   ): Promise<{
     allowedTools: string[] | undefined;
+    externalTools:
+      | Array<{
+          toolId: string;
+          name: string;
+          description: string;
+          inputSchema: Record<string, unknown>;
+        }>
+      | undefined;
     bound: number;
     resolved: number;
     skipped: number;
   }> {
     if (boundTools.length === 0 || !this.boundToolsPort) {
-      return { allowedTools: undefined, bound: boundTools.length, resolved: 0, skipped: 0 };
+      return {
+        allowedTools: undefined,
+        externalTools: undefined,
+        bound: boundTools.length,
+        resolved: 0,
+        skipped: 0,
+      };
     }
 
     const rows = await this.boundToolsPort.findByIds(boundTools);
     const names = new Set<string>();
+    const externalTools: Array<{
+      toolId: string;
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }> = [];
     let skipped = 0;
     for (const r of rows) {
       // 跨租户安全:防绑别租户工具
@@ -189,6 +234,15 @@ export class AssemblyProvider implements IAssemblyProvider {
         continue;
       }
       names.add(r.name);
+      // T18b-A:收集完整工具定义透传给 worker,注册为 SDK custom tool
+      // (handler 调 server /tool-invoke 收口:审批/凭证/计费/日志对本路径生效)
+      externalTools.push({
+        toolId: r.id,
+        name: r.name,
+        // description 缺省降级为 name(LLM 仍可据名选择),inputSchema 缺省为空 schema(无参工具)
+        description: r.description ?? r.name,
+        inputSchema: r.inputSchema ?? {},
+      });
     }
     // 不存在的 id 也算 skipped
     skipped += boundTools.length - rows.length;
@@ -196,6 +250,7 @@ export class AssemblyProvider implements IAssemblyProvider {
     // 空数组陷阱:resolved 为 0 → 返回 undefined(不覆盖,走默认),由 assemble 标 degraded
     return {
       allowedTools: names.size > 0 ? Array.from(names) : undefined,
+      externalTools: names.size > 0 ? externalTools : undefined,
       bound: boundTools.length,
       resolved: names.size,
       skipped,

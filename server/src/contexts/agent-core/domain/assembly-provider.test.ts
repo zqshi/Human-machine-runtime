@@ -17,9 +17,29 @@ function makeAgentDefPort(def: AgentDefinition | null): IAgentDefinitionPort {
 }
 
 function makeBoundToolsPort(
-  rows: Array<{ id: string; name: string; enabled: boolean; status: string; tenantId: string }>
+  rows: Array<{
+    id: string;
+    name: string;
+    enabled: boolean;
+    status: string;
+    tenantId: string;
+    description?: string | null;
+    inputSchema?: Record<string, unknown> | null;
+  }>
 ): IBoundToolsPort {
-  return { findByIds: vi.fn().mockResolvedValue(rows) };
+  return {
+    findByIds: vi.fn().mockResolvedValue(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        enabled: r.enabled,
+        status: r.status,
+        tenantId: r.tenantId,
+        description: r.description ?? null,
+        inputSchema: r.inputSchema ?? null,
+      }))
+    ),
+  };
 }
 
 function makeContentPort(
@@ -130,6 +150,73 @@ describe('AssemblyProvider', () => {
     expect(r.allowedTools).toEqual(expect.arrayContaining(['Bash', 'Write']));
     expect(r.sources.tools.resolved).toBe(2);
     expect(r.degraded).toBe(false);
+  });
+
+  it('externalTools 携带 description/inputSchema 透传给 worker(T18b-A)', async () => {
+    const def = makeDef({ boundTools: ['tdef_1'] });
+    const svc = new AssemblyProvider(
+      makeInstanceLookup('adef_1'),
+      makeAgentDefPort(def),
+      makeBoundToolsPort([
+        {
+          id: 'tdef_1',
+          name: 'get_weather',
+          enabled: true,
+          status: 'active',
+          tenantId: 'tn_demo',
+          description: '查询城市天气',
+          inputSchema: { type: 'object', properties: { city: { type: 'string' } } },
+        },
+      ]),
+      null,
+      makeLogger()
+    );
+    const r = await svc.assemble(REQ);
+    expect(r.externalTools).toHaveLength(1);
+    expect(r.externalTools![0]).toEqual({
+      toolId: 'tdef_1',
+      name: 'get_weather',
+      description: '查询城市天气',
+      inputSchema: { type: 'object', properties: { city: { type: 'string' } } },
+    });
+  });
+
+  it('externalTools description 缺省降级 name,inputSchema 缺省空 schema', async () => {
+    const def = makeDef({ boundTools: ['tdef_1'] });
+    const svc = new AssemblyProvider(
+      makeInstanceLookup('adef_1'),
+      makeAgentDefPort(def),
+      makeBoundToolsPort([
+        { id: 'tdef_1', name: 'noop', enabled: true, status: 'active', tenantId: 'tn_demo' },
+      ]),
+      null,
+      makeLogger()
+    );
+    const r = await svc.assemble(REQ);
+    expect(r.externalTools).toHaveLength(1);
+    expect(r.externalTools![0]).toEqual({
+      toolId: 'tdef_1',
+      name: 'noop',
+      description: 'noop',
+      inputSchema: {},
+    });
+  });
+
+  it('跨租户/禁用工具被跳过时 externalTools 同步 undefined', async () => {
+    const def = makeDef({ boundTools: ['tdef_1'] });
+    const svc = new AssemblyProvider(
+      makeInstanceLookup('adef_1'),
+      makeAgentDefPort(def),
+      makeBoundToolsPort([
+        { id: 'tdef_1', name: 'Bash', enabled: true, status: 'active', tenantId: 'tn_other' },
+      ]),
+      null,
+      makeLogger()
+    );
+    const r = await svc.assemble(REQ);
+    expect(r.allowedTools).toBeUndefined();
+    expect(r.externalTools).toBeUndefined();
+    expect(r.degraded).toBe(true);
   });
 
   it('boundSkills → skillsContext 拼接(content 优先)', async () => {

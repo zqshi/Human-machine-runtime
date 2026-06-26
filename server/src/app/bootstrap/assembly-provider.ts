@@ -48,6 +48,9 @@ function adaptBoundTools(repo: ToolDefinitionRepository): IBoundToolsPort {
         enabled: r.enabled,
         status: r.status,
         tenantId: r.tenantId,
+        // T18b-A:透传 description/inputSchema 供组装层产出 externalTools(worker custom tool 定义)
+        description: r.description ?? null,
+        inputSchema: (r.inputSchema as Record<string, unknown> | null) ?? null,
       }));
     },
   };
