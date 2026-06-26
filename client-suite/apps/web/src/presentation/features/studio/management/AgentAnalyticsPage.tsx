@@ -127,9 +127,7 @@ export function AgentAnalyticsPage() {
                 <Icon name={m.icon} size={14} className="text-slate-500" />
                 <span className="text-[10px] text-slate-400">{m.label}</span>
               </div>
-              <div className={`text-[20px] font-bold ${m.color}`}>
-                {loading ? '—' : m.value}
-              </div>
+              <div className={`text-[20px] font-bold ${m.color}`}>{loading ? '—' : m.value}</div>
             </div>
           ))}
         </div>

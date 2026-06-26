@@ -97,11 +97,7 @@ export function SkillDetailView({ skill }: Props) {
 
         {/* 文件结构:无真接口(marketplace 未返文件详情),空态 */}
         {tab === 'files' && (
-          <EmptyState
-            icon="folder"
-            title="暂无文件结构"
-            hint="安装技能后查看完整文件内容"
-          />
+          <EmptyState icon="folder" title="暂无文件结构" hint="安装技能后查看完整文件内容" />
         )}
 
         {/* 参数 & 示例:无真接口,空态 */}
@@ -115,11 +111,7 @@ export function SkillDetailView({ skill }: Props) {
 
         {/* 评价:无真接口,空态 */}
         {tab === 'reviews' && (
-          <EmptyState
-            icon="star_outline"
-            title="暂无评价"
-            hint="安装使用后可提交评价"
-          />
+          <EmptyState icon="star_outline" title="暂无评价" hint="安装使用后可提交评价" />
         )}
       </div>
     </div>

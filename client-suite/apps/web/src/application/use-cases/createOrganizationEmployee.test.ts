@@ -4,7 +4,9 @@ import {
   type OrganizationEmployeeCreateDraft,
 } from './createOrganizationEmployee';
 
-function makeDraft(overrides?: Partial<OrganizationEmployeeCreateDraft>): OrganizationEmployeeCreateDraft {
+function makeDraft(
+  overrides?: Partial<OrganizationEmployeeCreateDraft>
+): OrganizationEmployeeCreateDraft {
   return {
     basic: {
       name: '组织助手',
@@ -176,7 +178,10 @@ describe('createOrganizationEmployee', () => {
         runtimeProfile: { modelId: 'gpt-4o', systemPrompt: '你是组织助手' },
       })
     );
-    expect(deps.toolApi.bindTool).toHaveBeenCalledWith({ definitionId: 'tool-1', instanceId: 'emp-1' });
+    expect(deps.toolApi.bindTool).toHaveBeenCalledWith({
+      definitionId: 'tool-1',
+      instanceId: 'emp-1',
+    });
     expect(deps.skillApi.link).toHaveBeenCalledWith('skill-1', { employeeId: 'emp-1' });
     expect(deps.evalApi.startRun).toHaveBeenCalledWith({
       suiteId: 'suite-1',

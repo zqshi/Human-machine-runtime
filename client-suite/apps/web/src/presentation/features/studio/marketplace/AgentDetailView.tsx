@@ -113,9 +113,7 @@ export function AgentDetailView({ agent }: Props) {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500 text-sm">
-                该 Agent 未声明能力标签
-              </div>
+              <div className="text-center py-8 text-slate-500 text-sm">该 Agent 未声明能力标签</div>
             )}
 
             {/* 工具/技能/模型配置:marketplace agent 未安装时无此数据(AgentDefinition 安装后才有),
