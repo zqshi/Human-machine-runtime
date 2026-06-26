@@ -82,3 +82,31 @@ docker-compose --profile litellm up
 - **CI 保障**:`.github/workflows/ci.yml` integration job 在 ubuntu-latest 跑该套件(fake-anthropic-server,不需真实 Anthropic key)。
 
 **仍未实测**(私有化真实场景):国产模型(qwen/deepseek)经 LiteLLM 的 `/v1/messages` Anthropic 兼容端点能否支撑 Claude Agent SDK 完整能力(工具调用/computer use)。fake server 只验证协议链路,不验证模型能力。纯内网建议默认走路径 B(LiteLLM+AgentExecutor),路径 A 需按企业模型实测后启用。
+
+## T43 实测结论(2026-06-26,路径 A + glm-4-flash)
+
+> 来源:T43 worker externalTools 容器 E2E 深度排查。结论:**glm-4-flash 在路径 A 架构上不可用**,但根因是 SDK 架构限制非模型 bug。
+
+### 已修的基础设施缺陷(3 项,对路径 B 无害,路径 A 启用必需)
+
+1. **LiteLLM 路由墙**:`/v1/messages` 对 `openai/*` 兼容模型默认走 Responses API(`/v4/responses`),glm 只支持 chat/completions → 404。修:`docker/litellm/config.yaml` 加 `use_chat_completions_url_for_anthropic_messages: true`,让 `/v1/messages` 经 chat/completions 转发。
+2. **worker 镜像滞后**:T29 的 externalTools 注入(`createSdkMcpServer`)代码在 git 但镜像未重建 → boundTools 不生效。修:重建 `claude-worker:latest`(验证 worker.js 含 createSdkMcpServer)。
+3. **worker 容器网络**:`docker-worker-runner.ts` buildArgs 缺 `--add-host host.docker.internal:host-gateway`,bridge 网络内 worker 解析不到宿主 → 访问 LiteLLM/server exit 1。修:buildArgs 加 `--add-host`(集成测试 test 代码本有,生产 runner 漏)。
+
+### 已验证通过(代码侧)
+
+- LiteLLM `/v1/messages` 返回 anthropic 格式 + tool_use(含 `mcp__hmr-external-tools__` MCP 长名)——协议层 glm 可行
+- worker 集成测试(`CLAUDE_WORKER_E2E=1`)4 项通过——协议链路 + externalTools 注入 SDK(tools 含 `mcp__hmr-external-tools__check_system_health`)
+- /tool-check 对 mcp custom tool 返回 allow(enforce off)
+
+### 未达成真 E2E——2 个卡点
+
+1. **glm-4-flash 在大工具集下不调业务工具**(LLM 能力限制,代码不可绕):claude-agent-sdk **强制向 LLM 暴露 19 个内置工具 schema**(Task/Bash/Grep/Edit 等大 schema),`allowedTools` 仅控制执行权限不控制 schema 暴露。glm-4-flash 在 19 工具集下决策失焦返回 text 不调 mcp 工具;**只留 mcp 工具(去掉 18 内置)时 glm 立刻返回 tool_use**(curl 实测)。即 glm 能调工具,但扛不住 SDK 的内置工具噪声。**此为 claude-agent-sdk 架构限制,非 worker 代码可绕过。**
+2. **sessionId resume bug**(adapter bug,可修):adapter 从 instance session store 取历史 sessionId 传给 worker,worker.ts `options.resume=sessionId` 让 SDK resume,但 worker 容器 `--rm` 无历史会话状态 → Claude Code 子进程 exit 1。验证:含 sessionId exit 1(emit error);去 sessionId exit 0(emit result+done)。
+
+### 结论与处置
+
+- **路径 A 用 glm-4-flash 不可用**:glm 弱模型 + SDK 强制内置工具噪声不兼容。换强模型(glm-4-plus/真 Anthropic)或走路径 B。
+- **路径 B(tool-loop + glm)已通过(T42)**:自研 `ToolLoopExecutor` 只把业务工具传 LLM,不强制内置工具,glm 正常工作。
+- **投产走路径 B**(免费先上线,不被厂商绑定);路径 A 标"需强模型"遗留,3 项基础设施修复已提交(启用路径 A 时必需)。
+- **遗留**:sessionId resume bug(adapter 不应传无效 sessionId 给 `--rm` worker,或 resume 失败容错)记入 backlog。
