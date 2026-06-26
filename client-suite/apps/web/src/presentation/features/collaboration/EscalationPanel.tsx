@@ -38,7 +38,10 @@ export function EscalationPanel() {
         <div className="text-center py-8 text-slate-500 text-sm">暂无人工介入记录</div>
       ) : (
         escalations.map((esc) => (
-          <div key={esc.id} className={`rounded-lg border p-3 ${URGENCY_STYLES[esc.urgency] ?? ''}`}>
+          <div
+            key={esc.id}
+            className={`rounded-lg border p-3 ${URGENCY_STYLES[esc.urgency] ?? ''}`}
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-slate-200 truncate">{esc.reason}</p>

@@ -1,9 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SystemJobHandler } from './system-handler.js';
-import {
-  registerUsageAlertScanner,
-  scanTenantQuotaAlerts,
-} from './usage-alert-scanner.js';
+import { registerUsageAlertScanner, scanTenantQuotaAlerts } from './usage-alert-scanner.js';
 import type { QuotaAlertScannerPort, TenantListPort } from './usage-alert-scanner.js';
 
 function makeQuotaService(): QuotaAlertScannerPort & { getDashboard: ReturnType<typeof vi.fn> } {
