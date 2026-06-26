@@ -10,15 +10,17 @@ function mockRepo() {
 }
 
 describe('openclaw bootstrap routes', () => {
-  it('GET /bootstrap returns quick commands and activities', async () => {
+  it('GET /bootstrap returns quick commands(proactive 假数据已移除)', async () => {
     const repo = mockRepo();
     const app = createOpenclawBootstrapRoutes(repo as never);
     const res = await app.request('/bootstrap');
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.quickCommands).toBeDefined();
-    expect(body.proactiveActivities).toBeDefined();
-    expect(body.proactiveInsights).toBeDefined();
+    expect(body.quickCommands).toHaveLength(4);
+    // proactiveActivities/proactiveInsights 假数据已移除(无真实活动数据源,接真实数据后可恢复)
+    expect(body.proactiveActivities).toBeUndefined();
+    expect(body.proactiveInsights).toBeUndefined();
   });
 
   it('POST /agent/execute returns null intent without runtime service', async () => {

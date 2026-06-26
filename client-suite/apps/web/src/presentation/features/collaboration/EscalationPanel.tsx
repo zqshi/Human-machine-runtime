@@ -12,28 +12,8 @@ interface EscalationEntry {
   createdAt: number;
 }
 
-const MOCK_ESCALATIONS: EscalationEntry[] = [
-  {
-    id: 'esc-1',
-    chainId: 'chain-a',
-    reason: 'Agent 无法判断审批权限范围',
-    fromAgent: '合规审核 Agent',
-    toTarget: '法务主管',
-    urgency: 'high',
-    status: 'open',
-    createdAt: Date.now() - 300_000,
-  },
-  {
-    id: 'esc-2',
-    chainId: 'chain-b',
-    reason: '执行结果置信度低于阈值',
-    fromAgent: '数据分析 Agent',
-    toTarget: '数据负责人',
-    urgency: 'normal',
-    status: 'acknowledged',
-    createdAt: Date.now() - 900_000,
-  },
-];
+// 去mock:移除 MOCK_ESCALATIONS 假数据(escalation 是 SSE 事件流 escalation:triggered/resolved,
+// 非列表 API;真实待处理列表需接事件流聚合或后端列表端点,留后续)。当前空态。
 
 const URGENCY_STYLES: Record<string, string> = {
   critical: 'border-red-500/30 bg-red-500/5',
@@ -42,7 +22,7 @@ const URGENCY_STYLES: Record<string, string> = {
 };
 
 export function EscalationPanel() {
-  const [escalations] = useState<EscalationEntry[]>(MOCK_ESCALATIONS);
+  const [escalations] = useState<EscalationEntry[]>([]);
 
   return (
     <div className="space-y-3">
@@ -54,27 +34,31 @@ export function EscalationPanel() {
         </span>
       </div>
 
-      {escalations.map((esc) => (
-        <div key={esc.id} className={`rounded-lg border p-3 ${URGENCY_STYLES[esc.urgency] ?? ''}`}>
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-200 truncate">{esc.reason}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {esc.fromAgent} → {esc.toTarget}
-              </p>
+      {escalations.length === 0 ? (
+        <div className="text-center py-8 text-slate-500 text-sm">暂无人工介入记录</div>
+      ) : (
+        escalations.map((esc) => (
+          <div key={esc.id} className={`rounded-lg border p-3 ${URGENCY_STYLES[esc.urgency] ?? ''}`}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-200 truncate">{esc.reason}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {esc.fromAgent} → {esc.toTarget}
+                </p>
+              </div>
+              <span
+                className={`text-xs px-2 py-0.5 rounded ${
+                  esc.status === 'open'
+                    ? 'bg-orange-500/20 text-orange-300'
+                    : 'bg-green-500/20 text-green-300'
+                }`}
+              >
+                {esc.status === 'open' ? '待处理' : '已确认'}
+              </span>
             </div>
-            <span
-              className={`text-xs px-2 py-0.5 rounded ${
-                esc.status === 'open'
-                  ? 'bg-orange-500/20 text-orange-300'
-                  : 'bg-green-500/20 text-green-300'
-              }`}
-            >
-              {esc.status === 'open' ? '待处理' : '已确认'}
-            </span>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 }
