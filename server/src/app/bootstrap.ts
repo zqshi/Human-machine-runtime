@@ -1,6 +1,7 @@
 import { pool, type Database } from '../db/client.js';
 import { config } from '../config/index.js';
 import { logger } from './logger.js';
+import { appEventBus } from '../shared/event-bus.js';
 
 // 拆分出的子模块
 import type { AppContext } from './bootstrap/types.js';
@@ -18,6 +19,8 @@ import { buildQuotaBundle } from './bootstrap/quota-bundle.js';
 import { buildToolBundle } from './bootstrap/tool-bundle.js';
 import { buildRuntimeEngine } from './bootstrap/runtime-engine.js';
 import { buildAgentAdapters } from './bootstrap/agent-adapters.js';
+import { ToolLoopExecutor } from '../contexts/agent-core/domain/tool-loop-executor.js';
+import { ToolLoopAdapter } from '../contexts/agent-core/sandbox/tool-loop-adapter.js';
 import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
@@ -306,6 +309,34 @@ export function createAppContext(db: Database): AppContext {
     systemConfigService,
     instanceRepo
   );
+
+  // ToolLoopAdapter(实例任务真执行,不被模型绑定):经 LiteLLM 国产模型做多轮工具循环 +
+  // registry.invoke 真工具闭环(审批/凭证/租户隔离/计费/callLog)。替代假桩 OpenClawAdapter
+  // 接 dispatchTask 主链路(见 plan moonlit-dreaming-parrot)。依赖 agentLlmClient + toolRegistryService
+  // 均已构造,故在此注册(buildAgentAdapters 早于 toolRegistryService 构造,无法在彼处注入)。
+  const toolLoopExecutor = new ToolLoopExecutor(agentLlmClient, toolRegistryService);
+  const toolLoopAdapter = new ToolLoopAdapter(toolLoopExecutor);
+  agentAdapterRegistry.register(toolLoopAdapter);
+  toolLoopAdapter.onTaskComplete((result) => {
+    const receipt = receiptManager.getReceipt(result.taskId);
+    if (receipt) {
+      if (result.success) {
+        receiptManager
+          .sendSuccessReceipt(receipt.id, receipt.summary, JSON.stringify(result.output))
+          .catch((err) => logger.warn({ err: String(err) }, 'tool-loop receipt send failed'));
+      } else {
+        receiptManager
+          .sendFailureReceipt(receipt.id, receipt.summary, result.error ?? 'tool-loop task failed')
+          .catch((err) => logger.warn({ err: String(err) }, 'tool-loop receipt send failed'));
+      }
+    }
+    appEventBus.publish('receipt:sent', {
+      receiptId: result.taskId,
+      taskId: result.taskId,
+      channel: receipt?.originChannel ?? 'unknown',
+      success: result.success,
+    });
+  });
   const pushChannelService = new PushChannelService(operationalRepo);
   const sharedAgentService = new SharedAgentService(
     instanceService,

@@ -57,6 +57,9 @@ export class AdapterRegistry {
   }
 
   private selectBestAdapter(_task: AgentTaskInput): IAgentRuntimeAdapter | undefined {
+    // 优先 tool-loop(实例任务真执行,不被模型绑定;替代假桩 openclaw 默认路由)
+    const toolLoop = this.adapters.get('tool-loop');
+    if (toolLoop) return toolLoop;
     const adapters = Array.from(this.adapters.values());
     return adapters[0];
   }

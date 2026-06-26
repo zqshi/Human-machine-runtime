@@ -21,18 +21,46 @@ export interface IntentResult {
 }
 
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  /** assistant 轮携带的工具调用请求(OpenAI tool_calls 格式,仅 role='assistant' 时有值) */
+  toolCalls?: ToolCall[];
+  /** tool 轮回填的工具调用 id(仅 role='tool' 时有值,与 assistant.toolCalls[].id 对应) */
+  toolCallId?: string;
+}
+
+/** OpenAI function calling 工具调用请求(LLM 返回,要求执行某工具)。 */
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
+/** OpenAI function calling 工具定义(传给 LLM 供其选择)。 */
+export interface ToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    /** JSON Schema(OpenAI parameters 格式) */
+    parameters: Record<string, unknown>;
+  };
 }
 
 export interface ChatCompletionOptions {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: { type: string };
+  /** v1.7+ 扩展:工具定义(OpenAI function calling),ToolLoopExecutor 用 */
+  tools?: ToolDefinition[];
+  /** 工具选择策略('auto'/'none'/{type:'function',function:{name}}) */
+  toolChoice?: string | { type: string; function?: { name: string } };
 }
 
 export interface ChatCompletionResult {
   content: string | null;
+  /** LLM 要求的工具调用(解析自响应 message.tool_calls);无则 undefined */
+  toolCalls?: ToolCall[];
 }
 
 /** LLM 客户端接口 — domain 只依赖此抽象，不引入任何 SDK */

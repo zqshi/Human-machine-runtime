@@ -4,7 +4,8 @@ export type AgentFramework =
   | 'coze'
   | 'langchain'
   | 'custom'
-  | 'claude-agent-sdk';
+  | 'claude-agent-sdk'
+  | 'tool-loop';
 
 export type TaskPriority = 'critical' | 'high' | 'normal' | 'low';
 

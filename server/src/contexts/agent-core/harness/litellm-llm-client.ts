@@ -46,20 +46,34 @@ export class LiteLlmClientAdapter implements ILLMClient {
     const start = Date.now();
     try {
       // .call 保留底层 client 的 this（LiteLLMClient.chatCompletion 依赖 this.request）
+      // 保留 tool_calls(tool role 回填 + assistant 工具请求),透传 tools/tool_choice(底层 v1.7 已支持)
+      const mappedMessages = messages.map((m) => {
+        if (m.role === 'tool') {
+          return { role: 'tool', content: m.content, tool_call_id: m.toolCallId };
+        }
+        if (m.role === 'assistant' && m.toolCalls?.length) {
+          return { role: 'assistant', content: m.content, tool_calls: m.toolCalls };
+        }
+        return { role: m.role, content: m.content };
+      });
       const res = await this.client.chatCompletion.call(this.client, {
         model: this.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: mappedMessages,
         temperature: options?.temperature ?? this.defaults?.temperature,
         max_tokens: options?.maxTokens ?? this.defaults?.maxTokens,
+        tools: options?.tools,
+        tool_choice: options?.toolChoice,
       });
       const content = extractContent(res);
-      if (content === null) {
+      const toolCalls = extractToolCalls(res);
+      // 无内容也无工具调用 → 视为空(交由调用方 fallback)
+      if (content === null && (!toolCalls || toolCalls.length === 0)) {
         llmCallsTotal.labels(this.model, 'empty').inc();
         return null;
       }
       llmCallsTotal.labels(this.model, 'success').inc();
       llmCallDurationSeconds.labels(this.model, 'success').observe((Date.now() - start) / 1000);
-      return { content };
+      return { content, toolCalls: toolCalls ?? undefined };
     } catch {
       // 降级：返回 null，交由 AgentExecutor 走关键词 fallback，绝不向上抛打断主流程
       llmCallsTotal.labels(this.model, 'error').inc();
@@ -77,4 +91,37 @@ function extractContent(res: unknown): string | null {
   const message = (choices[0] as { message?: { content?: unknown } } | undefined)?.message;
   const content = message?.content;
   return typeof content === 'string' ? content : null;
+}
+
+/**
+ * 从 OpenAI 兼容响应提取工具调用(解析 choices[0].message.tool_calls)。
+ * 结构异常/无 tool_calls 返回 null。ToolLoopExecutor 据此决定是否进入工具执行轮。
+ */
+function extractToolCalls(res: unknown): import('../domain/agent-executor.js').ToolCall[] | null {
+  if (!res || typeof res !== 'object') return null;
+  const choices = (res as { choices?: unknown }).choices;
+  if (!Array.isArray(choices) || choices.length === 0) return null;
+  const message = (choices[0] as { message?: { tool_calls?: unknown } } | undefined)?.message;
+  const raw = message?.tool_calls;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const calls: import('../domain/agent-executor.js').ToolCall[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const tc = item as {
+      id?: unknown;
+      type?: unknown;
+      function?: { name?: unknown; arguments?: unknown };
+    };
+    if (typeof tc.id !== 'string' || tc.type !== 'function') continue;
+    if (!tc.function || typeof tc.function.name !== 'string') continue;
+    calls.push({
+      id: tc.id,
+      type: 'function',
+      function: {
+        name: tc.function.name,
+        arguments: typeof tc.function.arguments === 'string' ? tc.function.arguments : '{}',
+      },
+    });
+  }
+  return calls.length > 0 ? calls : null;
 }

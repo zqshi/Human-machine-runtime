@@ -1,10 +1,26 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
+import { z } from 'zod';
 import { streamSSE } from 'hono/streaming';
 import { newId, AppError } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { SSEEvent } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
 import type { AgentCore } from '../../contexts/agent-core/agent-core.js';
+import type { Principal } from '../../middleware/auth.js';
+
+function getUser(c: Context): Principal {
+  return c.get('user') as Principal;
+}
+
+const dispatchSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().default(''),
+  input: z.record(z.unknown()).optional().default({}),
+  priority: z.string().optional().default('normal'),
+  /** 可选指定框架;缺省由 sandbox.selectBestAdapter 选 tool-loop(实例任务真执行) */
+  framework: z.string().optional(),
+});
 
 export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCore?: AgentCore) {
   const app = new Hono();
@@ -104,20 +120,23 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
     if (!agentCore) {
       return c.json({ error: 'agent core not available' }, 503);
     }
-    const body = await c.req.json<{
-      name: string;
-      description: string;
-      input?: Record<string, unknown>;
-      priority?: string;
-      framework?: string;
-    }>();
+    const raw = await c.req.json().catch(() => null);
+    if (!raw) return c.json({ error: 'json body required' }, 400);
+    const parsed = dispatchSchema.safeParse(raw);
+    if (!parsed.success) {
+      return c.json({ error: 'invalid request', details: parsed.error.flatten() }, 400);
+    }
+    const body = parsed.data;
+    // 安全修复:tenantId 从 auth principal 取(非 body 硬编码 ''),保证租户隔离生效
+    const user = getUser(c);
+    const tenantId = user.tenantId || 'default';
     const task = {
       id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      tenantId: '',
+      tenantId,
       name: body.name,
-      description: body.description ?? '',
+      description: body.description,
       priority: (body.priority as 'normal') ?? 'normal',
-      input: body.input ?? {},
+      input: body.input,
     };
     try {
       const result = await agentCore.harness.dispatchTask(task, body.framework as never);
