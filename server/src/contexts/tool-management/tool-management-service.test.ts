@@ -212,12 +212,14 @@ describe('ToolManagementService', () => {
     const svc = createService(mocks);
     const introspectSpy = vi
       .spyOn(
-        (svc as unknown as { dbIntrospector: { introspect: Function } }).dbIntrospector,
+        (svc as unknown as { sourceService: { dbIntrospector: { introspect: Function } } })
+          .sourceService.dbIntrospector,
         'introspect'
       )
       .mockResolvedValue({ tables: [], errors: [] });
     vi.spyOn(
-      (svc as unknown as { dbIntrospector: { generateTools: Function } }).dbIntrospector,
+      (svc as unknown as { sourceService: { dbIntrospector: { generateTools: Function } } })
+        .sourceService.dbIntrospector,
       'generateTools'
     ).mockReturnValue([]);
     const result = await svc.syncSource('tsrc_1');
@@ -285,8 +287,11 @@ describe('ToolManagementService', () => {
     const svc = createService(mocks);
     const introspectSpy = vi
       .spyOn(
-        (svc as unknown as { dbIntrospector: { introspect: Function; generateTools: Function } })
-          .dbIntrospector,
+        (
+          svc as unknown as {
+            sourceService: { dbIntrospector: { introspect: Function; generateTools: Function } };
+          }
+        ).sourceService.dbIntrospector,
         'introspect'
       )
       .mockResolvedValue({
@@ -294,7 +299,8 @@ describe('ToolManagementService', () => {
         errors: [],
       });
     const generateSpy = vi.spyOn(
-      (svc as unknown as { dbIntrospector: { generateTools: Function } }).dbIntrospector,
+      (svc as unknown as { sourceService: { dbIntrospector: { generateTools: Function } } })
+        .sourceService.dbIntrospector,
       'generateTools'
     );
 
