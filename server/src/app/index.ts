@@ -23,7 +23,19 @@ app.use('/api/*', rateLimitMiddleware);
 app.use('*', metricsMiddleware);
 
 // Prometheus 抓取端点（不经 rateLimit，避免抓取被限流）
+// P2(架构审计):生产需配 bearer token(CLAUDE_INTERNAL_TOOL_SECRET) 防指标元数据暴露;
+// 支持 Authorization: Bearer <secret>(prometheus bearer_token 配置) 或 X-Internal-Secret(内部 RPC 复用);
+// dev 未配 secret 则放行(兼容本地调试)。
 app.get('/metrics', async (c) => {
+  const secret = config.claude?.internalToolSecret;
+  if (secret) {
+    const auth = c.req.header('authorization') ?? '';
+    const xSecret = c.req.header('x-internal-secret') ?? '';
+    const bearer = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (bearer !== secret && xSecret !== secret) {
+      return c.json({ error: 'unauthorized' }, 401);
+    }
+  }
   c.header('Content-Type', registry.contentType);
   return c.body(await registry.metrics());
 });
