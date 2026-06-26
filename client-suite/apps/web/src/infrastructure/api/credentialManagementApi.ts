@@ -83,6 +83,17 @@ export const credentialManagementApi = {
     return request(BASE, { method: 'POST', body: JSON.stringify(input) });
   },
 
+  /** T37:多 secret 凭证(DB username+password),供 McpDatabaseFlow 真连接凭证链路 */
+  createCredentialWithSecrets(input: {
+    userId: number;
+    providerId: number;
+    externalAccountId?: string;
+    scope?: string;
+    secrets: Array<{ secretType: string; plaintext: string }>;
+  }): Promise<{ id: number }> {
+    return request(`${BASE}/with-secrets`, { method: 'POST', body: JSON.stringify(input) });
+  },
+
   getCredential(id: number): Promise<CredentialDetail> {
     return request(`${BASE}/${id}`);
   },

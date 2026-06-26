@@ -76,6 +76,44 @@ describe('CredentialManagementService', () => {
     expect(repo.saveSecret).toHaveBeenCalledWith(1, 'api_key', 'enc:secret123');
   });
 
+  // T37: DB 凭证需 username+password 多 secret,createCredentialWithSecrets 建 authz + 存多个 secret
+  it('createCredentialWithSecrets: 建 authz + 存多个 secret(DB username/password)', async () => {
+    const repo = makeRepo();
+    const cs = makeCredentialService();
+    const svc = new CredentialManagementService(repo, cs, makeLeaseService());
+    const result = await svc.createCredentialWithSecrets({
+      userId: 1,
+      providerId: 2,
+      secrets: [
+        { secretType: 'username', plaintext: 'dbuser' },
+        { secretType: 'password', plaintext: 'dbpass' },
+      ],
+    });
+    expect(result.id).toBe(1);
+    expect(repo.createAuthorization).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 1, providerId: 2 })
+    );
+    // 两个 secret 都加密 + 存(同一 authz.id)
+    expect(cs.encrypt).toHaveBeenCalledWith('dbuser');
+    expect(cs.encrypt).toHaveBeenCalledWith('dbpass');
+    expect(repo.saveSecret).toHaveBeenCalledTimes(2);
+    expect(repo.saveSecret).toHaveBeenCalledWith(1, 'username', 'enc:dbuser');
+    expect(repo.saveSecret).toHaveBeenCalledWith(1, 'password', 'enc:dbpass');
+  });
+
+  it('createCredentialWithSecrets: 空 secrets 数组仍建 authz(不存 secret)', async () => {
+    const repo = makeRepo();
+    const svc = new CredentialManagementService(repo, makeCredentialService(), makeLeaseService());
+    const result = await svc.createCredentialWithSecrets({
+      userId: 1,
+      providerId: 2,
+      secrets: [],
+    });
+    expect(result.id).toBe(1);
+    expect(repo.createAuthorization).toHaveBeenCalledTimes(1);
+    expect(repo.saveSecret).not.toHaveBeenCalled();
+  });
+
   it('getCredential: 返回详情含 secret 元数据,不含 ciphertext(安全)', async () => {
     const repo = makeRepo();
     (repo.getAuthorization as ReturnType<typeof vi.fn>).mockResolvedValue({

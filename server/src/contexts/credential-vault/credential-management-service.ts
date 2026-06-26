@@ -30,6 +30,15 @@ export interface CreateCredentialInput {
   plaintext: string;
 }
 
+/** T37:多 secret 凭证(DB username+password 等)。secrets 数组每项 {secretType, plaintext}。 */
+export interface CreateCredentialWithSecretsInput {
+  userId: number;
+  providerId: number;
+  externalAccountId?: string | null;
+  scope?: string | null;
+  secrets: Array<{ secretType: string; plaintext: string }>;
+}
+
 export interface CredentialDetail extends AuthorizationRecord {
   secrets: SecretMeta[];
 }
@@ -50,6 +59,29 @@ export class CredentialManagementService {
     });
     const ciphertext = this.credentialService.encrypt(input.plaintext);
     await this.repo.saveSecret(authz.id, input.secretType, ciphertext);
+    return { id: authz.id };
+  }
+
+  /**
+   * T37:建 authz + 存多个 secret(DB username+password 等)。
+   *
+   * DB 连接凭证需 username/password 两 secret 关联同一 authz。createCredential 只存单 secret
+   * (OAuth 模型),本方法支持多 secret,供 McpDatabaseFlow 真连接凭证链路用。
+   * 返回 authz.id(作 tool source 的 credentialId)。
+   */
+  async createCredentialWithSecrets(
+    input: CreateCredentialWithSecretsInput
+  ): Promise<{ id: number }> {
+    const authz = await this.repo.createAuthorization({
+      userId: input.userId,
+      providerId: input.providerId,
+      externalAccountId: input.externalAccountId,
+      scope: input.scope,
+    });
+    for (const secret of input.secrets) {
+      const ciphertext = this.credentialService.encrypt(secret.plaintext);
+      await this.repo.saveSecret(authz.id, secret.secretType, ciphertext);
+    }
     return { id: authz.id };
   }
 

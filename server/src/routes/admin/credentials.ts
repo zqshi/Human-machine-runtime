@@ -14,6 +14,22 @@ const createCredentialSchema = z.object({
   plaintext: z.string().min(1),
 });
 
+/** T37:多 secret 凭证(DB username+password)。供 McpDatabaseFlow 真连接凭证链路。 */
+const createCredentialWithSecretsSchema = z.object({
+  userId: z.number().int().positive(),
+  providerId: z.number().int().positive(),
+  externalAccountId: z.string().max(256).optional(),
+  scope: z.string().max(256).optional(),
+  secrets: z
+    .array(
+      z.object({
+        secretType: z.string().min(1).max(32),
+        plaintext: z.string().min(1),
+      })
+    )
+    .min(1, '至少一个 secret'),
+});
+
 const issueLeaseSchema = z.object({
   ttlSec: z.number().int().positive().optional(),
 });
@@ -41,6 +57,14 @@ export function createAdminCredentialRoutes(svc: CredentialManagementService) {
     const parsed = await parseBody(c, createCredentialSchema);
     if ('error' in parsed) return badRequest(c, parsed.error);
     const result = await svc.createCredential(parsed.data);
+    return c.json(result, 201);
+  });
+
+  // T37:多 secret 凭证(DB username+password),供 McpDatabaseFlow 真连接
+  app.post('/with-secrets', async (c) => {
+    const parsed = await parseBody(c, createCredentialWithSecretsSchema);
+    if ('error' in parsed) return badRequest(c, parsed.error);
+    const result = await svc.createCredentialWithSecrets(parsed.data);
     return c.json(result, 201);
   });
 

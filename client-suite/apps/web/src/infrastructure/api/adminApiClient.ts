@@ -188,6 +188,19 @@ export const toolApi = {
       method: 'POST',
     });
   },
+  /** T37:探测表结构不落库(供 McpDatabaseFlow 测试连接+预览 schema,勾选后再 sync) */
+  introspectSource(id: string): Promise<{
+    tables: Array<{
+      tableName: string;
+      tableType: string;
+      columns: Array<{ name: string; dataType: string; isPrimaryKey: boolean }>;
+    }>;
+    errors: string[];
+  }> {
+    return request(`/api/admin/tools/sources/${encodeURIComponent(id)}/introspect`, {
+      method: 'POST',
+    });
+  },
   uploadSpec(
     specContent: string
   ): Promise<{ specVersion: string; title: string; toolCount: number }> {

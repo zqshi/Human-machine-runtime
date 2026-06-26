@@ -66,6 +66,7 @@ function makeDeps() {
       deleteSource: vi.fn(),
       syncSource: vi.fn(),
       testConnection: vi.fn(),
+      introspectSource: vi.fn(),
       uploadSpec: vi.fn(),
       listDefinitions: vi.fn(),
       getDefinition: vi.fn(),
