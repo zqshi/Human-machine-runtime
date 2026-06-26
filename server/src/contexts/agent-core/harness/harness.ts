@@ -10,6 +10,7 @@ import type {
   AgentTaskInput,
   AgentFramework,
   AgentTaskResult,
+  AgentTaskStatus,
 } from '../sandbox/agent-runtime-adapter.js';
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
 import type { IAssemblyProvider, AssemblyRequest } from '../domain/assembly-provider.js';
@@ -284,6 +285,14 @@ export class AgentHarness {
         }
       }
     }
+  }
+
+  /**
+   * 按 taskId 查任务状态(透传 sandbox):dispatchTask 异步执行后,调用方按 taskId
+   * 轮询任务态/结论。registry 遍历所有 adapter 找真正持有该 task 的(跳过 not found)。
+   */
+  async getTaskStatus(taskId: string): Promise<AgentTaskStatus> {
+    return this.sandbox.getTaskStatus(taskId);
   }
 
   /** Adapter 任务完成回调注册(透传 sandbox.adapterRegistry 的任意 adapter)。 */

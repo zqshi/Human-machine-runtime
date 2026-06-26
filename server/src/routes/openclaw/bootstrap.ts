@@ -114,6 +114,15 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
     }
   });
 
+  app.get('/agent/status/:id', async (c) => {
+    if (!agentCore) {
+      return c.json({ error: 'agent core not available' }, 503);
+    }
+    const id = c.req.param('id');
+    const status = await agentCore.harness.getTaskStatus(id);
+    return c.json(status);
+  });
+
   app.get('/agent/adapters', async (c) => {
     if (!agentCore) {
       return c.json({ adapters: [] });

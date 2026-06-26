@@ -14,6 +14,7 @@
 import type {
   AgentFramework,
   AgentTaskInput,
+  AgentTaskStatus,
   IAgentRuntimeAdapter,
 } from './agent-runtime-adapter.js';
 
@@ -77,6 +78,32 @@ export class AdapterRegistry {
       }
     }
     return results;
+  }
+
+  /**
+   * 按 taskId 查任务状态:遍历所有 adapter,返回第一个真正持有该 task 的状态。
+   * adapter 找不到任务时返回 failed+"Task not found",跳过继续遍历其他 adapter。
+   * 单 adapter 抛错不阻断(继续其他 adapter)。全部 not found → 返回 not found。
+   * 用于 dispatch 异步执行后,调用方按 taskId 轮询任务态/结论(getTaskStatus)。
+   */
+  async getTaskStatus(taskId: string): Promise<AgentTaskStatus> {
+    for (const adapter of this.adapters.values()) {
+      try {
+        const status = await adapter.getTaskStatus(taskId);
+        if (!(status.state === 'failed' && /not found/i.test(status.error ?? ''))) {
+          return status;
+        }
+      } catch {
+        // 单 adapter 查询异常不阻断,继续遍历其他 adapter
+      }
+    }
+    return {
+      taskId,
+      state: 'failed',
+      progress: 0,
+      error: 'Task not found',
+      lastUpdatedAt: new Date(),
+    };
   }
 }
 

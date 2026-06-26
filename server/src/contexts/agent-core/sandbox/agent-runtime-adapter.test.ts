@@ -26,6 +26,7 @@ function makeAdapter(
     submitTask?: (t: AgentTaskInput) => Promise<{ taskId: string; accepted: boolean }>;
     health?: () => Promise<{ healthy: boolean; latencyMs: number }>;
     healthThrows?: boolean;
+    getTaskStatus?: (taskId: string) => Promise<AgentTaskStatus>;
   } = {}
 ): IAgentRuntimeAdapter {
   const version = '1.0.0';
@@ -35,12 +36,14 @@ function makeAdapter(
     submitTask:
       opts.submitTask ?? (async (t) => ({ taskId: `${framework}-${t.id}`, accepted: true })),
     async getTaskStatus(taskId: string): Promise<AgentTaskStatus> {
-      return {
-        taskId,
-        state: 'completed',
-        progress: 100,
-        lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
-      };
+      return opts.getTaskStatus
+        ? opts.getTaskStatus(taskId)
+        : {
+            taskId,
+            state: 'completed',
+            progress: 100,
+            lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+          };
     },
     async cancelTask(): Promise<{ cancelled: boolean }> {
       return { cancelled: true };
@@ -216,5 +219,100 @@ describe('AgentRuntimeAdapterRegistry - healthCheckAll', () => {
     expect(res).toHaveLength(2);
     expect(res.find((r) => r.framework === 'dify')?.healthy).toBe(false);
     expect(res.find((r) => r.framework === 'coze')?.healthy).toBe(true);
+  });
+});
+
+describe('AgentRuntimeAdapterRegistry - getTaskStatus', () => {
+  it('returns status from the adapter holding the task', async () => {
+    const reg = new AgentRuntimeAdapterRegistry();
+    reg.register(
+      makeAdapter('tool-loop', {
+        getTaskStatus: async (id) => ({
+          taskId: id,
+          state: 'running',
+          progress: 50,
+          lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+        }),
+      })
+    );
+    const status = await reg.getTaskStatus('tloop_123');
+    expect(status.state).toBe('running');
+    expect(status.progress).toBe(50);
+  });
+
+  it('skips adapters returning not-found and returns the real status', async () => {
+    const reg = new AgentRuntimeAdapterRegistry();
+    reg.register(
+      makeAdapter('claude-agent-sdk', {
+        getTaskStatus: async (id) => ({
+          taskId: id,
+          state: 'failed',
+          progress: 0,
+          error: 'Task not found',
+          lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+        }),
+      })
+    );
+    reg.register(
+      makeAdapter('tool-loop', {
+        getTaskStatus: async (id) => ({
+          taskId: id,
+          state: 'completed',
+          progress: 100,
+          lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+        }),
+      })
+    );
+    const status = await reg.getTaskStatus('tloop_abc');
+    expect(status.state).toBe('completed');
+    expect(status.progress).toBe(100);
+  });
+
+  it('returns failed not-found when no adapter holds the task', async () => {
+    const reg = new AgentRuntimeAdapterRegistry();
+    reg.register(
+      makeAdapter('tool-loop', {
+        getTaskStatus: async (id) => ({
+          taskId: id,
+          state: 'failed',
+          progress: 0,
+          error: 'Task not found',
+          lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+        }),
+      })
+    );
+    const status = await reg.getTaskStatus('unknown');
+    expect(status.state).toBe('failed');
+    expect(status.error).toMatch(/not found/i);
+  });
+
+  it('returns failed not-found when no adapters registered', async () => {
+    const reg = new AgentRuntimeAdapterRegistry();
+    const status = await reg.getTaskStatus('any');
+    expect(status.state).toBe('failed');
+    expect(status.error).toMatch(/not found/i);
+  });
+
+  it('continues when an adapter throws during status lookup', async () => {
+    const reg = new AgentRuntimeAdapterRegistry();
+    reg.register(
+      makeAdapter('claude-agent-sdk', {
+        getTaskStatus: async () => {
+          throw new Error('boom');
+        },
+      })
+    );
+    reg.register(
+      makeAdapter('tool-loop', {
+        getTaskStatus: async (id) => ({
+          taskId: id,
+          state: 'completed',
+          progress: 100,
+          lastUpdatedAt: new Date('2025-01-01T00:00:00Z'),
+        }),
+      })
+    );
+    const status = await reg.getTaskStatus('tloop_x');
+    expect(status.state).toBe('completed');
   });
 });

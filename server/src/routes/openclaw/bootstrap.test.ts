@@ -72,6 +72,31 @@ describe('openclaw bootstrap routes', () => {
     expect(execute).toHaveBeenCalledWith('hello', 'hi', 's1', 'tn_acme');
   });
 
+  it('GET /agent/status/:id returns task status from harness', async () => {
+    const repo = mockRepo();
+    const getTaskStatus = vi.fn().mockResolvedValue({
+      taskId: 'tloop_1',
+      state: 'completed',
+      progress: 100,
+      lastUpdatedAt: '2025-01-01T00:00:00Z',
+    });
+    const agentCore = { harness: { getTaskStatus } } as never;
+    const app = createOpenclawBootstrapRoutes(repo as never, agentCore);
+    const res = await app.request('/agent/status/tloop_1');
+    expect(res.status).toBe(200);
+    expect(getTaskStatus).toHaveBeenCalledWith('tloop_1');
+    const body = await res.json();
+    expect(body.state).toBe('completed');
+    expect(body.taskId).toBe('tloop_1');
+  });
+
+  it('GET /agent/status/:id returns 503 without agentCore', async () => {
+    const repo = mockRepo();
+    const app = createOpenclawBootstrapRoutes(repo as never);
+    const res = await app.request('/agent/status/tloop_1');
+    expect(res.status).toBe(503);
+  });
+
   it('GET /knowledge/patterns returns patterns', async () => {
     const repo = mockRepo();
     repo.list.mockResolvedValue([{ id: 'kp-1', keywords: ['test'] }]);
