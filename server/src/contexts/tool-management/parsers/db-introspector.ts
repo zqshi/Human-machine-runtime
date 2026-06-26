@@ -58,10 +58,25 @@ export class DbIntrospector {
   }
 
   /**
-   * 测试数据库连接
+   * 测试数据库连接(按 config.type 分流:PG 用 pg,MySQL 用 mysql2)
    */
   async testConnection(config: DbConnectionConfig): Promise<{ success: boolean; message: string }> {
     try {
+      if (config.type === 'mysql') {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.createConnection({
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          user: config.username,
+          password: config.password,
+          connectTimeout: 5000,
+        });
+        await conn.execute('SELECT 1');
+        await conn.end();
+        return { success: true, message: '连接成功' };
+      }
+      // 默认 PostgreSQL
       const { default: pg } = await import('pg');
       const client = new pg.Client({
         host: config.host,
@@ -204,12 +219,103 @@ export class DbIntrospector {
 
   /* ──── MySQL Introspection ──── */
 
-  private async introspectMysql(_config: DbConnectionConfig): Promise<IntrospectResult> {
-    // MySQL introspection 预留 — 结构类似，使用 mysql2 连接
-    return {
-      tables: [],
-      errors: ['MySQL 探测暂未实现（预留接口）'],
-    };
+  private async introspectMysql(config: DbConnectionConfig): Promise<IntrospectResult> {
+    const errors: string[] = [];
+    const schemaName = config.schema || config.database; // MySQL 用库名作 schema 限定
+
+    try {
+      const mysql = await import('mysql2/promise');
+      const conn = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.username,
+        password: config.password,
+        connectTimeout: 10000,
+      });
+
+      // MySQL 只读会话(防 SET TRANSACTION READ ONLY 在非事务上下文的差异,用 START TRANSACTION READ ONLY)
+      await conn.query('START TRANSACTION READ ONLY');
+
+      // 表列表(MySQL information_schema.table_schema 即库名)
+      const [tablesRows] = (await conn.execute(
+        `SELECT TABLE_NAME AS table_name, TABLE_TYPE AS table_type
+         FROM information_schema.tables
+         WHERE table_schema = ?
+           AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+         ORDER BY table_name`,
+        [schemaName]
+      )) as [unknown[], unknown];
+
+      // 列信息
+      const [columnsRows] = (await conn.execute(
+        `SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
+                DATA_TYPE AS data_type, IS_NULLABLE AS is_nullable,
+                COLUMN_DEFAULT AS column_default, COLUMN_COMMENT AS column_comment
+         FROM information_schema.columns
+         WHERE table_schema = ?
+         ORDER BY table_name, ORDINAL_POSITION`,
+        [schemaName]
+      )) as [unknown[], unknown];
+
+      // 主键(MySQL 用 statistics 表,非 table_constraints)
+      const [pkRows] = (await conn.execute(
+        `SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name
+         FROM information_schema.statistics
+         WHERE table_schema = ? AND INDEX_NAME = 'PRIMARY'`,
+        [schemaName]
+      )) as [unknown[], unknown];
+
+      await conn.end();
+
+      const pkMap = new Map<string, Set<string>>();
+      for (const row of pkRows as { table_name: string; column_name: string }[]) {
+        let pkCols = pkMap.get(row.table_name);
+        if (!pkCols) {
+          pkCols = new Set();
+          pkMap.set(row.table_name, pkCols);
+        }
+        pkCols.add(row.column_name);
+      }
+
+      const columnMap = new Map<string, DbColumnInfo[]>();
+      for (const row of columnsRows as {
+        table_name: string;
+        column_name: string;
+        data_type: string;
+        is_nullable: string;
+        column_default: string | null;
+        column_comment: string;
+      }[]) {
+        let cols = columnMap.get(row.table_name);
+        if (!cols) {
+          cols = [];
+          columnMap.set(row.table_name, cols);
+        }
+        const pks = pkMap.get(row.table_name);
+        cols.push({
+          name: row.column_name,
+          dataType: row.data_type,
+          isNullable: row.is_nullable === 'YES',
+          columnDefault: row.column_default,
+          isPrimaryKey: pks?.has(row.column_name) ?? false,
+          comment: row.column_comment || undefined,
+        });
+      }
+
+      const tables: DbTableInfo[] = (
+        tablesRows as { table_name: string; table_type: string }[]
+      ).map((row) => ({
+        tableName: row.table_name,
+        tableType: row.table_type,
+        columns: columnMap.get(row.table_name) ?? [],
+      }));
+
+      return { tables, errors };
+    } catch (err) {
+      errors.push(`MySQL 探测失败: ${err instanceof Error ? err.message : String(err)}`);
+      return { tables: [], errors };
+    }
   }
 
   /* ──── Tool Generation ──── */

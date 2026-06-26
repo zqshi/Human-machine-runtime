@@ -29,7 +29,7 @@ import type {
   ToolStats,
 } from './types.js';
 import { OpenApiParser } from './parsers/openapi-parser.js';
-import { DbIntrospector } from './parsers/db-introspector.js';
+import { DbIntrospector, type IntrospectResult } from './parsers/db-introspector.js';
 import { GatewayDiscoverer } from './parsers/gateway-discoverer.js';
 import { getExecutor } from './executors/executor-factory.js';
 import type { ToolInvocationResult } from './tool-registry.js';
@@ -410,6 +410,47 @@ export class ToolManagementService {
       toolsRemoved: removed,
       errors: discoverResult.errors,
     };
+  }
+
+  /* ──── Introspect Source(独立探测,不落库;供 McpDatabaseFlow 探测→勾选→发布) ──── */
+
+  /**
+   * introspectSource — 探测 database source 的表结构,不生成工具不落库。
+   *
+   * 与 syncSource 区别:sync 探测+生成工具+落库一体(适合"确认发布");
+   * 本方法只返回表结构(适合"测试连接并预览 schema",用户勾选后再 sync)。
+   * 复用 syncDatabase 的解密+introspect 前半段,不调 generateTools/definitionRepo。
+   */
+  async introspectSource(sourceId: string): Promise<IntrospectResult> {
+    const source = await this.sourceRepo.findById(sourceId);
+    if (!source) {
+      return { tables: [], errors: ['source not found'] };
+    }
+    if (source.sourceType !== 'database') {
+      return { tables: [], errors: ['introspect 仅支持 database 类型 source'] };
+    }
+    if (!source.dbHost || !source.dbName || !source.credentialId) {
+      return { tables: [], errors: ['数据库连接配置不完整'] };
+    }
+
+    const credential = await this.resolveCredential(source.credentialId);
+    if (!credential) {
+      return {
+        tables: [],
+        errors: ['数据库凭证解密失败(credentialId 非法或未配置 username/password secret)'],
+      };
+    }
+
+    const config = {
+      type: (source.dbType || 'postgresql') as 'postgresql' | 'mysql',
+      host: source.dbHost,
+      port: source.dbPort || 5432,
+      database: source.dbName,
+      schema: source.dbSchemaName || 'public',
+      username: credential.username ?? '',
+      password: credential.password ?? '',
+    };
+    return this.dbIntrospector.introspect(config);
   }
 
   /* ──── Test Connection ──── */

@@ -268,4 +268,75 @@ describe('ToolManagementService', () => {
       expect.objectContaining({ type: 'basic', username: 'dbuser', password: 'dbpass' })
     );
   });
+
+  // T阶段1.1: introspectSource — 独立探测端点(不落库),供 McpDatabaseFlow 探测→勾选→发布
+  it('introspectSource source 不存在→返空 tables + not found 错误', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue(null);
+    const svc = createService(mocks);
+    const result = await svc.introspectSource('non_existent');
+    expect(result.tables).toEqual([]);
+    expect(result.errors[0]).toMatch(/not found/);
+  });
+
+  it('introspectSource database source 解密凭证→调 introspect 返回表结构(不调 generateTools/落库)', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue(dbSource);
+    const svc = createService(mocks);
+    const introspectSpy = vi
+      .spyOn(
+        (svc as unknown as { dbIntrospector: { introspect: Function; generateTools: Function } })
+          .dbIntrospector,
+        'introspect'
+      )
+      .mockResolvedValue({
+        tables: [{ name: 'users', columns: [{ name: 'id', type: 'int', pk: true }] }],
+        errors: [],
+      });
+    const generateSpy = vi.spyOn(
+      (svc as unknown as { dbIntrospector: { generateTools: Function } }).dbIntrospector,
+      'generateTools'
+    );
+
+    const result = await svc.introspectSource('tsrc_1');
+
+    expect(result.tables).toHaveLength(1);
+    expect(result.tables[0].name).toBe('users');
+    expect(result.errors).toEqual([]);
+    expect(introspectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'dbuser', password: 'dbpass', host: 'localhost' })
+    );
+    // 关键:不调 generateTools(不生成工具)、不落库(不调 createMany/deleteBySource)
+    expect(generateSpy).not.toHaveBeenCalled();
+    expect(mocks.definitionRepo.createMany).not.toHaveBeenCalled();
+    expect(mocks.definitionRepo.deleteBySource).not.toHaveBeenCalled();
+  });
+
+  it('introspectSource 连接配置不完整→报错', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue({ ...dbSource, dbHost: null });
+    const svc = createService(mocks);
+    const result = await svc.introspectSource('tsrc_1');
+    expect(result.tables).toEqual([]);
+    expect(result.errors[0]).toMatch(/配置不完整/);
+  });
+
+  it('introspectSource 凭证解密失败→报错', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue(dbSource);
+    mocks.credentialSecretProvider.getCredentialSecret.mockResolvedValue(null);
+    const svc = createService(mocks);
+    const result = await svc.introspectSource('tsrc_1');
+    expect(result.tables).toEqual([]);
+    expect(result.errors[0]).toMatch(/解密失败/);
+  });
+
+  it('introspectSource 非 database source(openapi)→报错(仅支持 database)', async () => {
+    const mocks = mockRepos();
+    mocks.sourceRepo.findById.mockResolvedValue({ ...dbSource, sourceType: 'openapi' });
+    const svc = createService(mocks);
+    const result = await svc.introspectSource('tsrc_1');
+    expect(result.tables).toEqual([]);
+    expect(result.errors[0]).toMatch(/仅.*database/);
+  });
 });

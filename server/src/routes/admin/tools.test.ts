@@ -16,6 +16,10 @@ function mockToolSvc() {
       errors: [],
     }),
     testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    introspectSource: vi.fn().mockResolvedValue({
+      tables: [{ name: 'users', columns: [{ name: 'id', type: 'int', pk: true }] }],
+      errors: [],
+    }),
     listDefinitions: vi.fn().mockResolvedValue([{ id: 'tdef_1', name: 'listUsers' }]),
     getDefinition: vi.fn().mockResolvedValue({ id: 'tdef_1', name: 'listUsers' }),
     updateDefinition: vi.fn().mockResolvedValue({ id: 'tdef_1', enabled: false }),
@@ -108,6 +112,17 @@ describe('admin tool routes (v2)', () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.toolsCreated).toBe(5);
+  });
+
+  it('POST /sources/:id/introspect triggers introspectSource(探测不落库)', async () => {
+    const svc = mockToolSvc();
+    const app = withUser(createAdminToolRoutes(svc as never));
+    const res = await app.request('/sources/tsrc_1/introspect', { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tables).toHaveLength(1);
+    expect(body.tables[0].name).toBe('users');
+    expect(svc.introspectSource).toHaveBeenCalledWith('tsrc_1');
   });
 
   it('GET /definitions returns tool definitions', async () => {

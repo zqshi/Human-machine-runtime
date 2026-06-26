@@ -105,6 +105,12 @@ export function createAdminToolRoutes(toolSvc: ToolManagementService) {
     return c.json(result);
   });
 
+  app.post('/sources/:id/introspect', async (c) => {
+    // 探测表结构不落库(供 McpDatabaseFlow 测试连接+预览 schema,用户勾选后再 sync)
+    const result = await toolSvc.introspectSource(c.req.param('id'));
+    return c.json(result);
+  });
+
   app.post('/sources/:id/test-connection', async (c) => {
     const result = await toolSvc.testConnection(c.req.param('id'));
     return c.json(result);
