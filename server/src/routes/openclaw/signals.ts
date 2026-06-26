@@ -8,12 +8,22 @@ export function createOpenclawSignalRoutes(repo: OpenclawRepository) {
 
   app.get('/signals', async (c) => {
     const urgency = c.req.query('urgency');
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (!urgency && (limit || offset)) {
+      return c.json(await repo.listPaged('signal', { limit, offset }));
+    }
     let items = await repo.list('signal');
     if (urgency) items = items.filter((s) => s.urgency === urgency);
     return c.json({ items });
   });
 
   app.get('/signals/emergent', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('emergent_signal', { limit, offset }));
+    }
     const items = await repo.list('emergent_signal');
     return c.json({ items });
   });
@@ -47,6 +57,11 @@ export function createOpenclawSignalRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/patterns', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('pattern', { limit, offset }));
+    }
     const items = await repo.list('pattern');
     return c.json({ items });
   });

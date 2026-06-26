@@ -7,6 +7,11 @@ export function createOpenclawEvaluationRoutes(repo: OpenclawRepository) {
 
   app.get('/evaluation/metrics', async (c) => {
     const dimension = c.req.query('dimension');
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (!dimension && (limit || offset)) {
+      return c.json(await repo.listPaged('evaluation_metric', { limit, offset }));
+    }
     let items = await repo.list('evaluation_metric');
     if (dimension) items = items.filter((m) => m.dimension === dimension);
     return c.json({ items });
@@ -25,6 +30,11 @@ export function createOpenclawEvaluationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/evaluation/scorecards', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('scorecard', { limit, offset }));
+    }
     const items = await repo.list('scorecard');
     return c.json({ items });
   });

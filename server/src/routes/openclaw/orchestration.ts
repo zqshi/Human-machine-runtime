@@ -8,6 +8,11 @@ export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
 
   app.get('/orchestration/chains', async (c) => {
     const status = c.req.query('status');
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (!status && (limit || offset)) {
+      return c.json(await repo.listPaged('orchestration_chain', { limit, offset }));
+    }
     let items = await repo.list('orchestration_chain');
     if (status) items = items.filter((ch) => ch.status === status);
     return c.json({ items });
@@ -56,6 +61,11 @@ export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/orchestration/escalations', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('escalation', { limit, offset }));
+    }
     const items = await repo.list('escalation');
     return c.json({ items });
   });
@@ -84,6 +94,11 @@ export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/orchestration/agents', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('orchestration_agent', { limit, offset }));
+    }
     const items = await repo.list('orchestration_agent');
     return c.json({ items });
   });

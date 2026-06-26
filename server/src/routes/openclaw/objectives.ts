@@ -8,6 +8,11 @@ export function createOpenclawObjectiveRoutes(repo: OpenclawRepository) {
 
   app.get('/', async (c) => {
     const level = c.req.query('level');
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (!level && (limit || offset)) {
+      return c.json(await repo.listPaged('objective', { limit, offset }));
+    }
     let items = await repo.list('objective');
     if (level) items = items.filter((o) => o.level === level);
     return c.json({ items });

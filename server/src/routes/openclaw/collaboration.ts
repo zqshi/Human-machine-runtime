@@ -9,6 +9,11 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Intents ──── */
 
   app.get('/intents', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('intent', { limit, offset }));
+    }
     const items = await repo.list('intent');
     return c.json({ items });
   });
@@ -39,6 +44,11 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Sessions ──── */
 
   app.get('/sessions', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('collab_session', { limit, offset }));
+    }
     const items = await repo.list('collab_session');
     return c.json({ items });
   });
@@ -93,6 +103,11 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Agent Profiles ──── */
 
   app.get('/agent-profiles', async (c) => {
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (limit || offset) {
+      return c.json(await repo.listPaged('agent_profile', { limit, offset }));
+    }
     const items = await repo.list('agent_profile');
     return c.json({ items });
   });

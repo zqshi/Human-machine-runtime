@@ -53,6 +53,11 @@ export function createOpenclawDecisionRoutes(repo: OpenclawRepository) {
 
   app.get('/judgment-records', async (c) => {
     const decisionId = c.req.query('decisionId');
+    const limit = Number(c.req.query('limit')) || undefined;
+    const offset = Number(c.req.query('offset')) || undefined;
+    if (!decisionId && (limit || offset)) {
+      return c.json(await repo.listPaged('judgment_record', { limit, offset }));
+    }
     let items = await repo.list('judgment_record');
     if (decisionId) items = items.filter((r) => r.decisionId === decisionId);
     return c.json({ items });
