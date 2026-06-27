@@ -46,6 +46,34 @@ function resolveWorkspacePath(relPath: string): string {
 
 type SandboxOp = 'write_file' | 'read_file' | 'list_files';
 
+/**
+ * search 返回的条目(FileInfo 或偶发字符串路径)。
+ * OpenSandbox SDK FileInfo 形状:{ path: string; type?: 'file'|'directory'|'symlink'|'other'; ... }。
+ */
+type SearchEntry = { path?: string; type?: string } | string;
+
+/**
+ * 将 files.search 递归返回的扁平 FileInfo[] 映射为前端可用的文件树条目。
+ *
+ * - type 映射:directory → 'dir'(前端递归展开);其余(file/symlink/other/缺失)→ 'file'。
+ *   修复 T53 遗留:listFiles 此前硬编码 type:'file',致目录被标 file,前端文件树无法递归。
+ * - path 去 /workspace 前缀转相对(前端展示用);绝对路径不含前缀时原样保留(兼容 LLM 偶发绝对路径)。
+ * - name 取路径最后一段。
+ *
+ * 纯函数(无 IO),供 listFiles 调用 + 单测覆盖(§2.2 domain 100%)。
+ */
+export function mapSearchEntries(
+  entries: SearchEntry[],
+  _requestPath: string
+): Array<{ name: string; path: string; type: 'dir' | 'file' }> {
+  return entries.map((e) => {
+    const p = typeof e === 'string' ? e : (e.path ?? String(e));
+    const rel = p.startsWith(WORKSPACE + '/') ? p.slice(WORKSPACE.length + 1) : p;
+    const type = typeof e === 'object' && e !== null && e.type === 'directory' ? 'dir' : 'file';
+    return { name: rel.split('/').pop() || rel, path: rel || '.', type };
+  });
+}
+
 interface CachedSandbox {
   sb: Sandbox;
   lastUsedAt: number;
@@ -253,12 +281,8 @@ export class OpenSandboxExecutor implements IToolExecutor {
     const absPath = resolveWorkspacePath(relPath);
     try {
       const entries = await sb.files.search({ path: absPath });
-      const result = entries.slice(0, 200).map((e) => {
-        const p = typeof e === 'string' ? e : ((e as { path?: string }).path ?? String(e));
-        // 返回相对 /workspace 的路径(前端展示用),去掉 WORKSPACE 前缀
-        const rel = p.startsWith(WORKSPACE + '/') ? p.slice(WORKSPACE.length + 1) : p;
-        return { name: rel.split('/').pop() || rel, path: rel || '.', type: 'file' as const };
-      });
+      const sliced = entries.slice(0, 200);
+      const result = mapSearchEntries(sliced as SearchEntry[], relPath);
       return {
         success: true,
         data: { path: relPath, entries: result, truncated: entries.length > 200 },
