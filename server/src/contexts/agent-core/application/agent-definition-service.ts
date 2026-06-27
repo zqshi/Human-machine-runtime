@@ -1,5 +1,5 @@
 import type { AgentDefinitionRepository } from '../../../db/repositories/agent-definition-repository.js';
-import type { AuditService } from '../../audit-observability/audit-service.js';
+import type { IAuditPort } from '../domain/audit-port.js';
 import {
   createAgentDefinition,
   validateAgentDefinitionSpec,
@@ -38,7 +38,7 @@ export interface ListAgentDefinitionsQuery {
 export class AgentDefinitionService {
   constructor(
     private readonly repo: AgentDefinitionRepository,
-    private readonly audit?: AuditService
+    private readonly audit?: IAuditPort
   ) {}
 
   async create(input: CreateAgentDefinitionInput, actor = 'system'): Promise<AgentDefinition> {

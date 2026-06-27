@@ -9,6 +9,7 @@ import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
+import { adaptSkillPort } from './bootstrap/studio-skill-port.js';
 import { buildPersonaProvider } from './bootstrap/persona-provider.js';
 import { StudioService } from '../contexts/agent-core/application/studio-service.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
@@ -81,6 +82,7 @@ import { ToolDefinitionRepository } from '../db/repositories/tool-registry-repos
 import { PushChannelService } from '../contexts/push-channel/push-channel-service.js';
 import { SharedAgentService } from '../contexts/shared-agent/shared-agent-service.js';
 import { AgentDefinitionService } from '../contexts/agent-core/application/agent-definition-service.js';
+import type { IAuditPort } from '../contexts/agent-core/domain/audit-port.js';
 import { GatewayHealth } from '../contexts/gateway/gateway-health.js';
 import { TraceSyncJob } from '../contexts/observability/trace-sync-job.js';
 import { DepartmentRepository } from '../db/repositories/department-repository.js';
@@ -151,6 +153,15 @@ function buildAuthProviderRegistry(userRepo: UserRepository): AuthProviderRegist
   }
 
   return registry;
+}
+
+/** AuditService → IAuditPort(守 §1.3,agent-core 不依赖 audit-observability;T47) */
+function adaptAuditPort(auditService: AuditService): IAuditPort {
+  return {
+    async log(type, payload, metadata) {
+      await auditService.log(type, payload, metadata ?? {});
+    },
+  };
 }
 
 export function createAppContext(db: Database): AppContext {
@@ -224,7 +235,10 @@ export function createAppContext(db: Database): AppContext {
 
   // v1.9:Agent 定义 CRD service(声明式 spec 管理;供 admin 路由 + assembly/persona provider 共用 repo)
   const agentDefinitionRepo = new AgentDefinitionRepository(db);
-  const agentDefinitionService = new AgentDefinitionService(agentDefinitionRepo, auditService);
+  const agentDefinitionService = new AgentDefinitionService(
+    agentDefinitionRepo,
+    adaptAuditPort(auditService)
+  );
 
   /* ──── Runtime Engine: 消息管线 + 用量/计费(含 inboundPipeline 闭包) ──── */
   const {
@@ -435,7 +449,7 @@ export function createAppContext(db: Database): AppContext {
   const studioService = new StudioService(
     agentDefinitionRepo,
     new ToolDefinitionRepository(db),
-    skillRepo
+    adaptSkillPort(skillRepo)
   );
 
   // v1.6:激活 trace 记录器(dispatchTask 全链路 trace 串联)。aiGatewayRepo 早实例化。

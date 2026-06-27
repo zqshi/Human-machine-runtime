@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { StudioService } from './studio-service.js';
 import type { AgentDefinition } from '../domain/agent-definition.js';
 
+/**
+ * T47 后:StudioService 依赖 ISkillPort(非 shared-assets 的 ISkillRepository)。
+ * skill 数据访问 + install/uninstall 全部经 port,幂等/去重逻辑下沉到 adaptSkillPort
+ * (见 app/bootstrap/studio-skill-port.test.ts),此处只验证 service 编排 + port 转发。
+ */
 function mockRepos() {
   return {
     agentDefRepo: {
@@ -13,14 +18,15 @@ function mockRepos() {
       findByTenant: vi.fn().mockResolvedValue([]),
       findById: vi.fn().mockResolvedValue(null),
     },
-    skillRepo: {
+    skillPort: {
       listSharedAssets: vi.fn().mockResolvedValue([]),
       getSharedAssetsByIds: vi.fn().mockResolvedValue([]),
       listBindingsByTenant: vi.fn().mockResolvedValue([]),
-      findAssetBinding: vi.fn().mockResolvedValue(null),
-      addAssetBinding: vi.fn().mockResolvedValue(undefined),
-      removeAssetBinding: vi.fn().mockResolvedValue(true),
       getSharedAsset: vi.fn().mockResolvedValue(null),
+      installAssetBinding: vi.fn(
+        async (_t: string, assetId: string) => ({ id: `asset_binding_${assetId}` })
+      ),
+      uninstallAssetBinding: vi.fn(async () => true),
     },
   };
 }
@@ -29,7 +35,7 @@ function createService(mocks: ReturnType<typeof mockRepos>) {
   return new StudioService(
     mocks.agentDefRepo as never,
     mocks.toolDefRepo as never,
-    mocks.skillRepo as never
+    mocks.skillPort as never
   );
 }
 
@@ -69,7 +75,7 @@ describe('StudioService', () => {
         enabled: true,
       },
     ]);
-    mocks.skillRepo.listSharedAssets.mockResolvedValue([
+    mocks.skillPort.listSharedAssets.mockResolvedValue([
       {
         id: 'sa_1',
         name: '报告生成',
@@ -80,7 +86,7 @@ describe('StudioService', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
     ]);
-    mocks.skillRepo.listBindingsByTenant.mockResolvedValue([
+    mocks.skillPort.listBindingsByTenant.mockResolvedValue([
       {
         id: 'b1',
         tenantId: 'tn_1',
@@ -89,7 +95,7 @@ describe('StudioService', () => {
         updatedAt: '2026-01-02T00:00:00Z',
       },
     ]);
-    mocks.skillRepo.getSharedAssetsByIds.mockResolvedValue([
+    mocks.skillPort.getSharedAssetsByIds.mockResolvedValue([
       {
         id: 'sa_2',
         name: '摘要',
@@ -120,7 +126,7 @@ describe('StudioService', () => {
     const mocks = mockRepos();
     mocks.agentDefRepo.getById.mockResolvedValue(agentDef);
     mocks.toolDefRepo.findById.mockResolvedValue({ id: 'tdef_1', name: 'db-query' });
-    mocks.skillRepo.getSharedAssetsByIds.mockResolvedValue([
+    mocks.skillPort.getSharedAssetsByIds.mockResolvedValue([
       {
         id: 'sa_1',
         name: '报告生成',
@@ -186,15 +192,16 @@ describe('StudioService', () => {
     expect(mocks.agentDefRepo.updateSpec).toHaveBeenCalled();
   });
 
-  it('installAsset 资产不存在返回 null', async () => {
+  it('installAsset 资产不存在返回 null + 不调 installAssetBinding', async () => {
     const mocks = mockRepos();
     const svc = createService(mocks);
     expect(await svc.installAsset('tn_1', 'missing', 'tenant', 'studio')).toBeNull();
+    expect(mocks.skillPort.installAssetBinding).not.toHaveBeenCalled();
   });
 
-  it('installAsset 资产存在 → addAssetBinding', async () => {
+  it('installAsset 资产存在 → 调 port.installAssetBinding(透传 assetType/actor)', async () => {
     const mocks = mockRepos();
-    mocks.skillRepo.getSharedAsset.mockResolvedValue({
+    mocks.skillPort.getSharedAsset.mockResolvedValue({
       id: 'sa_1',
       name: '报告',
       assetType: 'skill',
@@ -206,55 +213,20 @@ describe('StudioService', () => {
     const svc = createService(mocks);
     const result = await svc.installAsset('tn_1', 'sa_1', 'tenant', 'studio');
     expect(result?.id).toMatch(/^asset_binding/);
-    expect(mocks.skillRepo.addAssetBinding).toHaveBeenCalledOnce();
+    expect(mocks.skillPort.installAssetBinding).toHaveBeenCalledOnce();
+    expect(mocks.skillPort.installAssetBinding).toHaveBeenCalledWith('tn_1', 'sa_1', 'skill', 'studio');
   });
 
-  it('installAsset 幂等(已绑定 → 不重复插入)', async () => {
+  it('uninstallAsset 调 port.uninstallAssetBinding', async () => {
     const mocks = mockRepos();
-    mocks.skillRepo.getSharedAsset.mockResolvedValue({
-      id: 'sa_1',
-      name: '报告',
-      assetType: 'skill',
-      description: '',
-      version: '1.0',
-      status: 'active',
-      updatedAt: '',
-    });
-    mocks.skillRepo.findAssetBinding.mockResolvedValue({
-      id: 'b1',
-      tenantId: 'tn_1',
-      assetId: 'sa_1',
-      assetType: 'skill',
-      status: 'active',
-      createdBy: 'x',
-      createdAt: '',
-      updatedAt: '',
-    });
-    const svc = createService(mocks);
-    const result = await svc.installAsset('tn_1', 'sa_1', 'tenant', 'studio');
-    expect(result?.id).toBe('b1');
-    expect(mocks.skillRepo.addAssetBinding).not.toHaveBeenCalled();
-  });
-
-  it('uninstallAsset 删除绑定', async () => {
-    const mocks = mockRepos();
-    mocks.skillRepo.findAssetBinding.mockResolvedValue({
-      id: 'b1',
-      tenantId: 'tn_1',
-      assetId: 'sa_1',
-      assetType: 'skill',
-      status: 'active',
-      createdBy: 'x',
-      createdAt: '',
-      updatedAt: '',
-    });
     const svc = createService(mocks);
     expect(await svc.uninstallAsset('tn_1', 'sa_1')).toBe(true);
-    expect(mocks.skillRepo.removeAssetBinding).toHaveBeenCalledWith('b1');
+    expect(mocks.skillPort.uninstallAssetBinding).toHaveBeenCalledWith('tn_1', 'sa_1');
   });
 
-  it('uninstallAsset 绑定不存在返回 false', async () => {
+  it('uninstallAsset port 返回 false → service 返回 false', async () => {
     const mocks = mockRepos();
+    mocks.skillPort.uninstallAssetBinding.mockResolvedValue(false);
     const svc = createService(mocks);
     expect(await svc.uninstallAsset('tn_1', 'missing')).toBe(false);
   });

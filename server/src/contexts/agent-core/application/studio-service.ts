@@ -11,11 +11,14 @@
  *   openingMessage/presetQuestions/shortcuts/humanize/webSearch←runtime.config(jsonb)。
  *
  * install/uninstall 复用 shared-assets assetBindings 表(不建新表,§9.7)。
+ *
+ * 跨聚合边界(§1.3,T47 解耦):skill 数据经 ISkillPort 访问,不直接 import
+ * shared-assets 的 ISkillRepository / createAssetBinding。port 由 bootstrap 适配注入
+ * (adaptSkillPort,见 app/bootstrap/studio-skill-port.ts)。
  */
 import type { AgentDefinitionRepository } from '../../../db/repositories/agent-definition-repository.js';
 import type { ToolDefinitionRepository } from '../../../db/repositories/tool-registry-repository.js';
-import type { ISkillRepository } from '../../shared-assets/skill-service.js';
-import { createAssetBinding } from '../../shared-assets/domain/shared-skill.js';
+import type { ISkillPort } from '../domain/skill-port.js';
 
 export interface AssetItem {
   id: string;
@@ -48,7 +51,7 @@ export class StudioService {
   constructor(
     private readonly agentDefRepo: AgentDefinitionRepository,
     private readonly toolDefRepo: ToolDefinitionRepository,
-    private readonly skillRepo: ISkillRepository
+    private readonly skillPort: ISkillPort
   ) {}
 
   /** 聚合租户全部 AI 资产(自建 + 已安装 + 组织共享) */
@@ -87,7 +90,7 @@ export class StudioService {
     }
 
     // Skill(组织共享)
-    const shared = await this.skillRepo.listSharedAssets();
+    const shared = await this.skillPort.listSharedAssets();
     for (const s of shared) {
       items.push({
         id: s.id,
@@ -103,12 +106,12 @@ export class StudioService {
     }
 
     // 已安装(assetBindings → 关联 sharedAssets)
-    const bindings = await this.skillRepo.listBindingsByTenant(tenantId);
+    const bindings = await this.skillPort.listBindingsByTenant(tenantId);
     const installedIds = bindings
       .map((b) => b.assetId ?? b.skillId)
       .filter((id): id is string => !!id);
     if (installedIds.length > 0) {
-      const installedAssets = await this.skillRepo.getSharedAssetsByIds(installedIds);
+      const installedAssets = await this.skillPort.getSharedAssetsByIds(installedIds);
       const assetMap = new Map(installedAssets.map((a) => [a.id, a]));
       for (const b of bindings) {
         const aid = b.assetId ?? b.skillId;
@@ -187,28 +190,21 @@ export class StudioService {
     return { version: version || `v${def.generation + 1}` };
   }
 
-  /** 安装资产(从组织共享 → 租户,记录 assetBinding) */
+  /** 安装资产(从组织共享 → 租户,记录 assetBinding);幂等下沉到 port */
   async installAsset(
     tenantId: string,
     assetId: string,
     _source: string,
     actor: string
   ): Promise<{ id: string } | null> {
-    const asset = await this.skillRepo.getSharedAsset(assetId);
+    const asset = await this.skillPort.getSharedAsset(assetId);
     if (!asset) return null;
-    const existing = await this.skillRepo.findAssetBinding(tenantId, assetId);
-    if (existing) return { id: existing.id };
-    const binding = createAssetBinding(tenantId, assetId, asset.assetType, actor);
-    await this.skillRepo.addAssetBinding(binding);
-    return { id: binding.id };
+    return this.skillPort.installAssetBinding(tenantId, assetId, asset.assetType, actor);
   }
 
-  /** 卸载资产(删除 assetBinding) */
+  /** 卸载资产(删除 assetBinding);find+remove 下沉到 port */
   async uninstallAsset(tenantId: string, assetId: string): Promise<boolean> {
-    const binding = await this.skillRepo.findAssetBinding(tenantId, assetId);
-    if (!binding) return false;
-    await this.skillRepo.removeAssetBinding(binding.id);
-    return true;
+    return this.skillPort.uninstallAssetBinding(tenantId, assetId);
   }
 
   private async resolveMcpRefs(
@@ -226,7 +222,7 @@ export class StudioService {
     ids: string[]
   ): Promise<{ id: string; name: string; description: string }[]> {
     if (ids.length === 0) return [];
-    const assets = await this.skillRepo.getSharedAssetsByIds(ids);
+    const assets = await this.skillPort.getSharedAssetsByIds(ids);
     const map = new Map(assets.map((a) => [a.id, a]));
     return ids.map((id) => {
       const a = map.get(id);

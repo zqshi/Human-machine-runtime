@@ -29,6 +29,7 @@ import {
 import {
   ApprovalGate,
   type IInstanceApprovalPolicyPort,
+  type ISystemConfigPort,
 } from '../../contexts/tool-management/application/approval-gate.js';
 import type { CredentialSecretProvider } from '../../contexts/tool-management/types.js';
 import type { NotificationService } from '../../contexts/notification/notification-service.js';
@@ -53,6 +54,11 @@ function adaptInstanceApprovalPolicy(repo: InstanceRepository): IInstanceApprova
   };
 }
 
+/** SystemConfigService → ISystemConfigPort(守 §1.3,tool-management 不依赖 system-config;T47) */
+function adaptSystemConfigPort(svc: SystemConfigService): ISystemConfigPort {
+  return { isFeatureEnabled: (key, tenantId) => svc.isFeatureEnabled(key, tenantId) };
+}
+
 export function buildToolBundle(
   db: Database,
   credentialSecretProvider: CredentialSecretProvider,
@@ -74,7 +80,7 @@ export function buildToolBundle(
     new ApprovalPolicyService(),
     adaptInstanceApprovalPolicy(instanceRepo),
     toolApprovalRepo,
-    systemConfigService
+    adaptSystemConfigPort(systemConfigService)
   );
   const toolRegistryService = new ToolRegistryService(
     toolManagementService,

@@ -1,7 +1,6 @@
 import { ApprovalPolicyService, type InstanceApprovalPolicy } from './approval-policy-service.js';
 import type { ToolApprovalRepository } from '../../../db/repositories/tool-approvals-repository.js';
 import type { RiskLevel } from '../types.js';
-import type { SystemConfigService } from '../../system-config/system-config-service.js';
 import { newId } from '../../../shared/utils.js';
 
 /**
@@ -14,11 +13,17 @@ import { newId } from '../../../shared/utils.js';
  * 向后兼容:feature flag `tool.approval.enforce` 未启用 → 不拦截(默认 off)。
  * 实例未配 approvalPolicy 或无 instanceId → 不拦截(shouldApprove=false)。
  *
- * 跨聚合边界(§1.3):IInstanceApprovalPolicyPort 是 port,bootstrap 用 InstanceRepository
- * 适配(查 instance.approvalPolicy),tool-management 不直接依赖 tenant-instance context。
+ * 跨聚合边界(§1.3):IInstanceApprovalPolicyPort / ISystemConfigPort 是 port,bootstrap
+ * 用 InstanceRepository / SystemConfigService 适配注入,tool-management 不直接依赖
+ * tenant-instance / system-config context(T47 解耦)。
  */
 export interface IInstanceApprovalPolicyPort {
   getApprovalPolicy(instanceId: string): Promise<InstanceApprovalPolicy | null>;
+}
+
+/** 系统配置查询 port(守 §1.3,tool-management 不依赖 system-config context;T47 解耦) */
+export interface ISystemConfigPort {
+  isFeatureEnabled(key: string, tenantId?: string): Promise<boolean>;
 }
 
 export interface GateCheckInput {
@@ -45,12 +50,12 @@ export class ApprovalGate {
     private policyService: ApprovalPolicyService,
     private instancePolicyPort: IInstanceApprovalPolicyPort | null,
     private approvalRepo: ToolApprovalRepository,
-    private configService: SystemConfigService
+    private configPort: ISystemConfigPort
   ) {}
 
   async checkAndMaybeBlock(input: GateCheckInput): Promise<GateCheckResult> {
     // feature flag: tool.approval.enforce 未启用 → 不拦截(向后兼容,#13 灰度)
-    const enforced = await this.configService.isFeatureEnabled(
+    const enforced = await this.configPort.isFeatureEnabled(
       'tool.approval.enforce',
       input.tenantId
     );
