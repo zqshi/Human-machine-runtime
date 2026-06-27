@@ -109,6 +109,26 @@ export function createOpenclawChatRoutes(
     return undefined;
   }
 
+  /**
+   * 清洗前端传入的对话历史(多轮记忆,T49 修复"每轮失忆")。
+   * 只保留 role∈{user,assistant} + 非空 string content 的项;防注入
+   * (前端若传 role:'system' 绕过 systemPrompt,或 content 非 string 致 LLM 报错)。
+   * 截断超长历史(保留最近 20 轮,防上下文爆 token)。
+   */
+  function sanitizeHistory(raw: unknown): Array<{ role: 'user' | 'assistant'; content: string }> {
+    if (!Array.isArray(raw)) return [];
+    const cleaned: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') continue;
+      const r = (item as { role?: unknown; content?: unknown }).role;
+      const c = (item as { content?: unknown }).content;
+      if (r !== 'user' && r !== 'assistant') continue;
+      if (typeof c !== 'string' || c.trim().length === 0) continue;
+      cleaned.push({ role: r, content: c });
+    }
+    return cleaned.slice(-40); // 最近 20 轮(user+assistant 各一)=40 条上限
+  }
+
   /** 非流式 chat completion — LiteLLM 真实调用,未配置/失败返 503/502 */
   app.post('/chat', async (c) => {
     const body = await c.req.json().catch(() => null);
@@ -125,7 +145,7 @@ export function createOpenclawChatRoutes(
 
     try {
       const systemPrompt = await resolveSystemPrompt(body.instanceId, body.systemPrompt);
-      const history = Array.isArray(body.history) ? body.history : [];
+      const history = sanitizeHistory(body.history);
       const modelName = body.model || DEFAULT_MODEL;
 
       // 模型授权白名单校验（enforce 模式下拦截未授权的数字员工实例）
@@ -213,7 +233,7 @@ export function createOpenclawChatRoutes(
 
     try {
       const systemPrompt = await resolveSystemPrompt(body.instanceId, body.systemPrompt);
-      const history = Array.isArray(body.history) ? body.history : [];
+      const history = sanitizeHistory(body.history);
       const modelName = body.model || DEFAULT_MODEL;
 
       // 模型授权白名单校验

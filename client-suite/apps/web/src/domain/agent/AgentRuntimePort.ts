@@ -55,6 +55,13 @@ export interface AgentChatInput {
   instanceId?: string | null;
   /** 人设(软约束 systemPrompt 注入 prompt;guardrails 由调用方先拦截) */
   persona?: PersonaSpec;
+  /**
+   * 对话历史(多轮记忆,修复"无记忆"缺陷)。OpenAI messages 格式:
+   * role='user'|'assistant',content 为消息文本。后端 /api/openclaw/chat
+   * 已支持 body.history(chat.ts),前端此前不传致每轮失忆。
+   * 由 useAgentChat 从 store 历史消息转换(CoTMessage role 'agent' → 'assistant')。
+   */
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
 /**

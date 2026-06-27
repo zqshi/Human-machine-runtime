@@ -322,7 +322,21 @@ export function useAgentChat() {
 
       const openclawPrimary = runtimeType === 'openclaw';
       const primaryPort = getAgentRuntimePort(runtimeType);
-      const chatInput = { sessionId, prompt, instanceId: activeInstanceId, persona };
+      // 多轮记忆:从 store 实时取历史消息构造 OpenAI messages(history),修复"每轮失忆"缺陷。
+      // 用 getState() 实时读而非闭包 messages,避免 messages 进 useCallback 依赖致每次重建(流式中断)。
+      // 排除占位消息(routing/thinking 文本)与空内容,只取真实 user/agent 交替历史。
+      // CoTMessage role 'agent' → 'assistant'。占位特征:文本以"正在"/"🔀"/"抱歉，AI 服务"开头。
+      const PLACEHOLDER_RE = /^(正在|🔀|抱歉，AI 服务)/;
+      const liveMessages =
+        useOpenClawStore.getState().conversations[activeConversationId] ?? EMPTY_MESSAGES;
+      const history = liveMessages
+        .filter((m) => (m.role === 'user' || m.role === 'agent') && m.text.trim().length > 0)
+        .filter((m) => !PLACEHOLDER_RE.test(m.text.trim()))
+        .map((m) => ({
+          role: (m.role === 'agent' ? 'assistant' : 'user') as 'user' | 'assistant',
+          content: m.text,
+        }));
+      const chatInput = { sessionId, prompt, instanceId: activeInstanceId, persona, history };
 
       try {
         let streamFailed = false;
@@ -549,6 +563,7 @@ export function useAgentChat() {
       sessionId,
       isSending,
       activeInstanceId,
+      activeConversationId,
       appendMessage,
       updateLastMessage,
       setIsSending,

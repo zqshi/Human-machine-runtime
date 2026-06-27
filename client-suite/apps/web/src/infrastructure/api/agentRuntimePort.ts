@@ -56,6 +56,7 @@ class OpenClawRuntimePort implements IAgentRuntimePort {
           message: prompt,
           sessionId: input.sessionId,
           instanceId: input.instanceId ?? undefined,
+          history: input.history ?? [],
         }),
         signal: cb.signal,
       });
