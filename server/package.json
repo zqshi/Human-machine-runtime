@@ -23,6 +23,7 @@
     "test:all": "npm test && npm run test:integration"
   },
   "dependencies": {
+    "@alibaba-group/opensandbox": "^0.1.9",
     "@hono/node-server": "^1.14.0",
     "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.0",

@@ -56,9 +56,15 @@ export class ToolExecutionService {
       }
     }
 
+    // sandbox 执行器需 callerId 做 per-instance 工作目录隔离(防跨实例文件可见)。
+    // 注入 __callerId 到 params(sandbox 约定字段,其他 executor 忽略未知字段,零影响)。
+    const execParams: Record<string, unknown> =
+      definition.executionType === 'sandbox'
+        ? { ...params, __callerId: context.callerId ?? context.instanceId ?? 'default' }
+        : params;
     const result = await executor.execute(
       definition.executionConfig as Record<string, unknown>,
-      params,
+      execParams,
       credential
     );
 

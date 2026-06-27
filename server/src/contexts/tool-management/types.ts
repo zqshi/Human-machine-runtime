@@ -1,7 +1,7 @@
 /* ──── Tool Management Domain Types ──── */
 
 export type SourceType = 'openapi' | 'database' | 'gateway' | 'mcp_native';
-export type ExecutionType = 'http_proxy' | 'db_query' | 'gateway_route' | 'mcp_call';
+export type ExecutionType = 'http_proxy' | 'db_query' | 'gateway_route' | 'mcp_call' | 'sandbox';
 export type AuthMethod = 'none' | 'api_key' | 'oauth2' | 'basic' | 'bearer' | 'custom';
 export type SyncStrategy = 'manual' | 'on_change' | 'periodic';
 export type SourceStatus = 'active' | 'syncing' | 'error' | 'archived';

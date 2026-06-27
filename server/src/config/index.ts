@@ -99,6 +99,16 @@ export const config = {
     maxSizeMb: optionalInt('UPLOAD_MAX_SIZE_MB', 50),
   },
 
+  // OpenSandbox 代码执行沙箱(alibaba/OpenSandbox,Apache-2.0 开源自托管)。
+  // 配置 domain 即启用容器隔离(替代 node-fs 非隔离版,投产 P0 安全升级)。
+  // 未配 domain → 降级 node-fs SandboxExecutor(仅开发,非隔离)。
+  // 服务端:uvx opensandbox-server(默认 8080),数据不出企业(自托管)。
+  opensandbox: {
+    domain: optional('OPENSANDBOX_DOMAIN', ''),
+    apiKey: optional('OPENSANDBOX_API_KEY', ''),
+    image: optional('OPENSANDBOX_IMAGE', 'node:22-alpine'),
+  },
+
   mail: {
     host: optional('MAIL_HOST', ''),
     port: optionalInt('MAIL_PORT', 25),
