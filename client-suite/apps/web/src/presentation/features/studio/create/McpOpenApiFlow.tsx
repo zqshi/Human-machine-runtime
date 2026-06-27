@@ -1,6 +1,10 @@
 /**
  * McpOpenApiFlow — OpenAPI 对话式接入
  *
+ * ⚠️ [未接真实后端 — 升级项] 当前为前端 setTimeout 假表演(MOCK_ENDPOINTS/MOCK_SWAGGER
+ * 假"端点发现"动画),无真实 OpenAPI 解析/MCP 生成。保留作升级项,待真实 MCP 创建链路
+ * 就绪后改造(参照 AppCreateFlow T52 真实 dispatch 模式)。用户决策保留,不删。
+ *
  * 设计源模式：左对话 + 右4Tab实时面板（端点发现 → Swagger → Higress MCP → mcporter）
  * AI 自动完成全流程，用户只需提供文档链接或描述。
  */

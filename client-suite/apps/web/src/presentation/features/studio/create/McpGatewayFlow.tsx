@@ -1,6 +1,10 @@
 /**
  * McpGatewayFlow — Gateway 对接模式
  *
+ * ⚠️ [未接真实后端 — 升级项] 当前为前端 setTimeout 假表演(MOCK_ROUTES 假"路由发现"),
+ * 无真实 Gateway Admin API 对接。保留作升级项,待真实 MCP Gateway 链路就绪后改造。
+ * 用户决策保留,不删。
+ *
  * 设计源模式：左网关配置 + 右路由发现列表
  * 流程：选网关类型 → 填 Admin API 地址 → 连接发现路由 → 勾选路由 → 确认发布
  */

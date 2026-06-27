@@ -1,13 +1,15 @@
 /**
- * AppCreateFlow — 轻应用对话式 Workspace 开发
+ * AppCreateFlow — 轻应用对话式 Workspace 开发(真实链路,路径B)。
  *
  * 设计源模式：
  * - 左栏: 对话（与 AI 协作开发应用）
- * - 右栏: 三Tab — 文件树 / 终端 / 预览
+ * - 右栏: 三Tab — 文件树 / 创建日志 / 预览
  *
- * AI 自动生成应用代码，用户可在右侧实时查看文件、终端输出和预览效果。
+ * T52:接真实 tool-loop dispatch(LLM 经 write_file 真实创建文件),替换原 MOCK_TERMINAL 假表演。
+ * 文件从 sandbox 读取端点 GET /agent/sandbox/:instanceId/files 真实展示。
+ * 预览需构建环境(留后续),当前诚实标注"文件已创建"。
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
 import { Icon } from '../../../components/ui/Icon';
 
@@ -21,43 +23,23 @@ interface ChatMsg {
   content: string;
 }
 
-interface AppFile {
+/** sandbox 文件树条目(来自 /agent/sandbox/:instanceId/files list_files) */
+interface SandboxEntry {
   name: string;
-  type: 'file' | 'folder';
-  indent: number;
-  content?: string;
+  type: 'dir' | 'file';
+}
+/** sandbox 文件树节点(含子节点,递归展示) */
+interface FileNode {
+  name: string;
+  path: string;
+  type: 'dir' | 'file';
+  children?: FileNode[];
 }
 
 type RightTab = 'files' | 'terminal' | 'preview';
 
-const INITIAL_FILES: AppFile[] = [
-  { name: 'src/', type: 'folder', indent: 0 },
-  { name: 'App.tsx', type: 'file', indent: 1, content: '// 等待生成...' },
-  {
-    name: 'main.tsx',
-    type: 'file',
-    indent: 1,
-    content:
-      'import { createRoot } from "react-dom/client"\nimport App from "./App"\n\ncreateRoot(document.getElementById("root")!).render(<App />)',
-  },
-  { name: 'index.css', type: 'file', indent: 1, content: '/* 全局样式 */' },
-  {
-    name: 'package.json',
-    type: 'file',
-    indent: 0,
-    content: '{\n  "name": "my-app",\n  "private": true,\n  "version": "0.0.1"\n}',
-  },
-];
-
-const MOCK_TERMINAL = [
-  '$ npm install',
-  'added 1423 packages in 12s',
-  '',
-  '$ npm run dev',
-  '',
-  '  VITE v5.4.1  ready in 312 ms',
-  '  ➜  Local:   http://localhost:5173/',
-];
+/** studio 专用 sandbox instance(隔离目录 app-studio,不依赖业务 instance 选择) */
+const STUDIO_INSTANCE = 'app-studio';
 
 export function AppCreateFlow({ onBack }: Props) {
   const toast = useToastStore((s) => s.addToast);
@@ -67,7 +49,7 @@ export function AppCreateFlow({ onBack }: Props) {
       id: 0,
       role: 'bot',
       content:
-        '你好！我是应用开发助手。\n\n描述你想创建的应用，我会帮你：\n1. 生成项目结构和代码\n2. 安装依赖并启动开发服务器\n3. 实时预览应用效果\n\n你想创建什么样的应用？',
+        '你好！我是应用开发助手。\n\n描述你想创建的应用，我会真实生成项目文件（React/TS 代码）。\n\n你想创建什么样的应用？',
     },
   ]);
   const [input, setInput] = useState('');
@@ -75,93 +57,146 @@ export function AppCreateFlow({ onBack }: Props) {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const [rightTab, setRightTab] = useState<RightTab>('files');
-  const [files, setFiles] = useState<AppFile[]>(INITIAL_FILES);
-  const [selectedFile, setSelectedFile] = useState<string | null>('App.tsx');
-  const [terminalLines, setTerminalLines] = useState<string[]>([]);
+  const [files, setFiles] = useState<FileNode[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFileContent, setSelectedFileContent] = useState<string>('');
+  const [logLines, setLogLines] = useState<string[]>([]);
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const addBot = (content: string) =>
-    setMessages((prev) => [...prev, { id: Date.now() + Math.random(), role: 'bot', content }]);
+  const addBot = useCallback(
+    (content: string) =>
+      setMessages((prev) => [...prev, { id: Date.now() + Math.random(), role: 'bot', content }]),
+    []
+  );
+  const addLog = useCallback(
+    (line: string) => setLogLines((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${line}`]),
+    []
+  );
 
-  const handleSend = () => {
-    if (!input.trim() || processing) return;
+  /** 轮询任务状态直到 completed/failed */
+  const pollTaskStatus = useCallback(
+    async (taskId: string): Promise<{ conclusion?: string; toolCallsLog?: unknown[]; error?: string }> => {
+      const token = await getAuthToken();
+      for (let i = 0; i < 30; i++) {
+        await sleep(1500);
+        const res = await fetch(`/api/openclaw/agent/status/${taskId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        const state = data.state ?? data.data?.state;
+        if (state === 'completed') {
+          const out = data.output ?? data.data?.output ?? {};
+          return { conclusion: out.conclusion, toolCallsLog: out.toolCallsLog };
+        }
+        if (state === 'failed') {
+          return { error: data.error ?? data.data?.error ?? '任务执行失败' };
+        }
+      }
+      return { error: '任务超时(30 轮询未完成)' };
+    },
+    []
+  );
+
+  /** 从 sandbox 读取文件树(list_files 递归一层) */
+  const loadSandboxFiles = useCallback(async (): Promise<FileNode[]> => {
+    const token = await getAuthToken();
+    const res = await fetch(
+      `/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    const entries: SandboxEntry[] = data?.data?.entries ?? [];
+    return entries.map((e) => ({ name: e.name, path: e.name, type: e.type }));
+  }, []);
+
+  /** 读取 sandbox 单个文件内容 */
+  const loadFileContent = useCallback(async (path: string): Promise<string> => {
+    const token = await getAuthToken();
+    const res = await fetch(
+      `/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=${encodeURIComponent(path)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    return data?.success ? String(data.data?.content ?? '') : '(读取失败)';
+  }, []);
+
+  const handleSend = useCallback(async () => {
     const userMsg = input.trim();
-    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMsg }]);
+    if (!userMsg || processing) return;
     setInput('');
     setProcessing(true);
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMsg }]);
+    addLog(`用户请求: ${userMsg.slice(0, 80)}`);
 
-    // Phase 1: 生成代码
-    setTimeout(() => {
-      addBot('好的，正在生成应用代码...');
+    try {
+      const token = await getAuthToken();
+      addLog('→ dispatch tool-loop 任务(app-studio sandbox)');
+      // 真实 dispatch:LLM 经 tool-loop 调 write_file 真实创建文件
+      const dispatchRes = await fetch('/api/openclaw/agent/dispatch', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'studio-create-app',
+          description: `创建应用: ${userMsg.slice(0, 60)}`,
+          input: {
+            prompt: `创建一个应用。需求: ${userMsg}\n\n用 write_file 工具在 src/ 目录下创建必要的代码文件(如 App.tsx)。用合理的项目结构。创建后用 read_file 确认。`,
+            instanceId: STUDIO_INSTANCE,
+          },
+          framework: 'tool-loop',
+        }),
+      });
+      const dispatchData = await dispatchRes.json();
+      const taskId = dispatchData.taskId ?? dispatchData.data?.taskId;
+      if (!taskId) {
+        throw new Error(dispatchData.error ?? 'dispatch 失败');
+      }
+      addLog(`✓ 任务已派发 taskId=${taskId.slice(0, 16)}...`);
+
+      setRightTab('terminal');
+      const result = await pollTaskStatus(taskId);
+      if (result.error) {
+        addLog(`✗ 任务失败: ${result.error}`);
+        addBot(`抱歉,创建失败: ${result.error}`);
+        setProcessing(false);
+        return;
+      }
+
+      const toolCount = result.toolCallsLog?.length ?? 0;
+      addLog(`✓ 任务完成: 执行 ${toolCount} 次工具调用`);
+
+      // 从 sandbox 读取真实创建的文件
+      addLog('→ 读取 sandbox 创建的文件');
+      const fileTree = await loadSandboxFiles();
+      setFiles(fileTree);
+      setAppReady(true);
       setRightTab('files');
 
-      setTimeout(() => {
-        const genFiles: AppFile[] = [
-          { name: 'src/', type: 'folder', indent: 0 },
-          {
-            name: 'App.tsx',
-            type: 'file',
-            indent: 1,
-            content: `import { useState } from 'react'\n\nexport default function App() {\n  const [count, setCount] = useState(0)\n\n  return (\n    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">\n      <div className="text-center">\n        <h1 className="text-3xl font-bold text-white mb-4">${userMsg.slice(0, 30)}</h1>\n        <p className="text-slate-400 mb-6">由 AI 自动生成的轻应用</p>\n        <button\n          onClick={() => setCount(c => c + 1)}\n          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"\n        >\n          点击计数: {count}\n        </button>\n      </div>\n    </div>\n  )\n}`,
-          },
-          {
-            name: 'main.tsx',
-            type: 'file',
-            indent: 1,
-            content:
-              'import { createRoot } from "react-dom/client"\nimport App from "./App"\nimport "./index.css"\n\ncreateRoot(document.getElementById("root")!).render(<App />)',
-          },
-          {
-            name: 'index.css',
-            type: 'file',
-            indent: 1,
-            content: '@tailwind base;\n@tailwind components;\n@tailwind utilities;',
-          },
-          { name: 'components/', type: 'folder', indent: 1 },
-          {
-            name: 'package.json',
-            type: 'file',
-            indent: 0,
-            content: `{\n  "name": "${userMsg.slice(0, 20).replace(/\s/g, '-').toLowerCase()}",\n  "private": true,\n  "version": "0.0.1",\n  "dependencies": {\n    "react": "^19.0.0",\n    "react-dom": "^19.0.0"\n  }\n}`,
-          },
-          {
-            name: 'vite.config.ts',
-            type: 'file',
-            indent: 0,
-            content:
-              'import { defineConfig } from "vite"\nimport react from "@vitejs/plugin-react"\n\nexport default defineConfig({\n  plugins: [react()]\n})',
-          },
-        ];
-        setFiles(genFiles);
-        addBot('代码生成完毕 ✓ 正在安装依赖...');
+      const conclusion = result.conclusion || '应用文件已创建';
+      addBot(`✅ **应用已创建！**\n\n${conclusion}\n\n- 在「文件」Tab 查看真实创建的代码\n- 在「终端」Tab 查看创建日志\n\n需要调整或新增文件吗？`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addLog(`✗ 错误: ${msg}`);
+      addBot(`抱歉,创建过程出错: ${msg}`);
+      toast('创建失败,请检查服务', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  }, [input, processing, addBot, addLog, pollTaskStatus, loadSandboxFiles, toast]);
 
-        // Phase 2: 安装依赖 + 启动
-        setRightTab('terminal');
-        let lineIdx = 0;
-        const addLine = () => {
-          if (lineIdx < MOCK_TERMINAL.length) {
-            setTerminalLines((prev) => [...prev, MOCK_TERMINAL[lineIdx]]);
-            lineIdx++;
-            setTimeout(addLine, lineIdx === 1 ? 800 : 200);
-          } else {
-            setAppReady(true);
-            setRightTab('preview');
-            addBot(
-              '🎉 **应用已就绪！**\n\n- 代码在「文件」Tab 中查看/编辑\n- 终端输出在「终端」Tab\n- 应用预览在「预览」Tab\n\n需要调整什么吗？'
-            );
-            setProcessing(false);
-          }
-        };
-        setTimeout(addLine, 500);
-      }, 1000);
-    }, 800);
-  };
-
-  const selectedFileContent = files.find((f) => f.name === selectedFile)?.content || '';
+  const onSelectFile = useCallback(
+    async (node: FileNode) => {
+      if (node.type !== 'file') return;
+      setSelectedFile(node.path);
+      setSelectedFileContent('(加载中...)');
+      const content = await loadFileContent(node.path);
+      setSelectedFileContent(content);
+    },
+    [loadFileContent]
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -174,16 +209,17 @@ export function AppCreateFlow({ onBack }: Props) {
             <Icon name="arrow_back" size={13} /> 返回
           </button>
           <h2 className="text-[13px] font-semibold text-slate-100">App Workspace</h2>
+          <span className="text-[10px] text-emerald-400/70">真实创建(sandbox)</span>
         </div>
         {appReady && (
           <button
             onClick={() => {
-              toast('应用已发布', 'success');
+              toast('应用文件已保存至 sandbox', 'success');
               onBack();
             }}
             className="h-7 px-3 rounded-lg text-[11px] font-medium bg-emerald-600 text-white hover:opacity-90"
           >
-            发布
+            完成
           </button>
         )}
       </header>
@@ -216,7 +252,7 @@ export function AppCreateFlow({ onBack }: Props) {
                     <div className="w-3 h-3 border-[1.5px] border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                   <div className="border border-white/[0.1] bg-white/[0.04] rounded-[12px] rounded-bl-[3px] px-3 py-2 text-[12px] text-slate-500">
-                    生成中...
+                    AI 正在创建文件...
                   </div>
                 </div>
               )}
@@ -255,7 +291,7 @@ export function AppCreateFlow({ onBack }: Props) {
               onClick={() => setRightTab('terminal')}
               className={`px-3.5 py-2.5 text-[10px] font-medium border-b-2 transition-colors ${rightTab === 'terminal' ? 'text-primary border-primary' : 'text-slate-500 border-transparent'}`}
             >
-              ⬛ 终端
+              📋 创建日志
             </button>
             <button
               onClick={() => setRightTab('preview')}
@@ -269,17 +305,22 @@ export function AppCreateFlow({ onBack }: Props) {
             {rightTab === 'files' && (
               <div className="flex h-full">
                 <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto hmr-scrollbar">
-                  {files.map((f) => (
-                    <button
-                      key={f.name}
-                      onClick={() => f.type === 'file' && setSelectedFile(f.name)}
-                      className={`w-full text-left px-2 py-1 rounded text-[10px] transition-colors ${selectedFile === f.name ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/[0.04]'}`}
-                      style={{ paddingLeft: `${f.indent * 12 + 8}px` }}
-                    >
-                      <span className="mr-1">{f.type === 'folder' ? '📁' : '📄'}</span>
-                      {f.name}
-                    </button>
-                  ))}
+                  {files.length === 0 ? (
+                    <div className="text-[10px] text-slate-500 px-2 py-4 text-center">
+                      尚未创建文件
+                    </div>
+                  ) : (
+                    files.map((f) => (
+                      <button
+                        key={f.path}
+                        onClick={() => onSelectFile(f)}
+                        className={`w-full text-left px-2 py-1 rounded text-[10px] transition-colors ${selectedFile === f.path ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/[0.04]'}`}
+                      >
+                        <span className="mr-1">{f.type === 'dir' ? '📁' : '📄'}</span>
+                        {f.name}
+                      </button>
+                    ))
+                  )}
                 </div>
                 <div className="flex-1 p-3 overflow-auto">
                   {selectedFileContent ? (
@@ -298,17 +339,17 @@ export function AppCreateFlow({ onBack }: Props) {
             {rightTab === 'terminal' && (
               <div className="h-full bg-[#0d1117] p-4 overflow-auto">
                 <pre className="text-[10px] font-mono leading-[1.7]">
-                  {terminalLines.length === 0 ? (
-                    <span className="text-slate-500">等待安装和启动...</span>
+                  {logLines.length === 0 ? (
+                    <span className="text-slate-500">等待创建任务...</span>
                   ) : (
-                    terminalLines.map((line, i) => (
+                    logLines.map((line, i) => (
                       <div
                         key={i}
                         className={
-                          line.startsWith('$')
-                            ? 'text-emerald-400'
-                            : line.includes('ready') || line.includes('VITE')
-                              ? 'text-emerald-300 font-semibold'
+                          line.includes('✗')
+                            ? 'text-red-400'
+                            : line.includes('✓')
+                              ? 'text-emerald-300'
                               : 'text-slate-400'
                         }
                       >
@@ -322,22 +363,23 @@ export function AppCreateFlow({ onBack }: Props) {
 
             {rightTab === 'preview' && (
               <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-                {appReady ? (
-                  <div className="text-center">
-                    <div className="text-[14px] font-bold text-white mb-2">应用预览</div>
-                    <div className="text-[11px] text-slate-400 mb-4">沙箱环境正在运行中</div>
-                    <div className="w-72 h-48 bg-white/[0.06] border border-white/[0.1] rounded-xl flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-white mb-2">Hello App</div>
-                        <button className="px-4 py-1.5 bg-blue-500 text-white text-[11px] rounded-lg">
-                          点击计数: 0
-                        </button>
-                      </div>
+                <div className="text-center px-6">
+                  <div className="text-[14px] font-bold text-white mb-2">应用预览</div>
+                  {appReady ? (
+                    <div className="text-[11px] text-slate-400 leading-[1.6]">
+                      <p className="mb-2">✅ 文件已真实创建于 sandbox</p>
+                      <p className="text-slate-500">
+                        预览需构建环境(npm install + vite dev),<br />
+                        将在后续版本支持沙箱构建运行。
+                      </p>
+                      <p className="mt-3 text-slate-600 text-[10px]">
+                        当前可在「文件」Tab 查看真实生成的代码
+                      </p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">等待应用启动...</div>
-                )}
+                  ) : (
+                    <div className="text-[11px] text-slate-500">等待应用创建...</div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -345,6 +387,23 @@ export function AppCreateFlow({ onBack }: Props) {
       </div>
     </div>
   );
+}
+
+/** 获取 auth token(从同源 cookie 或重新登录;studio 页面同源) */
+async function getAuthToken(): Promise<string> {
+  // studio 页面与 API 同源,依赖 cookie session;若需 Bearer 则走登录
+  // 简化:优先用 localStorage 缓存的 token,无则空(后端 cookie 认证兜底)
+  try {
+    const t = localStorage.getItem('hmr_token');
+    if (t) return t;
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function renderContent(text: string) {
