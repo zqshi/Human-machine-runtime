@@ -86,9 +86,7 @@ export function AppCreateFlow({ onBack }: Props) {
   /** 文件树加载后默认展开所有目录(小应用文件少,全展开便于浏览) */
   useEffect(() => {
     const collectDirs = (nodes: FileNode[]): string[] =>
-      nodes.flatMap((n) =>
-        n.type === 'dir' ? [n.path, ...collectDirs(n.children ?? [])] : []
-      );
+      nodes.flatMap((n) => (n.type === 'dir' ? [n.path, ...collectDirs(n.children ?? [])] : []));
     setExpandedDirs(new Set(collectDirs(files)));
   }, [files]);
 
