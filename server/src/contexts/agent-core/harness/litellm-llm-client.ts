@@ -131,9 +131,7 @@ function extractToolCalls(res: unknown): import('../domain/agent-executor.js').T
  * 从 OpenAI 兼容响应提取 token 用量(usage.prompt_tokens / completion_tokens)。
  * 结构异常/无 usage 返回 null。ToolLoopExecutor 据此累计各轮用量入账统计/计费。
  */
-function extractUsage(
-  res: unknown
-): { promptTokens: number; completionTokens: number } | null {
+function extractUsage(res: unknown): { promptTokens: number; completionTokens: number } | null {
   if (!res || typeof res !== 'object') return null;
   const u = (res as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } }).usage;
   if (!u) return null;

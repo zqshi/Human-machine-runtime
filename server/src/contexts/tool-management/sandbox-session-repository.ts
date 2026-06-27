@@ -18,18 +18,26 @@ export interface SandboxSessionRow {
 }
 
 /** 按 callerId 查持久化的 sandboxId(active 状态)。无记录返回 null。 */
-export async function findSandboxSession(
-  callerId: string
-): Promise<SandboxSessionRow | null> {
+export async function findSandboxSession(callerId: string): Promise<SandboxSessionRow | null> {
   const rows = (await db.execute(sql`
     SELECT caller_id, sandbox_id, tenant_id, status
     FROM sandbox_sessions
     WHERE caller_id = ${callerId} AND status = 'active'
     LIMIT 1
-  `)) as unknown as Array<{ caller_id: string; sandbox_id: string; tenant_id: string | null; status: string }>;
+  `)) as unknown as Array<{
+    caller_id: string;
+    sandbox_id: string;
+    tenant_id: string | null;
+    status: string;
+  }>;
   const r = rows?.[0];
   if (!r) return null;
-  return { callerId: r.caller_id, sandboxId: r.sandbox_id, tenantId: r.tenant_id, status: r.status };
+  return {
+    callerId: r.caller_id,
+    sandboxId: r.sandbox_id,
+    tenantId: r.tenant_id,
+    status: r.status,
+  };
 }
 
 /** upsert callerId → sandboxId 映射(新建或更新 sandboxId,如 callerId 换了新 sandbox)。 */

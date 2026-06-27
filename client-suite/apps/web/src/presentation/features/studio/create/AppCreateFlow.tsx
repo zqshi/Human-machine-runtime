@@ -73,13 +73,16 @@ export function AppCreateFlow({ onBack }: Props) {
     []
   );
   const addLog = useCallback(
-    (line: string) => setLogLines((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${line}`]),
+    (line: string) =>
+      setLogLines((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${line}`]),
     []
   );
 
   /** 轮询任务状态直到 completed/failed */
   const pollTaskStatus = useCallback(
-    async (taskId: string): Promise<{ conclusion?: string; toolCallsLog?: unknown[]; error?: string }> => {
+    async (
+      taskId: string
+    ): Promise<{ conclusion?: string; toolCallsLog?: unknown[]; error?: string }> => {
       const token = await getAuthToken();
       for (let i = 0; i < 30; i++) {
         await sleep(1500);
@@ -104,10 +107,9 @@ export function AppCreateFlow({ onBack }: Props) {
   /** 从 sandbox 读取文件树(list_files 递归一层) */
   const loadSandboxFiles = useCallback(async (): Promise<FileNode[]> => {
     const token = await getAuthToken();
-    const res = await fetch(
-      `/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const res = await fetch(`/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     const data = await res.json();
     const entries: SandboxEntry[] = data?.data?.entries ?? [];
     return entries.map((e) => ({ name: e.name, path: e.name, type: e.type }));
@@ -176,7 +178,9 @@ export function AppCreateFlow({ onBack }: Props) {
       setRightTab('files');
 
       const conclusion = result.conclusion || '应用文件已创建';
-      addBot(`✅ **应用已创建！**\n\n${conclusion}\n\n- 在「文件」Tab 查看真实创建的代码\n- 在「终端」Tab 查看创建日志\n\n需要调整或新增文件吗？`);
+      addBot(
+        `✅ **应用已创建！**\n\n${conclusion}\n\n- 在「文件」Tab 查看真实创建的代码\n- 在「终端」Tab 查看创建日志\n\n需要调整或新增文件吗？`
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       addLog(`✗ 错误: ${msg}`);
@@ -369,7 +373,8 @@ export function AppCreateFlow({ onBack }: Props) {
                     <div className="text-[11px] text-slate-400 leading-[1.6]">
                       <p className="mb-2">✅ 文件已真实创建于 sandbox</p>
                       <p className="text-slate-500">
-                        预览需构建环境(npm install + vite dev),<br />
+                        预览需构建环境(npm install + vite dev),
+                        <br />
                         将在后续版本支持沙箱构建运行。
                       </p>
                       <p className="mt-3 text-slate-600 text-[10px]">

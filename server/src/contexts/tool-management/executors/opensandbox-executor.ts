@@ -237,7 +237,11 @@ export class OpenSandboxExecutor implements IToolExecutor {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/not found|no such|ENOENT/i.test(msg)) {
-        return { success: false, error: `file not found: ${relPath}`, durationMs: Date.now() - start };
+        return {
+          success: false,
+          error: `file not found: ${relPath}`,
+          durationMs: Date.now() - start,
+        };
       }
       return { success: false, error: msg, durationMs: Date.now() - start };
     }
@@ -250,7 +254,7 @@ export class OpenSandboxExecutor implements IToolExecutor {
     try {
       const entries = await sb.files.search({ path: absPath });
       const result = entries.slice(0, 200).map((e) => {
-        const p = typeof e === 'string' ? e : (e as { path?: string }).path ?? String(e);
+        const p = typeof e === 'string' ? e : ((e as { path?: string }).path ?? String(e));
         // 返回相对 /workspace 的路径(前端展示用),去掉 WORKSPACE 前缀
         const rel = p.startsWith(WORKSPACE + '/') ? p.slice(WORKSPACE.length + 1) : p;
         return { name: rel.split('/').pop() || rel, path: rel || '.', type: 'file' as const };

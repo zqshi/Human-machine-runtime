@@ -142,15 +142,17 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
     }
     const relPath = c.req.query('path') || '.';
     // 用 factory 单例(与 LLM 写入共享 sandbox 缓存,否则新实例新 sandbox 看不到文件)
-    const { sandboxExecutorSingleton } = await import(
-      '../../contexts/tool-management/executors/executor-factory.js'
-    );
+    const { sandboxExecutorSingleton } =
+      await import('../../contexts/tool-management/executors/executor-factory.js');
     const executor = sandboxExecutorSingleton;
     const trimmed = relPath.replace(/\/+$/, '');
     const looksLikeFile = trimmed !== '.' && trimmed !== '..' && /\.[^/]+$/.test(trimmed);
     const result = looksLikeFile
       ? await executor.execute({ op: 'read_file' }, { path: relPath, __callerId: instanceId })
-      : await executor.execute({ op: 'list_files' }, { path: trimmed || '.', __callerId: instanceId });
+      : await executor.execute(
+          { op: 'list_files' },
+          { path: trimmed || '.', __callerId: instanceId }
+        );
     return c.json(result);
   });
 
@@ -161,41 +163,71 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
     if (!/^[a-zA-Z0-9_-]+$/.test(instanceId)) {
       return c.json({ error: 'invalid instanceId' }, 400);
     }
-    const { sandboxExecutorSingleton } = await import(
-      '../../contexts/tool-management/executors/executor-factory.js'
-    );
+    const { sandboxExecutorSingleton } =
+      await import('../../contexts/tool-management/executors/executor-factory.js');
     const executor = sandboxExecutorSingleton;
     // 仅 OpenSandboxExecutor 有 getSandboxForCommand(node-fs 版无命令执行能力)
-    if (typeof (executor as { getSandboxForCommand?: unknown }).getSandboxForCommand !== 'function') {
+    if (
+      typeof (executor as { getSandboxForCommand?: unknown }).getSandboxForCommand !== 'function'
+    ) {
       return c.json({ error: 'preview requires OpenSandbox (configure OPENSANDBOX_DOMAIN)' }, 503);
     }
     try {
-      const sb = await (executor as { getSandboxForCommand: (id: string) => Promise<unknown> }).getSandboxForCommand(instanceId);
+      const sb = await (
+        executor as { getSandboxForCommand: (id: string) => Promise<unknown> }
+      ).getSandboxForCommand(instanceId);
       const sandbox = sb as {
         files: { search: (p: { path: string }) => Promise<unknown[]> };
-        commands: { run: (cmd: string, opts?: { timeoutSeconds?: number; workingDirectory?: string; background?: boolean }) => Promise<{ logs?: { stdout?: { text: string }[]; stderr?: { text: string }[] } }> };
+        commands: {
+          run: (
+            cmd: string,
+            opts?: { timeoutSeconds?: number; workingDirectory?: string; background?: boolean }
+          ) => Promise<{ logs?: { stdout?: { text: string }[]; stderr?: { text: string }[] } }>;
+        };
         getEndpointUrl: (port: number) => Promise<string> | string;
       };
       // 1. 检查 package.json 是否存在(LLM 创建的应用)
       const wsFiles = await sandbox.files.search({ path: '/workspace' });
-      const hasPkg = wsFiles.some((f) => (typeof f === 'string' ? f : (f as { path?: string }).path) === '/workspace/package.json');
+      const hasPkg = wsFiles.some(
+        (f) =>
+          (typeof f === 'string' ? f : (f as { path?: string }).path) === '/workspace/package.json'
+      );
       if (!hasPkg) {
-        return c.json({ error: 'no package.json in workspace, please create app files first' }, 400);
+        return c.json(
+          { error: 'no package.json in workspace, please create app files first' },
+          400
+        );
       }
       // 2. npm install(前台同步,超时 120s;复用缓存则秒过)
-      const installRes = await sandbox.commands.run('cd /workspace && npm install --no-audit --prefer-offline 2>&1 | tail -3', { timeoutSeconds: 120, workingDirectory: '/workspace' });
+      const installRes = await sandbox.commands.run(
+        'cd /workspace && npm install --no-audit --prefer-offline 2>&1 | tail -3',
+        { timeoutSeconds: 120, workingDirectory: '/workspace' }
+      );
       const installLog = (installRes.logs?.stdout ?? []).map((l) => l.text).join('\n');
       // 3. 启动 vite dev(background detached 模式,不随命令结束被杀;监听 5173)
       //    用 background:true 让 dev server 长驻 sandbox,再 sleep 等它就绪。
       try {
-        await sandbox.commands.run('npm run dev', { background: true, workingDirectory: '/workspace' });
+        await sandbox.commands.run('npm run dev', {
+          background: true,
+          workingDirectory: '/workspace',
+        });
         // 等 vite 就绪(首次启动需编译,给 8s)
         await sandbox.commands.run('sleep 8', { timeoutSeconds: 15 });
         // 验证 5173 真在监听(连一下),失败则报错
-        const probe = await sandbox.commands.run('curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo fail', { timeoutSeconds: 10 });
-        const code = (probe.logs?.stdout ?? []).map((l) => l.text).join('').trim();
+        const probe = await sandbox.commands.run(
+          'curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo fail',
+          { timeoutSeconds: 10 }
+        );
+        const code = (probe.logs?.stdout ?? [])
+          .map((l) => l.text)
+          .join('')
+          .trim();
         if (!code || code === 'fail' || code === '000') {
-          return c.json({ success: false, installLog, error: `dev server 未就绪(端口5173无响应,可能 package.json 无 vite dev 脚本或启动失败)` });
+          return c.json({
+            success: false,
+            installLog,
+            error: `dev server 未就绪(端口5173无响应,可能 package.json 无 vite dev 脚本或启动失败)`,
+          });
         }
       } catch (e) {
         return c.json({

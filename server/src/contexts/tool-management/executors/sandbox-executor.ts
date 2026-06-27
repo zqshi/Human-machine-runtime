@@ -99,7 +99,11 @@ export class SandboxExecutor implements IToolExecutor {
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code === 'ENOENT') {
-        return { success: false, error: `file not found: ${relPath}`, durationMs: Date.now() - start };
+        return {
+          success: false,
+          error: `file not found: ${relPath}`,
+          durationMs: Date.now() - start,
+        };
       }
       throw err;
     }
