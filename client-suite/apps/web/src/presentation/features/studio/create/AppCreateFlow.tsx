@@ -6,12 +6,13 @@
  * - 右栏: 三Tab — 文件树 / 创建日志 / 预览
  *
  * T52:接真实 tool-loop dispatch(LLM 经 write_file 真实创建文件),替换原 MOCK_TERMINAL 假表演。
- * 文件从 sandbox 读取端点 GET /agent/sandbox/:instanceId/files 真实展示。
- * 预览需构建环境(留后续),当前诚实标注"文件已创建"。
+ * 文件从 sandbox 读取端点 GET /agent/sandbox/:instanceId/files 真实展示(search 递归子树 → buildFileTree 构建嵌套树)。
+ * 预览:POST /agent/sandbox/:instanceId/preview 在 sandbox 内 npm install + vite dev,返回 URL → iframe 展示。
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
 import { Icon } from '../../../components/ui/Icon';
+import { buildFileTree, type FileNode, type SandboxEntry } from './fileTree';
 
 interface Props {
   onBack: () => void;
@@ -21,19 +22,6 @@ interface ChatMsg {
   id: number;
   role: 'user' | 'bot';
   content: string;
-}
-
-/** sandbox 文件树条目(来自 /agent/sandbox/:instanceId/files list_files) */
-interface SandboxEntry {
-  name: string;
-  type: 'dir' | 'file';
-}
-/** sandbox 文件树节点(含子节点,递归展示) */
-interface FileNode {
-  name: string;
-  path: string;
-  type: 'dir' | 'file';
-  children?: FileNode[];
 }
 
 type RightTab = 'files' | 'terminal' | 'preview';
@@ -62,6 +50,13 @@ export function AppCreateFlow({ onBack }: Props) {
   const [selectedFileContent, setSelectedFileContent] = useState<string>('');
   const [logLines, setLogLines] = useState<string[]>([]);
   const [appReady, setAppReady] = useState(false);
+  /** 展开的目录 path 集合(文件树递归展开/折叠) */
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+  /** 应用预览:sandbox 内 vite dev 的可访问 URL(null=未启动) */
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLog, setPreviewLog] = useState<string | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -78,16 +73,34 @@ export function AppCreateFlow({ onBack }: Props) {
     []
   );
 
+  /** 切换目录展开/折叠 */
+  const toggleDir = useCallback((path: string) => {
+    setExpandedDirs((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  /** 文件树加载后默认展开所有目录(小应用文件少,全展开便于浏览) */
+  useEffect(() => {
+    const collectDirs = (nodes: FileNode[]): string[] =>
+      nodes.flatMap((n) =>
+        n.type === 'dir' ? [n.path, ...collectDirs(n.children ?? [])] : []
+      );
+    setExpandedDirs(new Set(collectDirs(files)));
+  }, [files]);
+
   /** 轮询任务状态直到 completed/failed */
   const pollTaskStatus = useCallback(
     async (
       taskId: string
     ): Promise<{ conclusion?: string; toolCallsLog?: unknown[]; error?: string }> => {
-      const token = await getAuthToken();
       for (let i = 0; i < 30; i++) {
         await sleep(1500);
         const res = await fetch(`/api/openclaw/agent/status/${taskId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
         });
         const data = await res.json();
         const state = data.state ?? data.data?.state;
@@ -104,23 +117,21 @@ export function AppCreateFlow({ onBack }: Props) {
     []
   );
 
-  /** 从 sandbox 读取文件树(list_files 递归一层) */
+  /** 从 sandbox 读取文件树(search 递归返回子树 → buildFileTree 按路径构建嵌套树) */
   const loadSandboxFiles = useCallback(async (): Promise<FileNode[]> => {
-    const token = await getAuthToken();
     const res = await fetch(`/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     });
     const data = await res.json();
     const entries: SandboxEntry[] = data?.data?.entries ?? [];
-    return entries.map((e) => ({ name: e.name, path: e.name, type: e.type }));
+    return buildFileTree(entries);
   }, []);
 
   /** 读取 sandbox 单个文件内容 */
   const loadFileContent = useCallback(async (path: string): Promise<string> => {
-    const token = await getAuthToken();
     const res = await fetch(
       `/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=${encodeURIComponent(path)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { credentials: 'include' }
     );
     const data = await res.json();
     return data?.success ? String(data.data?.content ?? '') : '(读取失败)';
@@ -135,12 +146,12 @@ export function AppCreateFlow({ onBack }: Props) {
     addLog(`用户请求: ${userMsg.slice(0, 80)}`);
 
     try {
-      const token = await getAuthToken();
       addLog('→ dispatch tool-loop 任务(app-studio sandbox)');
       // 真实 dispatch:LLM 经 tool-loop 调 write_file 真实创建文件
       const dispatchRes = await fetch('/api/openclaw/agent/dispatch', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'studio-create-app',
           description: `创建应用: ${userMsg.slice(0, 60)}`,
@@ -201,6 +212,62 @@ export function AppCreateFlow({ onBack }: Props) {
     },
     [loadFileContent]
   );
+
+  /** 递归渲染文件树节点(目录可展开/折叠,深度缩进) */
+  const renderFileNode = (node: FileNode, depth: number) => {
+    const isDir = node.type === 'dir';
+    const expanded = expandedDirs.has(node.path);
+    return (
+      <div key={node.path}>
+        <button
+          onClick={() => (isDir ? toggleDir(node.path) : onSelectFile(node))}
+          style={{ paddingLeft: `${depth * 10 + 6}px` }}
+          className={`w-full flex items-center gap-1 py-1 pr-2 rounded text-[10px] transition-colors ${!isDir && selectedFile === node.path ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/[0.04]'}`}
+        >
+          <span className="shrink-0">{isDir ? (expanded ? '📂' : '📁') : '📄'}</span>
+          <span className="truncate">{node.name}</span>
+        </button>
+        {isDir && expanded && (node.children ?? []).map((c) => renderFileNode(c, depth + 1))}
+      </div>
+    );
+  };
+
+  /** 启动应用预览:sandbox 内 npm install + vite dev,返回可访问 URL → iframe 展示 */
+  const startPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewUrl(null);
+    setPreviewLog(null);
+    addLog('→ 启动预览(sandbox 内 npm install + vite dev,首次较慢)');
+    setRightTab('preview');
+    try {
+      // npm install 可能 120s + vite 8s,超时给 150s
+      const res = await fetch(`/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/preview`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(150_000),
+      });
+      const data = await res.json();
+      if (data?.success && data.url) {
+        setPreviewUrl(data.url);
+        if (data.installLog) setPreviewLog(String(data.installLog));
+        addLog(`✓ 预览就绪: ${data.url}`);
+      } else {
+        const err = data?.error ?? '预览启动失败';
+        setPreviewError(err);
+        if (data?.installLog) setPreviewLog(String(data.installLog));
+        addLog(`✗ 预览失败: ${err}`);
+        toast('预览启动失败,请确认应用含 vite 依赖', 'error');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setPreviewError(`请求失败: ${msg}(可能 npm install 超时)`);
+      addLog(`✗ 预览请求失败: ${msg}`);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [addLog, toast]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -308,22 +375,13 @@ export function AppCreateFlow({ onBack }: Props) {
           <div className="flex-1 overflow-hidden">
             {rightTab === 'files' && (
               <div className="flex h-full">
-                <div className="w-40 border-r border-white/[0.06] p-2 overflow-y-auto hmr-scrollbar">
+                <div className="w-44 border-r border-white/[0.06] p-2 overflow-y-auto hmr-scrollbar">
                   {files.length === 0 ? (
                     <div className="text-[10px] text-slate-500 px-2 py-4 text-center">
                       尚未创建文件
                     </div>
                   ) : (
-                    files.map((f) => (
-                      <button
-                        key={f.path}
-                        onClick={() => onSelectFile(f)}
-                        className={`w-full text-left px-2 py-1 rounded text-[10px] transition-colors ${selectedFile === f.path ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/[0.04]'}`}
-                      >
-                        <span className="mr-1">{f.type === 'dir' ? '📁' : '📄'}</span>
-                        {f.name}
-                      </button>
-                    ))
+                    files.map((f) => renderFileNode(f, 0))
                   )}
                 </div>
                 <div className="flex-1 p-3 overflow-auto">
@@ -366,25 +424,61 @@ export function AppCreateFlow({ onBack }: Props) {
             )}
 
             {rightTab === 'preview' && (
-              <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-                <div className="text-center px-6">
-                  <div className="text-[14px] font-bold text-white mb-2">应用预览</div>
-                  {appReady ? (
-                    <div className="text-[11px] text-slate-400 leading-[1.6]">
-                      <p className="mb-2">✅ 文件已真实创建于 sandbox</p>
-                      <p className="text-slate-500">
-                        预览需构建环境(npm install + vite dev),
-                        <br />
-                        将在后续版本支持沙箱构建运行。
-                      </p>
-                      <p className="mt-3 text-slate-600 text-[10px]">
-                        当前可在「文件」Tab 查看真实生成的代码
-                      </p>
+              <div className="h-full flex flex-col bg-gradient-to-br from-slate-900 to-slate-800">
+                {!appReady ? (
+                  <div className="flex-1 flex items-center justify-center text-[11px] text-slate-500">
+                    等待应用创建...
+                  </div>
+                ) : previewLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+                    <div className="w-8 h-8 border-[1.5px] border-primary border-t-transparent rounded-full animate-spin mb-3" />
+                    <div className="text-[12px] font-bold text-white mb-1">正在构建预览</div>
+                    <div className="text-[10px] text-slate-400 leading-[1.6]">
+                      sandbox 内 npm install + 启动 vite dev
+                      <br />
+                      首次构建较慢(可达 2 分钟),请勿离开...
                     </div>
-                  ) : (
-                    <div className="text-[11px] text-slate-500">等待应用创建...</div>
-                  )}
-                </div>
+                    {previewLog && (
+                      <pre className="mt-3 max-h-32 overflow-auto text-[9px] font-mono text-slate-500 bg-[#0d1117] rounded-lg p-2 max-w-full">
+                        {previewLog}
+                      </pre>
+                    )}
+                  </div>
+                ) : previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    title="应用预览"
+                    className="flex-1 w-full bg-white"
+                    sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+                  />
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+                    <div className="text-[14px] font-bold text-white mb-2">应用预览</div>
+                    <p className="text-[11px] text-slate-400 leading-[1.6] mb-4">
+                      在 sandbox 内安装依赖并启动 vite dev server,
+                      <br />
+                      实时预览 AI 生成的应用运行效果。
+                    </p>
+                    <button
+                      onClick={startPreview}
+                      className="h-8 px-4 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90"
+                    >
+                      ▶ 启动预览
+                    </button>
+                    {previewError && (
+                      <div className="mt-4 max-w-full">
+                        <pre className="text-[10px] font-mono text-red-400 bg-red-950/30 rounded-lg p-2 whitespace-pre-wrap">
+                          {previewError}
+                        </pre>
+                        {previewLog && (
+                          <pre className="mt-2 max-h-24 overflow-auto text-[9px] font-mono text-slate-500 bg-[#0d1117] rounded-lg p-2">
+                            {previewLog}
+                          </pre>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -392,19 +486,6 @@ export function AppCreateFlow({ onBack }: Props) {
       </div>
     </div>
   );
-}
-
-/** 获取 auth token(从同源 cookie 或重新登录;studio 页面同源) */
-async function getAuthToken(): Promise<string> {
-  // studio 页面与 API 同源,依赖 cookie session;若需 Bearer 则走登录
-  // 简化:优先用 localStorage 缓存的 token,无则空(后端 cookie 认证兜底)
-  try {
-    const t = localStorage.getItem('hmr_token');
-    if (t) return t;
-  } catch {
-    /* ignore */
-  }
-  return '';
 }
 
 function sleep(ms: number): Promise<void> {
