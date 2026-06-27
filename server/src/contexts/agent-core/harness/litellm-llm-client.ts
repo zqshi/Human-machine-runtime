@@ -66,6 +66,7 @@ export class LiteLlmClientAdapter implements ILLMClient {
       });
       const content = extractContent(res);
       const toolCalls = extractToolCalls(res);
+      const usage = extractUsage(res);
       // 无内容也无工具调用 → 视为空(交由调用方 fallback)
       if (content === null && (!toolCalls || toolCalls.length === 0)) {
         llmCallsTotal.labels(this.model, 'empty').inc();
@@ -73,7 +74,7 @@ export class LiteLlmClientAdapter implements ILLMClient {
       }
       llmCallsTotal.labels(this.model, 'success').inc();
       llmCallDurationSeconds.labels(this.model, 'success').observe((Date.now() - start) / 1000);
-      return { content, toolCalls: toolCalls ?? undefined };
+      return { content, toolCalls: toolCalls ?? undefined, usage: usage ?? undefined };
     } catch {
       // 降级：返回 null，交由 AgentExecutor 走关键词 fallback，绝不向上抛打断主流程
       llmCallsTotal.labels(this.model, 'error').inc();
@@ -124,4 +125,20 @@ function extractToolCalls(res: unknown): import('../domain/agent-executor.js').T
     });
   }
   return calls.length > 0 ? calls : null;
+}
+
+/**
+ * 从 OpenAI 兼容响应提取 token 用量(usage.prompt_tokens / completion_tokens)。
+ * 结构异常/无 usage 返回 null。ToolLoopExecutor 据此累计各轮用量入账统计/计费。
+ */
+function extractUsage(
+  res: unknown
+): { promptTokens: number; completionTokens: number } | null {
+  if (!res || typeof res !== 'object') return null;
+  const u = (res as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown } }).usage;
+  if (!u) return null;
+  const promptTokens = Number(u.prompt_tokens);
+  const completionTokens = Number(u.completion_tokens);
+  if (!Number.isFinite(promptTokens) || !Number.isFinite(completionTokens)) return null;
+  return { promptTokens, completionTokens };
 }

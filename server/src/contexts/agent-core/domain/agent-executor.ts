@@ -61,6 +61,8 @@ export interface ChatCompletionResult {
   content: string | null;
   /** LLM 要求的工具调用(解析自响应 message.tool_calls);无则 undefined */
   toolCalls?: ToolCall[];
+  /** LLM 返回的 token 用量(OpenAI usage);LiteLlmClientAdapter 提取,供 ToolLoopExecutor 累计入账统计/计费 */
+  usage?: { promptTokens: number; completionTokens: number };
 }
 
 /** LLM 客户端接口 — domain 只依赖此抽象，不引入任何 SDK */

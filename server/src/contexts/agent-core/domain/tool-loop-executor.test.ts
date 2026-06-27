@@ -7,13 +7,19 @@ import type {
   ToolInvocationResult,
 } from '../../tool-management/tool-registry.js';
 
-function makeLlmClient(responses: Array<{ content?: string | null; toolCalls?: ToolCall[] }>) {
+function makeLlmClient(
+  responses: Array<{
+    content?: string | null;
+    toolCalls?: ToolCall[];
+    usage?: { promptTokens: number; completionTokens: number };
+  }>
+) {
   let i = 0;
   return {
     isAvailable: true,
     chatCompletion: vi.fn(async (_messages: ChatMessage[], _opts?: unknown) => {
       const r = responses[i++] ?? { content: null };
-      return { content: r.content ?? null, toolCalls: r.toolCalls };
+      return { content: r.content ?? null, toolCalls: r.toolCalls, usage: r.usage };
     }),
   } as unknown as ILLMClient;
 }
@@ -229,5 +235,23 @@ describe('ToolLoopExecutor', () => {
     expect(result.conclusion).toContain('不可用'); // 降级提示
     expect(result.toolCallsLog).toEqual([]);
     expect(llm.chatCompletion).not.toHaveBeenCalled();
+  });
+
+  it('累计各轮 LLM usage → tokenUsage 供入账统计/计费(修复"统计对不上业务")', async () => {
+    const llm = makeLlmClient([
+      {
+        content: null,
+        toolCalls: [{ id: 'c1', type: 'function', function: { name: 'search', arguments: '{}' } }],
+        usage: { promptTokens: 100, completionTokens: 20 },
+      },
+      { content: '完成', usage: { promptTokens: 150, completionTokens: 10 } },
+    ]);
+    const reg = makeRegistry({ endpoints: [endpoint('search')] });
+    const exec = new ToolLoopExecutor(llm, reg);
+
+    const result = await exec.run(baseInput);
+
+    // 两轮 usage 累加:prompt 100+150=250, completion 20+10=30
+    expect(result.tokenUsage).toEqual({ prompt: 250, completion: 30 });
   });
 });

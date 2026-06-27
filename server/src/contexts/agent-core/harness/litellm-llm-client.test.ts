@@ -100,6 +100,29 @@ describe('LiteLlmClientAdapter', () => {
     expect(mock.chatCompletion).not.toHaveBeenCalled();
   });
 
+  it('提取 OpenAI usage(prompt/completion tokens)透传给调用方入账统计/计费', async () => {
+    const mock = makeMockClient({
+      raw: {
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 120, completion_tokens: 30, total_tokens: 150 },
+      },
+    });
+    const adapter = new LiteLlmClientAdapter(mock, 'glm-4-flash');
+
+    const result = await adapter.chatCompletion([{ role: 'user', content: 'x' }]);
+
+    expect(result?.usage).toEqual({ promptTokens: 120, completionTokens: 30 });
+  });
+
+  it('响应无 usage → result.usage 为 undefined(旧调用方/降级路径兼容)', async () => {
+    const mock = makeMockClient({ content: 'ok' }); // 默认 raw 无 usage
+    const adapter = new LiteLlmClientAdapter(mock, 'glm-4-flash');
+
+    const result = await adapter.chatCompletion([{ role: 'user', content: 'x' }]);
+
+    expect(result?.usage).toBeUndefined();
+  });
+
   it('透传调用方 options（temperature/maxTokens），缺省回退构造默认', async () => {
     const mock = makeMockClient({ content: 'x' });
 

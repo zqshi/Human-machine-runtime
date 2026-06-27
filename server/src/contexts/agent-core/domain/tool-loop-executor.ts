@@ -43,6 +43,8 @@ export interface ToolLoopResult {
   toolCallsLog: ToolCallLogEntry[];
   /** LLM 调用次数(含工具轮 + 最终结论轮) */
   turns: number;
+  /** 累计 token 用量(各轮 prompt+completion 之和),供 adapter 透传 → bootstrap 入账统计/计费 */
+  tokenUsage?: { prompt: number; completion: number };
 }
 
 const DEFAULT_MAX_TURNS = 8;
@@ -93,6 +95,8 @@ export class ToolLoopExecutor {
     const toolCallsLog: ToolCallLogEntry[] = [];
     let conclusion = '';
     let turns = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
 
     // 2. 多轮循环
     while (turns < maxTurns) {
@@ -102,6 +106,11 @@ export class ToolLoopExecutor {
         // LLM 降级返回 null(底层异常/空响应)
         conclusion = conclusion || 'LLM 未返回有效响应,任务终止。';
         break;
+      }
+      // 累计 token 用量(各轮 LLM 真实消耗),供入账统计/计费
+      if (result.usage) {
+        totalPromptTokens += result.usage.promptTokens;
+        totalCompletionTokens += result.usage.completionTokens;
       }
 
       const toolCalls = result.toolCalls;
@@ -185,7 +194,12 @@ export class ToolLoopExecutor {
       conclusion = `任务执行已达最大轮次(${maxTurns}),执行了 ${toolCallsLog.length} 次工具调用,未生成最终结论。`;
     }
 
-    return { conclusion, toolCallsLog, turns };
+    return {
+      conclusion,
+      toolCallsLog,
+      turns,
+      tokenUsage: { prompt: totalPromptTokens, completion: totalCompletionTokens },
+    };
   }
 }
 

@@ -21,6 +21,7 @@ import { buildRuntimeEngine } from './bootstrap/runtime-engine.js';
 import { buildAgentAdapters } from './bootstrap/agent-adapters.js';
 import { ToolLoopExecutor } from '../contexts/agent-core/domain/tool-loop-executor.js';
 import { ToolLoopAdapter } from '../contexts/agent-core/sandbox/tool-loop-adapter.js';
+import { estimateCostUsd } from '../contexts/agent-core/domain/pricing.js';
 import { AgentDefinitionRepository } from '../db/repositories/agent-definition-repository.js';
 import { createMatrixBotLogger, createMatrixBotDeps } from './bootstrap/matrix-adapters.js';
 
@@ -319,6 +320,43 @@ export function createAppContext(db: Database): AppContext {
   agentAdapterRegistry.register(toolLoopAdapter);
   toolLoopAdapter.onTaskComplete((result) => {
     const receipt = receiptManager.getReceipt(result.taskId);
+    // token 用量入账(无论 receipt 是否存在,usage 都是真实 LLM 消耗)。
+    // 修复"统计对不上业务":tool-loop 投产路径此前不写统计/计费,致统计表空、对不上真实用量。
+    // 仿 claude adapter(agent-adapters.ts:60-95):recordUsage + estimateCostUsd + billing.recordEvent。
+    if (result.success && result.tokenUsage) {
+      const tenantIdForUsage = receipt?.tenantId ?? 'unknown';
+      const model = config.agent.llmModel;
+      tokenUsageService
+        .recordUsage({
+          tenantId: tenantIdForUsage,
+          model,
+          inputTokens: result.tokenUsage.prompt,
+          outputTokens: result.tokenUsage.completion,
+          source: 'tool-loop',
+        })
+        .catch((err) => logger.warn({ err: String(err) }, 'tool-loop token usage record failed'));
+      const costUsd = estimateCostUsd(
+        model,
+        result.tokenUsage.prompt,
+        result.tokenUsage.completion
+      );
+      if (costUsd > 0) {
+        billingService
+          .recordEvent({
+            tenantId: tenantIdForUsage,
+            type: 'token_usage',
+            amount: costUsd,
+            metadata: {
+              model,
+              inputTokens: result.tokenUsage.prompt,
+              outputTokens: result.tokenUsage.completion,
+              taskId: result.taskId,
+              source: 'tool-loop',
+            },
+          })
+          .catch((err) => logger.warn({ err: String(err) }, 'tool-loop billing record failed'));
+      }
+    }
     if (receipt) {
       if (result.success) {
         receiptManager

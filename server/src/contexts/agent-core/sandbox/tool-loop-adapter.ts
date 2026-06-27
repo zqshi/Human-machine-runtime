@@ -73,6 +73,7 @@ export class ToolLoopAdapter implements IAgentRuntimeAdapter {
       const result = await this.executor.run({
         prompt,
         tenantId: task.tenantId,
+        instanceId: task.input?.instanceId ? String(task.input.instanceId) : undefined,
         sessionId: String(task.input?.sessionId ?? ''),
         maxTurns: typeof task.input?.maxTurns === 'number' ? task.input.maxTurns : undefined,
       });
@@ -94,6 +95,13 @@ export class ToolLoopAdapter implements IAgentRuntimeAdapter {
         success: true,
         output: entry.state.output,
         durationMs: Date.now() - entry.startedAt,
+        tokenUsage: result.tokenUsage
+          ? {
+              prompt: result.tokenUsage.prompt,
+              completion: result.tokenUsage.completion,
+              total: result.tokenUsage.prompt + result.tokenUsage.completion,
+            }
+          : undefined,
       });
     } catch (err) {
       if (entry.finalState) return;
