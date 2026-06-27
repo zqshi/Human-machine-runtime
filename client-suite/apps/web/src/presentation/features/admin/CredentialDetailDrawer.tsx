@@ -9,7 +9,7 @@ import { Drawer } from '../../components/ui/Drawer';
 import {
   credentialManagementApi,
   type CredentialDetail,
-} from '../../../infrastructure/api/credentialManagementApi';
+} from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 interface Props {

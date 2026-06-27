@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
-import { credentialManagementApi } from '../../../infrastructure/api/credentialManagementApi';
+import { credentialManagementApi } from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 interface Props {

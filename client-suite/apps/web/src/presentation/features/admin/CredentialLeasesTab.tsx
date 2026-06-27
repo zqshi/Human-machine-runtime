@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   credentialManagementApi,
   type CredentialLease,
-} from '../../../infrastructure/api/credentialManagementApi';
+} from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 const PAGE_SIZE = 20;

@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   credentialManagementApi,
   type CredentialAuthorization,
-} from '../../../infrastructure/api/credentialManagementApi';
+} from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { CredentialCreateDrawer } from './CredentialCreateDrawer';
 import { CredentialDetailDrawer } from './CredentialDetailDrawer';

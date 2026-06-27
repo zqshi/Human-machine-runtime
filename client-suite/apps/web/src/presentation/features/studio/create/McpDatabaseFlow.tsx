@@ -11,8 +11,8 @@
 import { useState } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
 import { Icon } from '../../../components/ui/Icon';
-import { toolApi } from '../../../../infrastructure/api/adminApiClient';
-import { credentialManagementApi } from '../../../../infrastructure/api/credentialManagementApi';
+import { toolApi } from '../../../../application/services/adminApi';
+import { credentialManagementApi } from '../../../../application/services/adminApi';
 
 interface Props {
   onBack: () => void;

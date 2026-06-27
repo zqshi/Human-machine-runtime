@@ -122,6 +122,8 @@ export type {
 } from '../../infrastructure/api/marketplaceApiClient';
 export { marketplaceApi as upstreamMarketplaceApi } from '../../infrastructure/api/upstreamApiClient';
 
+export * from '../../infrastructure/api/credentialManagementApi';
+
 export {
   agentDefinitionApi,
   defaultAgentDefinitionSpec,
