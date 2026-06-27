@@ -13,6 +13,7 @@
 | v1.3-v1.7 | 云原生声明式 Agent 平台（声明/组装/trace/eval） | done | snapshot 已归档（v1.3-v1.7-snapshot.md）；4 版连续完成，架构总纲 `docs/architecture/cloud-native-platform-design.md` |
 | v1.8 | 声明/运行 reconcile 解耦 | done | snapshot 已归档(v1.8-snapshot.md);desiredState+generation+spec-diff 调和,云原生收官;遗留:Container 扩容限制 + bootstrap.ts 832 行技术债 |
 | v1.9 | 投产就绪:Agent 声明式创建升级 + #1拒答/#7审批/#13灰度 + D8治本 | done | snapshot 已归档(v1.9-snapshot.md);7步声明式向导+AgentRuntimePort解耦useAgentChat+管理后台UI(审批/flag/模板);遗留:T9流式待浏览器实测+openclaw后端guardrail兜底 |
+| v2.0 | 声明式+编译固化+运行时动态组装(架构升级) | next 待启动 | 补齐编译固化层(RuntimeManifest+BakingService)+CubeSandbox高安全执行层并存+后台固化/沙箱策略能力;设计文档 docs/architecture/v2.0-declarative-baking-runtime.md;任务图 docs/versions/v2.0-next.md(C1-C15);与v1.2.2计费正交,激活时不丢计费规划 |
 
 ## 长期技术债务
 
@@ -31,6 +32,9 @@
 | D9 | **marketplace「对话」半成品**：`MarketplacePage.tsx` 两处点 Agent「对话」仅 `setDock` 跳转、不建对话上下文。根因：`marketplaceStore.agents`(id `mk-*`，市场模板) 与 `agentStore.sharedAgents`(id `sa-*`，组织共享 Agent) id 体系不兼容，无法直接 `startSharedAgentChat`。需产品决策（先安装为共享 Agent 再对话？还是独立入口？）后实现。2026-06-24 排查后主动回退了误改，治本(`setDock` 对齐 `appMode`)已防撕裂，完整实现留此条。 | 双模式修复(计划外) | P2 | ✅ 已解决 2026-06-25（T20a 方案 done + T20b 选项 A 实现：installAgent 落 AgentDefinition+createInstance→sharedAgentChatService.openInstalledInstance→activeInstanceId→chat 真 instanceId；核实发现 activeInstanceId 全链路未接线断点已修 marketplace 路径）；遗留真对话响应待浏览器实测(类 D10) + 重复安装幂等性待补。方案见 `docs/architecture/t20a-marketplace-chat-decision.md` |
 | D10 | **openclawStore 跨模式自举真请求验证缺口**：IM 模式内共享 Agent 对话复用 `useAgentChat`+`openclawStore`，`sharedAgentChatService.open` 已调幂等 `initConversation()` 准备状态机，但 IM 模式未走 `appMode==='openclaw'` 的 `initialize()`(拉通知/事件等 OC 专属数据)。逻辑自举由 `conversationActions`(initConversation 幂等 + switchConversation 自建空对话) 保证，但真请求流式回包未经浏览器验证（tsc/vitest 测不出，类 `migrate.ts 不跑 .sql` 风险）。需 IM 模式实际发一条消息确认。 | 双模式修复(计划外) | P2 | 待浏览器验证 |
 | D11 | **WpsImAdapter 7 个 NotImplementedError 未实现**：editMessage/redactMessage/createDmRoom/inviteToRoom/createGroupRoom/joinRoom/leaveRoom。`useMatrixClient.loginWps` 会实例化 WpsImAdapter，但投产未启用 WPS IM 通道(决策 2026-06-25)，不阻断。启用该通道时需对照 WPS IM 协议(farmBaseUrl API)补齐。 | 投产收尾 T6 | P2 | ✅ 已解决 2026-06-25（T21：加 `VITE_WPS_IM_ENABLED` gate,WpsImAdapter 构造 fail-fast 守卫 + SettingsPage 选项过滤 + client `.env.example`;未启用即禁止实例化,防残留 wps-token 触发未实现方法。启用该通道时须先补齐 7 方法再设 `VITE_WPS_IM_ENABLED=true`） |
+| D12 | openclaw 4 聚合统计端点全量 reduce 性能优化（/inbox、/judgment-analytics、/evaluation dual-track、/trends 返回聚合指标非 item 列表，不属 §7.2.1 分页管辖，但全量读取是性能债） | v1.2.2 T58 | P3 | 待排期 |
+| D13 | openclaw 带 filter 端点 JSONB filter 索引优化（list+filter+slice 改 DB 层 where filter，消除全量读+内存 filter；实体 EAV+JSONB） | v1.2.2 T58 | P3 | 待排期 |
+| D14 | CubeSandbox KVM 宿主部署（v2.0 C8 实测前置；代码只接 E2B SDK，宿主部署是运维侧，需支持 KVM 的 x86_64 Linux PVM） | v2.0 规划 | P1 | v2.0 激活前 |
 
 ## 候选方向（未排期）
 
