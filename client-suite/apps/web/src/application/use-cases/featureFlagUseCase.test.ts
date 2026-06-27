@@ -51,7 +51,11 @@ describe('listFeatureFlags', () => {
     });
     const drafts = await listFeatureFlags(deps);
     const preset = drafts.find((d) => d.key === 'tool.approval.enforce');
-    expect(preset).toMatchObject({ key: 'tool.approval.enforce', enabled: false, tenantsInput: '' });
+    expect(preset).toMatchObject({
+      key: 'tool.approval.enforce',
+      enabled: false,
+      tenantsInput: '',
+    });
   });
 
   it('allowedTenants 数组 → tenantsInput 逗号字符串(草稿转换)', async () => {
@@ -106,10 +110,7 @@ describe('saveFeatureFlag', () => {
   it('killSwitch 透传', async () => {
     const set = vi.fn().mockResolvedValue(undefined);
     const deps = mockDeps({ featureFlagApi: { list: vi.fn(), set } as never });
-    await saveFeatureFlag(
-      { key: 'k', enabled: true, tenantsInput: '', killSwitch: false },
-      deps
-    );
+    await saveFeatureFlag({ key: 'k', enabled: true, tenantsInput: '', killSwitch: false }, deps);
     expect(set).toHaveBeenCalledWith('k', expect.objectContaining({ killSwitch: false }));
   });
 });

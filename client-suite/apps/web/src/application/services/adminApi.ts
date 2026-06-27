@@ -111,6 +111,16 @@ export type { Department } from '../../infrastructure/api/departmentApiClient';
 
 export { featureFlagApi } from '../../infrastructure/api/v19AdminApi';
 export type { FeatureFlagConfig } from '../../infrastructure/api/v19AdminApi';
+export { toolApprovalsApi } from '../../infrastructure/api/v19AdminApi';
+export type { ToolApproval, ToolApprovalStatus } from '../../infrastructure/api/v19AdminApi';
+export { runtimeTemplatesApi } from '../../infrastructure/api/v19AdminApi';
+export type { SandboxTemplateDef, RuntimeTypeEntry } from '../../infrastructure/api/v19AdminApi';
+export { marketplaceApi } from '../../infrastructure/api/marketplaceApiClient';
+export type {
+  MarketplaceAgentDTO,
+  MarketplaceSkillDTO,
+} from '../../infrastructure/api/marketplaceApiClient';
+export { marketplaceApi as upstreamMarketplaceApi } from '../../infrastructure/api/upstreamApiClient';
 
 export {
   agentDefinitionApi,

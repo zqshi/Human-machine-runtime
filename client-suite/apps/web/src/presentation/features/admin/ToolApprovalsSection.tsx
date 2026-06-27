@@ -4,7 +4,7 @@
  * 列出 pending 审批,admin approve(触发续执行)/reject。消费 toolApprovalsApi。
  */
 import { useState, useEffect, useCallback } from 'react';
-import { toolApprovalsApi, type ToolApproval } from '../../../infrastructure/api/v19AdminApi';
+import { toolApprovalsApi, type ToolApproval } from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 const RISK_COLORS: Record<string, string> = {

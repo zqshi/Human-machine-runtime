@@ -37,7 +37,11 @@ describe('buildAgentDefinitionSpec', () => {
   it('表单字段映射到 spec(含 default 兜底)', () => {
     const spec = buildAgentDefinitionSpec(baseForm);
     expect(spec.sandboxTemplate).toBe('basic');
-    expect(spec.modelConfig).toEqual({ primaryModel: 'auto', fallbackModels: [], maxConcurrency: 5 });
+    expect(spec.modelConfig).toEqual({
+      primaryModel: 'auto',
+      fallbackModels: [],
+      maxConcurrency: 5,
+    });
     expect(spec.persona.systemPrompt).toBe('你是助手');
     expect(spec.runtime).toEqual({ runtimeType: 'claude' });
   });
@@ -69,19 +73,28 @@ describe('createOrUpdateAgentDefinition', () => {
 
   it('无 definitionId → 走 create(传 tenantId)', async () => {
     const create = vi.fn().mockResolvedValue(fakeDef);
-    const deps = mockDeps({ agentDefinitionApi: { create, update: vi.fn(), instantiate: vi.fn() } as never });
+    const deps = mockDeps({
+      agentDefinitionApi: { create, update: vi.fn(), instantiate: vi.fn() } as never,
+    });
     const spec: AgentDefinitionSpec = {} as never;
     const result = await createOrUpdateAgentDefinition(
       { definitionId: undefined, tenantId: 't1', name: '测试', description: 'desc', spec },
       deps
     );
-    expect(create).toHaveBeenCalledWith({ tenantId: 't1', name: '测试', spec, description: 'desc' });
+    expect(create).toHaveBeenCalledWith({
+      tenantId: 't1',
+      name: '测试',
+      spec,
+      description: 'desc',
+    });
     expect(result).toBe(fakeDef);
   });
 
   it('有 definitionId → 走 update(不传 tenantId)', async () => {
     const update = vi.fn().mockResolvedValue(fakeDef);
-    const deps = mockDeps({ agentDefinitionApi: { create: vi.fn(), update, instantiate: vi.fn() } as never });
+    const deps = mockDeps({
+      agentDefinitionApi: { create: vi.fn(), update, instantiate: vi.fn() } as never,
+    });
     const spec: AgentDefinitionSpec = {} as never;
     const result = await createOrUpdateAgentDefinition(
       { definitionId: 'adef_x', tenantId: 'ignored', name: 'n', description: '', spec },
@@ -93,7 +106,9 @@ describe('createOrUpdateAgentDefinition', () => {
 
   it('description 空 → create 传 null', async () => {
     const create = vi.fn().mockResolvedValue(fakeDef);
-    const deps = mockDeps({ agentDefinitionApi: { create, update: vi.fn(), instantiate: vi.fn() } as never });
+    const deps = mockDeps({
+      agentDefinitionApi: { create, update: vi.fn(), instantiate: vi.fn() } as never,
+    });
     await createOrUpdateAgentDefinition(
       { tenantId: 't1', name: 'n', description: '', spec: {} as never },
       deps
@@ -105,7 +120,9 @@ describe('createOrUpdateAgentDefinition', () => {
 describe('instantiateAgentDefinition', () => {
   it('调 agentDefinitionApi.instantiate 返回 {instanceId, name}', async () => {
     const instantiate = vi.fn().mockResolvedValue({ instanceId: 'inst_1', name: '对话' });
-    const deps = mockDeps({ agentDefinitionApi: { create: vi.fn(), update: vi.fn(), instantiate } as never });
+    const deps = mockDeps({
+      agentDefinitionApi: { create: vi.fn(), update: vi.fn(), instantiate } as never,
+    });
     const result = await instantiateAgentDefinition('adef_1', deps);
     expect(instantiate).toHaveBeenCalledWith('adef_1');
     expect(result).toEqual({ instanceId: 'inst_1', name: '对话' });

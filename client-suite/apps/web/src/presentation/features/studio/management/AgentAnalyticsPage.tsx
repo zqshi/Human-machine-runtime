@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../../components/ui/Icon';
-import { analyticsApi } from '../../../../infrastructure/api/adminApiClient';
+import { analyticsApi } from '../../../../application/services/adminApi';
 
 type TimeRange = '7d' | '30d' | '90d';
 

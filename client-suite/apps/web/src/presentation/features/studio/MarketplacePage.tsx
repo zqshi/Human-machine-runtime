@@ -10,9 +10,12 @@ import { useMarketplaceStore } from '../../../application/stores/marketplaceStor
 import { useStudioStore } from '../../../application/stores/studioStore';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { useUIStore } from '../../../application/stores/uiStore';
-import { appCatalogApi, type AppCatalogItem } from '../../../application/services/adminApi';
-import { marketplaceApi } from '../../../infrastructure/api/marketplaceApiClient';
-import { marketplaceApi as upstreamMarketplaceApi } from '../../../infrastructure/api/upstreamApiClient';
+import {
+  appCatalogApi,
+  type AppCatalogItem,
+  marketplaceApi,
+  upstreamMarketplaceApi,
+} from '../../../application/services/adminApi';
 import { sharedAgentChatService } from '../../../application/services/sharedAgentChatService';
 import { SkillDetailView } from './marketplace/SkillDetailView';
 import { McpDetailView } from './marketplace/McpDetailView';

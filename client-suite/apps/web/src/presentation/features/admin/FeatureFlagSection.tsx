@@ -8,7 +8,11 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useToastStore } from '../../../application/stores/toastStore';
-import { listFeatureFlags, saveFeatureFlag, type FlagDraft } from '../../../application/use-cases/featureFlagUseCase';
+import {
+  listFeatureFlags,
+  saveFeatureFlag,
+  type FlagDraft,
+} from '../../../application/use-cases/featureFlagUseCase';
 
 export function FeatureFlagSection() {
   const [drafts, setDrafts] = useState<FlagDraft[]>([]);

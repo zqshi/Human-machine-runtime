@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { Icon } from '../../../components/ui/Icon';
-import type { MarketplaceAgentDTO } from '../../../../infrastructure/api/marketplaceApiClient';
+import type { MarketplaceAgentDTO } from '../../../../application/services/adminApi';
 
 interface Props {
   agent: MarketplaceAgentDTO;

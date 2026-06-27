@@ -9,7 +9,7 @@
  */
 import { useState } from 'react';
 import { Icon } from '../../../components/ui/Icon';
-import type { MarketplaceSkillDTO } from '../../../../infrastructure/api/marketplaceApiClient';
+import type { MarketplaceSkillDTO } from '../../../../application/services/adminApi';
 
 interface Props {
   skill: MarketplaceSkillDTO;

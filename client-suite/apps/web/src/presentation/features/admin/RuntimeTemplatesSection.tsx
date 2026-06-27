@@ -9,7 +9,7 @@ import {
   runtimeTemplatesApi,
   type SandboxTemplateDef,
   type RuntimeTypeEntry,
-} from '../../../infrastructure/api/v19AdminApi';
+} from '../../../application/services/adminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
 
 export function RuntimeTemplatesSection() {
