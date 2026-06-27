@@ -65,6 +65,9 @@ const HASHABLE_ADMIN_SECTIONS: readonly AdminSection[] = [
   'employee-memory',
   'scheduled-tasks',
   'credentials',
+  'tool-approvals',
+  'feature-flags',
+  'runtime-templates',
 ];
 
 /** 从 URL hash 读取 section（硬刷新后恢复当前页）；非法或缺失返回 'employees'。 */

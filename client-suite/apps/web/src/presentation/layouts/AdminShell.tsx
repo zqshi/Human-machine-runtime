@@ -29,6 +29,10 @@ import { OpsWeeklySection } from '../features/admin/OpsWeeklySection';
 import { ChannelManagementSection } from '../features/admin/ChannelManagementSection';
 import { AdminAssistant } from '../features/admin/AdminAssistant';
 import { MemorySection } from '../features/admin/memory';
+import { CredentialSection } from '../features/admin/CredentialSection';
+import { FeatureFlagSection } from '../features/admin/FeatureFlagSection';
+import { RuntimeTemplatesSection } from '../features/admin/RuntimeTemplatesSection';
+import { ToolApprovalsSection } from '../features/admin/ToolApprovalsSection';
 import { LoginPage } from '../pages/LoginPage';
 import { SSOCallback } from '../pages/auth/SSOCallback';
 import { ToastContainer } from '../components/ui/Toast';
@@ -86,11 +90,20 @@ const NAV_GROUPS: NavGroup[] = [
     items: [{ key: 'scheduled-tasks', icon: 'schedule', label: '定时任务' }],
   },
   {
+    title: '投产管控',
+    items: [
+      { key: 'tool-approvals', icon: 'task_alt', label: '工具审批' },
+      { key: 'feature-flags', icon: 'flag', label: 'Feature Flag' },
+      { key: 'runtime-templates', icon: 'memory', label: '运行时模板' },
+    ],
+  },
+  {
     title: '系统',
     items: [
       { key: 'logs', icon: 'receipt_long', label: '日志' },
       { key: 'auth', icon: 'admin_panel_settings', label: '权限管理' },
       { key: 'notifications', icon: 'notifications', label: '通知' },
+      { key: 'credentials', icon: 'key', label: '凭证管理' },
     ],
   },
 ];
@@ -168,6 +181,14 @@ function SwitchedSection({ section }: { section: AdminSection }) {
       return <EvalSuiteDetail />;
     case 'scheduled-tasks':
       return <ScheduledTasksSection />;
+    case 'credentials':
+      return <CredentialSection />;
+    case 'tool-approvals':
+      return <ToolApprovalsSection />;
+    case 'feature-flags':
+      return <FeatureFlagSection />;
+    case 'runtime-templates':
+      return <RuntimeTemplatesSection />;
     default:
       return null;
   }
