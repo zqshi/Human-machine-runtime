@@ -108,3 +108,25 @@ export type {
 
 export { departmentApi } from '../../infrastructure/api/departmentApiClient';
 export type { Department } from '../../infrastructure/api/departmentApiClient';
+
+export { featureFlagApi } from '../../infrastructure/api/v19AdminApi';
+export type { FeatureFlagConfig } from '../../infrastructure/api/v19AdminApi';
+
+export {
+  agentDefinitionApi,
+  defaultAgentDefinitionSpec,
+  GUARDRAIL_ACTIONS,
+  GUARDRAIL_TYPES,
+  RUNTIME_TYPES,
+  RUNTIME_TYPE_LABELS,
+  SANDBOX_TEMPLATES,
+  SANDBOX_TEMPLATE_LABELS,
+} from '../../infrastructure/api/agentDefinitionApi';
+export type {
+  AgentDefinition,
+  AgentDefinitionSpec,
+  AgentRuntimeType,
+  GuardrailAction,
+  GuardrailRule,
+  GuardrailType,
+} from '../../infrastructure/api/agentDefinitionApi';

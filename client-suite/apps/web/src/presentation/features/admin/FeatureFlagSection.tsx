@@ -3,29 +3,12 @@
  *
  * 列出已配置 flag(enabled/rolloutPct/killSwitch/allowedTenants),可编辑 + 新增。
  * 关键 flag:agent.guardrails.enforce / tool.approval.enforce / agent.runtime.canary。
- * 消费 featureFlagApi。
+ *
+ * T46:经 application use-case(featureFlagUseCase)编排,不直调 infrastructure。
  */
 import { useState, useEffect, useCallback } from 'react';
-import { featureFlagApi, type FeatureFlagConfig } from '../../../infrastructure/api/v19AdminApi';
 import { useToastStore } from '../../../application/stores/toastStore';
-
-const PRESET_KEYS = ['agent.guardrails.enforce', 'tool.approval.enforce', 'agent.runtime.canary'];
-
-interface FlagDraft extends FeatureFlagConfig {
-  key: string;
-  tenantsInput: string; // allowedTenants 编辑用(逗号分隔)
-}
-
-function toDraft(key: string, flag: FeatureFlagConfig): FlagDraft {
-  return {
-    key,
-    enabled: flag.enabled,
-    rolloutPct: flag.rolloutPct,
-    allowedTenants: flag.allowedTenants,
-    killSwitch: flag.killSwitch,
-    tenantsInput: (flag.allowedTenants ?? []).join(', '),
-  };
-}
+import { listFeatureFlags, saveFeatureFlag, type FlagDraft } from '../../../application/use-cases/featureFlagUseCase';
 
 export function FeatureFlagSection() {
   const [drafts, setDrafts] = useState<FlagDraft[]>([]);
@@ -37,13 +20,7 @@ export function FeatureFlagSection() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await featureFlagApi.list();
-      const allKeys = new Set([...Object.keys(r.flags), ...PRESET_KEYS]);
-      setDrafts(
-        Array.from(allKeys).map((k) =>
-          r.flags[k] ? toDraft(k, r.flags[k]) : { key: k, enabled: false, tenantsInput: '' }
-        )
-      );
+      setDrafts(await listFeatureFlags());
     } catch (e) {
       toast(`加载 feature flag 失败: ${(e as Error).message}`, 'error');
     } finally {
@@ -62,17 +39,7 @@ export function FeatureFlagSection() {
   const save = async (d: FlagDraft) => {
     setSaving(d.key);
     try {
-      const tenants = d.tenantsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-      const config: FeatureFlagConfig = {
-        enabled: d.enabled,
-        rolloutPct: d.rolloutPct,
-        allowedTenants: tenants.length ? tenants : undefined,
-        killSwitch: d.killSwitch,
-      };
-      await featureFlagApi.set(d.key, config);
+      await saveFeatureFlag(d);
       toast(`已保存 ${d.key}`, 'success');
     } catch (e) {
       toast(`保存失败: ${(e as Error).message}`, 'error');

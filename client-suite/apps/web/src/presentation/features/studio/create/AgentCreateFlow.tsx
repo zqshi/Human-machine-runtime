@@ -16,18 +16,6 @@ import { useToastStore } from '../../../../application/stores/toastStore';
 import { useUIStore } from '../../../../application/stores/uiStore';
 import { useAuthStore } from '../../../../application/stores/authStore';
 import { sharedAgentChatService } from '../../../../application/services/sharedAgentChatService';
-import { Icon } from '../../../components/ui/Icon';
-import {
-  agentDefinitionApi,
-  defaultAgentDefinitionSpec,
-} from '../../../../infrastructure/api/agentDefinitionApi';
-import type {
-  AgentDefinitionSpec,
-  AgentRuntimeType,
-  GuardrailAction,
-  GuardrailRule,
-  GuardrailType,
-} from '../../../../infrastructure/api/agentDefinitionApi';
 import {
   GUARDRAIL_ACTIONS,
   GUARDRAIL_TYPES,
@@ -35,7 +23,18 @@ import {
   RUNTIME_TYPE_LABELS,
   SANDBOX_TEMPLATES,
   SANDBOX_TEMPLATE_LABELS,
-} from '../../../../infrastructure/api/agentDefinitionApi';
+  type AgentDefinitionSpec,
+  type AgentRuntimeType,
+  type GuardrailAction,
+  type GuardrailRule,
+  type GuardrailType,
+} from '../../../../application/services/adminApi';
+import {
+  buildAgentDefinitionSpec,
+  createOrUpdateAgentDefinition,
+  instantiateAgentDefinition,
+} from '../../../../application/use-cases/agentDefinitionUseCase';
+import { Icon } from '../../../components/ui/Icon';
 
 interface Props {
   onBack: () => void;
@@ -115,27 +114,28 @@ export function AgentCreateFlow({ onBack, definitionId, initial }: Props) {
       toast('未获取到租户信息,请重新登录后重试', 'error');
       return;
     }
-    const cleanGuardrails = guardrails.filter((g) => g.pattern.trim());
-    const spec: AgentDefinitionSpec = {
-      ...defaultAgentDefinitionSpec(),
+    const spec = buildAgentDefinitionSpec({
       sandboxTemplate,
-      modelConfig: { primaryModel: primaryModel.trim() || 'auto', fallbackModels, maxConcurrency },
-      persona: { systemPrompt, guardrails: cleanGuardrails, refusalResponse },
+      primaryModel,
+      fallbackModels,
+      maxConcurrency,
+      systemPrompt,
+      guardrails,
+      refusalResponse,
       boundSkills,
       boundKnowledge,
       boundTools,
-      runtime: { runtimeType },
-    };
+      runtimeType,
+    });
     setSubmitting(true);
     try {
-      const def = definitionId
-        ? await agentDefinitionApi.update(definitionId, spec)
-        : await agentDefinitionApi.create({
-            tenantId: tenantId!,
-            name: name.trim(),
-            spec,
-            description: description.trim() || null,
-          });
+      const def = await createOrUpdateAgentDefinition({
+        definitionId,
+        tenantId,
+        name: name.trim(),
+        description: description.trim(),
+        spec,
+      });
       exitCreateFlow();
 
       if (definitionId) {
@@ -147,7 +147,7 @@ export function AgentCreateFlow({ onBack, definitionId, initial }: Props) {
         // (管理后台新建Agent→页面可对话;复用 marketplace 安装即对话的 openInstalledInstance 接线)
         toast(`已创建 Agent「${def.name}」,正在打开对话...`, 'success');
         try {
-          const inst = await agentDefinitionApi.instantiate(def.id);
+          const inst = await instantiateAgentDefinition(def.id);
           sharedAgentChatService.openInstalledInstance(inst.instanceId, inst.name);
           useUIStore.getState().setDock('messages');
           toast(`已创建「${inst.name}」并打开对话`, 'success');
