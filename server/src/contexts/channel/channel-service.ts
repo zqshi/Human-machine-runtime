@@ -5,6 +5,7 @@ import type {
   ChannelConversation,
   ChannelStatus,
   ChannelType,
+  InboundMessage,
 } from './channel-adapter.js';
 import type { InboundPipeline } from './inbound-pipeline.js';
 import { logger } from '../../app/logger.js';
@@ -12,6 +13,12 @@ import { logger } from '../../app/logger.js';
 export class ChannelService {
   private adapters = new Map<ChannelType, IChannelAdapter>();
   private inboundPipeline?: InboundPipeline;
+  /**
+   * Matrix 入站分流 handler:matrix 消息走 bot 对话(不进评分决策 pipeline)。
+   * 由 bootstrap 注入(调 matrixBot.processTextMessage + sendToChannel 回发),
+   * channel-service 不耦合 MatrixBot(回调注入,守 §1 分层)。
+   */
+  private matrixInboundHandler?: (msg: InboundMessage) => Promise<void>;
 
   setInboundPipeline(pipeline: InboundPipeline): void {
     this.inboundPipeline = pipeline;
@@ -20,16 +27,32 @@ export class ChannelService {
     }
   }
 
+  /** 注入 Matrix 入站分流 handler(bootstrap 装配 matrixBot 后调用) */
+  setMatrixInboundHandler(handler: (msg: InboundMessage) => Promise<void>): void {
+    this.matrixInboundHandler = handler;
+  }
+
   registerAdapter(adapter: IChannelAdapter): void {
     this.adapters.set(adapter.channelType, adapter);
     this.bindInbound(adapter);
   }
 
   private bindInbound(adapter: IChannelAdapter): void {
-    if (!this.inboundPipeline) return;
+    if (!this.inboundPipeline && !this.matrixInboundHandler) return;
     if (!adapter.supportsInbound || !adapter.onInboundMessage) return;
-    const pipeline = this.inboundPipeline;
     adapter.onInboundMessage((msg) => {
+      // matrix 消息走 bot 对话分流(不进评分决策 pipeline);handler 未注入则 fallback 进 pipeline
+      if (msg.channelType === 'matrix' && this.matrixInboundHandler) {
+        this.matrixInboundHandler(msg).catch((err) => {
+          logger.warn(
+            { channelType: msg.channelType, err: String(err) },
+            'matrix inbound handler error'
+          );
+        });
+        return;
+      }
+      const pipeline = this.inboundPipeline;
+      if (!pipeline) return;
       pipeline.process(msg).catch((err) => {
         logger.warn(
           { channelType: adapter.channelType, err: String(err) },

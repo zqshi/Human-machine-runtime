@@ -75,6 +75,107 @@ describe('ChannelService', () => {
     );
   });
 
+  it('matrix 入站消息走 matrixInboundHandler(不进 pipeline)', async () => {
+    const svc = new ChannelService();
+    const matrix = mockInboundAdapter('matrix');
+    const pipelineHandler = vi.fn(async () => {});
+    const pipeline = new InboundPipeline();
+    pipeline.use(pipelineHandler);
+    svc.setInboundPipeline(pipeline);
+    const matrixHandler = vi.fn(async () => {});
+    svc.setMatrixInboundHandler(matrixHandler);
+    svc.registerAdapter(matrix);
+
+    const msg: InboundMessage = {
+      id: 'm1',
+      channelType: 'matrix',
+      sender: { id: '@alice:localhost', channel: 'matrix' },
+      roomId: '!room1:localhost',
+      content: '你好',
+      contentType: 'text',
+      receivedAt: new Date(),
+    };
+    matrix.emitInbound(msg);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(matrixHandler).toHaveBeenCalledWith(msg);
+    expect(pipelineHandler).not.toHaveBeenCalled();
+  });
+
+  it('matrix handler 未注入则 fallback 进 pipeline', async () => {
+    const svc = new ChannelService();
+    const matrix = mockInboundAdapter('matrix');
+    const pipelineHandler = vi.fn(async () => {});
+    const pipeline = new InboundPipeline();
+    pipeline.use(pipelineHandler);
+    svc.setInboundPipeline(pipeline);
+    svc.registerAdapter(matrix);
+
+    const msg: InboundMessage = {
+      id: 'm1',
+      channelType: 'matrix',
+      sender: { id: '@alice:localhost', channel: 'matrix' },
+      roomId: '!room1:localhost',
+      content: '你好',
+      contentType: 'text',
+      receivedAt: new Date(),
+    };
+    matrix.emitInbound(msg);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(pipelineHandler).toHaveBeenCalledWith(msg);
+  });
+
+  it('非 matrix 消息走 pipeline(不受 matrixHandler 影响)', async () => {
+    const svc = new ChannelService();
+    const wps = mockInboundAdapter('wps');
+    const pipelineHandler = vi.fn(async () => {});
+    const pipeline = new InboundPipeline();
+    pipeline.use(pipelineHandler);
+    svc.setInboundPipeline(pipeline);
+    const matrixHandler = vi.fn(async () => {});
+    svc.setMatrixInboundHandler(matrixHandler);
+    svc.registerAdapter(wps);
+
+    const msg: InboundMessage = {
+      id: 'm1',
+      channelType: 'wps',
+      sender: { id: 'u1', channel: 'wps' },
+      roomId: 'r1',
+      content: 'hi',
+      contentType: 'text',
+      receivedAt: new Date(),
+    };
+    wps.emitInbound(msg);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(pipelineHandler).toHaveBeenCalledWith(msg);
+    expect(matrixHandler).not.toHaveBeenCalled();
+  });
+
+  it('matrix handler 抛错不崩(被 catch 不传播)', async () => {
+    const svc = new ChannelService();
+    const matrix = mockInboundAdapter('matrix');
+    const pipeline = new InboundPipeline();
+    pipeline.use(vi.fn(async () => {}));
+    svc.setInboundPipeline(pipeline);
+    svc.setMatrixInboundHandler(vi.fn(async () => Promise.reject(new Error('boom'))));
+    svc.registerAdapter(matrix);
+
+    const msg: InboundMessage = {
+      id: 'm1',
+      channelType: 'matrix',
+      sender: { id: '@alice:localhost', channel: 'matrix' },
+      roomId: '!room1:localhost',
+      content: '你好',
+      contentType: 'text',
+      receivedAt: new Date(),
+    };
+    // emitInbound 同步触发 handler(promise),.catch 内部消化,不应抛
+    expect(() => matrix.emitInbound(msg)).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
   it('aggregates conversations from all adapters', async () => {
     const svc = new ChannelService();
     svc.registerAdapter(mockAdapter('matrix'));

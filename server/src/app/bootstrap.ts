@@ -11,6 +11,9 @@ import { buildRagProvider } from './bootstrap/rag-provider.js';
 import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
 import { adaptSkillPort } from './bootstrap/studio-skill-port.js';
 import { buildPersonaProvider } from './bootstrap/persona-provider.js';
+import { ChatService } from '../contexts/agent-core/application/chat-service.js';
+import { RuntimeProxyService } from '../contexts/agent-core/application/runtime-proxy-service.js';
+import { MatrixConversationStore } from '../contexts/agent-core/application/matrix-conversation-store.js';
 import { StudioService } from '../contexts/agent-core/application/studio-service.js';
 import { buildTraceRecorder } from './bootstrap/trace-recorder.js';
 import { buildEvalBundle } from './bootstrap/eval-bundle.js';
@@ -445,6 +448,21 @@ export function createAppContext(db: Database): AppContext {
   const personaProvider = buildPersonaProvider(instanceRepo, agentDefinitionRepo);
   agentHarness.setPersonaProvider(personaProvider);
 
+  /* ──── ChatService / Matrix bot 对话闭环(T57) ──── */
+  // ChatService:对话能力核心(persona/guardrail/history/LiteLLM),openclaw chat route +
+  // RuntimeProxyService(Matrix bot)共用(DRY)。RuntimeProxyService 实现 IRuntimeProxyService
+  // (此前未实现,MatrixBot runtime_proxy 模式必走失败分支),经它调 LLM 生成回复,经
+  // MatrixChannelAdapter.sendMessage 发回(消息始终走 Matrix 协议,非绕进 HMR 内部)。
+  // MatrixConversationStore:按 roomId 维护多轮历史(Matrix 无前端传 history 机制,后端存)。
+  const chatService = new ChatService(
+    litellmClient,
+    personaProvider,
+    aiGatewayRepo,
+    modelGrantChecker
+  );
+  const matrixConversationStore = new MatrixConversationStore();
+  const runtimeProxyService = new RuntimeProxyService(chatService, matrixConversationStore);
+
   // T13:openclaw Studio 资产聚合 service(替代 studio route STUB 假数据)。
   const studioService = new StudioService(
     agentDefinitionRepo,
@@ -572,8 +590,23 @@ export function createAppContext(db: Database): AppContext {
             },
           }
         : undefined,
+      runtimeProxyService,
     }
   );
+
+  /* T57: Matrix 入站分流—matrix 房间消息走 bot 对话(matrixBot.processTextMessage),
+   * reply 经 MatrixChannelAdapter.sendMessage 发回(走 Matrix 协议)。人↔人消息 bot 不介入
+   * (processTextMessage 返 ignored 不回发)。channel-service 不耦合 MatrixBot(回调注入,守 §1)。 */
+  channelService.setMatrixInboundHandler(async (msg) => {
+    if (!matrixBot) return;
+    const result = await matrixBot.processTextMessage(msg.sender.id, msg.roomId, msg.content);
+    if (!result.ignored && result.reply) {
+      await channelService.sendToChannel(
+        { channelType: 'matrix', roomId: msg.roomId, userId: msg.sender.id },
+        { type: 'text', content: result.reply }
+      );
+    }
+  });
 
   return {
     db,
