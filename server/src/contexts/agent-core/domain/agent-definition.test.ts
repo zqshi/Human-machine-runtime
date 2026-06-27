@@ -163,8 +163,8 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
     );
   });
 
-  it('runtime.runtimeType 合法值(claude/openclaw/hermes)通过', () => {
-    for (const rt of ['claude', 'openclaw', 'hermes'] as const) {
+  it('runtime.runtimeType 合法值(claude/cockpit/hermes)通过', () => {
+    for (const rt of ['claude', 'cockpit', 'hermes'] as const) {
       const spec = { ...defaultAgentDefinitionSpec(), runtime: { runtimeType: rt } };
       expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'runtime.runtimeType')).toBe(
         false

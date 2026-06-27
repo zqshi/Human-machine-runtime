@@ -37,7 +37,7 @@ function toSkill(agent: Record<string, unknown>): Skill {
     desc: String(agent.description || agent.capabilitySignature || ''),
     roles: Array.isArray(agent.jobCodes) ? (agent.jobCodes as string[]) : tags.slice(0, 3),
     usage: Number(agent.usageCount) || 0,
-    author: String(agent.source || 'runtime/openclaw'),
+    author: String(agent.source || 'runtime/cockpit'),
   };
 }
 

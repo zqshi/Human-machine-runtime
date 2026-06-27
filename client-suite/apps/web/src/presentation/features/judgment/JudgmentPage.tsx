@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { JudgmentWorkbench } from './JudgmentWorkbench';
 import { JudgmentHistoryPanel } from './JudgmentHistoryPanel';
 import { CorrectionGraph } from './CorrectionGraph';
-import { SignalFeedPanel } from '../openclaw/SignalFeedPanel';
-import { PushConfigDialog } from '../openclaw/PushConfigDialog';
+import { SignalFeedPanel } from '../cockpit/SignalFeedPanel';
+import { PushConfigDialog } from '../cockpit/PushConfigDialog';
 import { Icon } from '../../components/ui/Icon';
 import { useJudgmentStore } from '../../../application/stores/judgmentStore';
 

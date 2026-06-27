@@ -18,7 +18,7 @@ HMR = 企业 AI 数字员工平台生产底座，包含：
 | 项目（组件代号） | 角色 | 技术栈 |
 |------|------|--------|
 | 企业平台 Monorepo（ks-claw） | 平台 Monorepo，含技能市场/配置中心/平台后端 | Python(FastAPI) + Go + TS(Hono) + MySQL + PG |
-| 实例编排（claw-farm） | IM 网关 + K8s 编排 | Go + TS(OpenClaw Channel) |
+| 实例编排（claw-farm） | IM 网关 + K8s 编排 | Go + TS(Cockpit Channel) |
 | AI 工作区（xspace） | AI 应用生成 | Python(FastAPI) + MySQL + Prisma + K8s |
 
 ## HMR 当前技术债

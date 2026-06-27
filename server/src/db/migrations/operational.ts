@@ -2,6 +2,13 @@ import { sql } from 'drizzle-orm';
 import type { MigrateDb } from './types.js';
 
 export async function migrateOperational(db: MigrateDb): Promise<void> {
+  // T60: openclaw→cockpit 命名中性化数据迁移(幂等:老库 rename 表+drop 旧索引,新库 IF EXISTS 跳过)。
+  // 必须在下方 CREATE TABLE IF NOT EXISTS cockpit_entities 之前——否则老库先建空表后 RENAME 会因
+  // 目标表已存在而报错。RENAME 后旧索引 idx_openclaw_entities_* 仍挂在 cockpit_entities 上,drop 后重建新名。
+  await db.execute(sql`ALTER TABLE IF EXISTS openclaw_entities RENAME TO cockpit_entities`);
+  await db.execute(sql`DROP INDEX IF EXISTS idx_openclaw_entities_type`);
+  await db.execute(sql`DROP INDEX IF EXISTS idx_openclaw_entities_tenant`);
+
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
@@ -38,7 +45,7 @@ export async function migrateOperational(db: MigrateDb): Promise<void> {
   `);
 
   await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS openclaw_entities (
+    CREATE TABLE IF NOT EXISTS cockpit_entities (
       id VARCHAR(64) PRIMARY KEY,
       entity_type VARCHAR(32) NOT NULL,
       tenant_id VARCHAR(64),
@@ -116,10 +123,10 @@ export async function migrateOperational(db: MigrateDb): Promise<void> {
 
   // Indexes
   await db.execute(
-    sql`CREATE INDEX IF NOT EXISTS idx_openclaw_entities_type ON openclaw_entities(entity_type)`
+    sql`CREATE INDEX IF NOT EXISTS idx_cockpit_entities_type ON cockpit_entities(entity_type)`
   );
   await db.execute(
-    sql`CREATE INDEX IF NOT EXISTS idx_openclaw_entities_tenant ON openclaw_entities(tenant_id)`
+    sql`CREATE INDEX IF NOT EXISTS idx_cockpit_entities_tenant ON cockpit_entities(tenant_id)`
   );
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_workspaces_owner ON workspaces(owner_id)`);
   await db.execute(

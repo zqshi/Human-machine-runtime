@@ -67,7 +67,7 @@ human-machine-runtime/
 - RiskRule：风控规则（从 SQLite 升级）
 - AiTrace：AI 追踪记录（从 SQLite 升级）
 - CostRecord：成本记录（从 SQLite 升级）
-- Instance：OpenClaw 实例状态
+- Instance：Cockpit 实例状态
 
 ### PostgreSQL (packages/db-pg/)
 

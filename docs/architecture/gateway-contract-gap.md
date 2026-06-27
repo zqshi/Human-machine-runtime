@@ -17,7 +17,7 @@
 | Profile Service(portal) | 无 | `profile-service-client.ts` | `bootstrap.ts:458` AgentProfileService | ✅ 已封装 |
 | Workspace Backend(xspace) | 无 | `workspace-backend-client.ts` | `bootstrap.ts:452` WorkspaceService | ✅ 已封装 |
 | Container Orchestrator(claw-farm) | 无 | `container-orchestrator-client.ts` | `bootstrap.ts:197` WpsChannelAdapter / `:247` Provisioner / `:748` WsBridge | ✅ 已封装 |
-| Cluster Instance | 无 | `cluster-instance-client.ts` | `bootstrap.ts:341` OpenClawAdapter | ✅ 已封装 |
+| Cluster Instance | 无 | `cluster-instance-client.ts` | `bootstrap.ts:341` CockpitAdapter | ✅ 已封装 |
 | WeKnora | 无 | `weknora-client.ts` | `bootstrap.ts:515` 条件实例化 | ✅ 已封装 |
 
 ## T3 处置方向
@@ -44,8 +44,8 @@ claude-worker 缺口非「补一个 Anthropic client」可解——Claude Agent 
 | container-orchestrator-provisioner | ✅ 抛/return | `container-orchestrator-provisioner.ts:9/29` |
 | litellm | ✅ LiteLlmClientAdapter.isAvailable | `litellm-llm-client.ts:37`(llmModel 判空) |
 | weknora | ✅ 条件实例化 | `bootstrap.ts:515`(未启用=null) |
-| OpenClawAdapter.healthCheck | ✅ try/catch 返回 unhealthy | `openclaw-adapter.ts:108` |
+| CockpitAdapter.healthCheck | ✅ try/catch 返回 unhealthy | `cockpit-adapter.ts:108` |
 
 `litellm-client`/`weknora-client` 方法内未调 `isConfigured` 是设计如此——litellm 有默认 baseUrl(`localhost:4000`),其"未配置"语义由 Adapter 的 `isAvailable` 处理;weknora 未启用时不实例化。给 client 方法强加 `isConfigured` 守卫会违反 §4.3(无谓改动)且破坏既有的"配置判断下沉调用方"架构。T2 以核查确认达成,不补码。
 
-> **附注**:`OpenClawAdapter` 是模拟桩(`simulateProgress` setTimeout 5s 硬编码返回"任务执行完成"),非真实执行。私有化降级必须靠路径 B(LiteLLM+AgentExecutor 真实执行),不可依赖 OpenClawAdapter 空转。这是 T3 双路径设计的必要性的另一印证。
+> **附注**:`CockpitAdapter` 是模拟桩(`simulateProgress` setTimeout 5s 硬编码返回"任务执行完成"),非真实执行。私有化降级必须靠路径 B(LiteLLM+AgentExecutor 真实执行),不可依赖 CockpitAdapter 空转。这是 T3 双路径设计的必要性的另一印证。

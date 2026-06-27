@@ -337,7 +337,7 @@ function MarkdownField({
         <CodeMirror
           value={md}
           extensions={extensions}
-          theme={appMode === 'openclaw' ? 'dark' : 'light'}
+          theme={appMode === 'cockpit' ? 'dark' : 'light'}
           placeholder={field.placeholder}
           onChange={(val) => onChange(val)}
           onCreateEditor={(view) => {

@@ -2,10 +2,10 @@
  * SharedAgentChatView — IM 模式内共享 Agent 对话视图（浅色主题）
  *
  * IM 模式下点击无 Matrix 账号的共享 Agent「对话」时渲染（由 AgentsHub 在
- * imChatAgentId 非空时挂载）。复用 OpenClaw 的对话收发能力（useAgentChat +
- * openclawStore），但以 IM 浅色主题呈现，不切 appMode、不跳 Almighty 工作面板。
+ * imChatAgentId 非空时挂载）。复用 Cockpit 的对话收发能力（useAgentChat +
+ * cockpitStore），但以 IM 浅色主题呈现，不切 appMode、不跳 Almighty 工作面板。
  *
- * TODO(runtime-port): useAgentChat 当前绑定 openclaw 运行时；运行时可替换任务
+ * TODO(runtime-port): useAgentChat 当前绑定 cockpit 运行时；运行时可替换任务
  * 完成前，此处为过渡实现（依赖经 sharedAgentChatService 收敛，见该 service 注释）。
  */
 import { useRef, useEffect, useCallback, useState, type KeyboardEvent } from 'react';

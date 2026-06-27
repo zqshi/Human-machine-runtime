@@ -7,7 +7,7 @@ import {
   decodeStrategy,
   type ObjectiveDTO,
   type DecodedStrategyDTO,
-} from '../../infrastructure/api/openclawObjectiveApiAdapter';
+} from '../../infrastructure/api/cockpitObjectiveApiAdapter';
 import { appEvents } from '../events/eventBus';
 
 export type { ObjectiveDTO, DecodedStrategyDTO };

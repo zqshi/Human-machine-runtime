@@ -61,4 +61,11 @@ export async function migrateAgentDefinition(db: MigrateDb): Promise<void> {
   await db.execute(
     sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS runtime JSONB NOT NULL DEFAULT '{"runtimeType":"claude"}'::jsonb`
   );
+
+  // T60: openclaw→cockpit 命名中性化(历史 runtime.runtimeType 值迁移,幂等)
+  await db.execute(sql`
+    UPDATE agent_definitions
+    SET runtime = jsonb_set(runtime, '{runtimeType}', '"cockpit"'::jsonb)
+    WHERE runtime->>'runtimeType' = 'openclaw'
+  `);
 }

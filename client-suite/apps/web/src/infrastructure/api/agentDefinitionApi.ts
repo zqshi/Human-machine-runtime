@@ -11,7 +11,7 @@ import { request } from './httpClient';
 
 /* ---------- 类型(对齐后端 agent-definition.ts) ---------- */
 
-export type AgentRuntimeType = 'claude' | 'openclaw' | 'hermes';
+export type AgentRuntimeType = 'claude' | 'cockpit' | 'hermes';
 export type GuardrailType = 'keyword' | 'regex' | 'intent';
 export type GuardrailAction = 'block' | 'review';
 
@@ -111,13 +111,13 @@ export interface AgentDefinition {
 /* ---------- 枚举常量(向导 UI 用) ---------- */
 
 export const SANDBOX_TEMPLATES = ['basic', 'high-privilege', 'network-isolated'] as const;
-export const RUNTIME_TYPES: AgentRuntimeType[] = ['claude', 'openclaw', 'hermes'];
+export const RUNTIME_TYPES: AgentRuntimeType[] = ['claude', 'cockpit', 'hermes'];
 export const GUARDRAIL_TYPES: GuardrailType[] = ['keyword', 'regex', 'intent'];
 export const GUARDRAIL_ACTIONS: GuardrailAction[] = ['block', 'review'];
 
 export const RUNTIME_TYPE_LABELS: Record<AgentRuntimeType, string> = {
   claude: 'Claude (claude-worker)',
-  openclaw: 'OpenClaw (IM 对话)',
+  cockpit: 'Cockpit (IM 对话)',
   hermes: 'Hermes (自定义运行时)',
 };
 

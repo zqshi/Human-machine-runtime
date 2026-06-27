@@ -1,9 +1,9 @@
 /**
- * OpenClawDrawerContent — Drawer 内容类型定义
+ * CockpitDrawerContent — Drawer 内容类型定义
  * 统一 Drawer 系统，替代原 TaskDetailDrawer 硬编码方案。
  */
 
-export type OpenClawDrawerType =
+export type CockpitDrawerType =
   | 'task-detail'
   | 'activity-detail'
   | 'source-detail'
@@ -21,8 +21,8 @@ export type OpenClawDrawerType =
   | 'project-board'
   | 'agent-studio';
 
-export interface OpenClawDrawerContent {
-  type: OpenClawDrawerType;
+export interface CockpitDrawerContent {
+  type: CockpitDrawerType;
   title: string;
   data: Record<string, unknown>;
 }

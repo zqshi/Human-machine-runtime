@@ -29,7 +29,7 @@ const baseEmployees: Employee[] = [
     role: 'operator',
     scope: 'organization',
     status: 'active',
-    agentRuntime: 'openclaw',
+    agentRuntime: 'cockpit',
     matrixRoomId: '!room-a:server',
     createdAt: '2024-01-01T00:00:00Z',
     remote: { nodeName: 'node-1', podName: 'pod-a', cluster: 'k8s' },
@@ -91,11 +91,11 @@ describe('selectFilteredEmployees', () => {
     ).toEqual(['b']);
   });
 
-  it('agentType 归一：缺省视为 openclaw', () => {
+  it('agentType 归一：缺省视为 cockpit', () => {
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
-        agentType: 'openclaw',
+        agentType: 'cockpit',
       }).map((e) => e.id),
     ).toEqual(['c', 'a']); // b 是 harness
   });
@@ -184,7 +184,7 @@ describe('selectFilteredEmployees', () => {
       ...EMPTY_EMPLOYEE_FILTERS,
       deptFilter: 'ops',
       stateFilter: 'active',
-      agentType: 'openclaw',
+      agentType: 'cockpit',
     };
     expect(selectFilteredEmployees(baseEmployees, filters).map((e) => e.id)).toEqual(['a']);
   });

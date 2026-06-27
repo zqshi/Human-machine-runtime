@@ -1,12 +1,12 @@
 /**
  * studioApi — Studio 聚合 API 服务
  *
- * 调用后端 /api/openclaw/studio/* 端点，聚合用户 AI 资产数据。
+ * 调用后端 /api/cockpit/studio/* 端点，聚合用户 AI 资产数据。
  */
 import type { AssetItem } from '../../presentation/features/studio/AssetCard';
 import { handleSessionExpired } from '../../infrastructure/api/sessionHandler';
 
-const BASE = '/api/openclaw/studio';
+const BASE = '/api/cockpit/studio';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

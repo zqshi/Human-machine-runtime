@@ -606,18 +606,18 @@ paths:
   /api/framework:
     get:
       summary: Framework info
-  /api/admin/runtime/openclaw-config:
+  /api/admin/runtime/cockpit-config:
     get:
-      summary: Current OpenClaw config
+      summary: Current Cockpit config
     post:
-      summary: Update OpenClaw config
-  /api/admin/runtime/openclaw-config/snapshots:
+      summary: Update Cockpit config
+  /api/admin/runtime/cockpit-config/snapshots:
     get:
       summary: Config snapshot list
-  /api/admin/runtime/openclaw-config/snapshots/{id}/restore:
+  /api/admin/runtime/cockpit-config/snapshots/{id}/restore:
     post:
       summary: Restore config snapshot
-  /api/admin/runtime/openclaw-config/snapshots/{id1}/diff/{id2}:
+  /api/admin/runtime/cockpit-config/snapshots/{id1}/diff/{id2}:
     get:
       summary: Config snapshot diff
   /api/admin/runtime/skill-sedimentation-policy:

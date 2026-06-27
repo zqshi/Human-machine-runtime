@@ -77,9 +77,9 @@ const BUDGET_OVERRIDE_FACTOR = 1.2;
  * - 取消:AbortController.abort() → worker SIGTERM → docker --rm 清理
  * - 完成:runner 触发 onResult/onError → state 更新 → onTaskComplete 回调
  *
- * 与 OpenClawAdapter 共存:framework='claude-agent-sdk',registry 路由时按
+ * 与 CockpitAdapter 共存:framework='claude-agent-sdk',registry 路由时按
  * preferredFramework 选择。env 不配 ANTHROPIC_API_KEY 时,bootstrap 不注册本
- * adapter,系统自动降级到 OpenClaw。
+ * adapter,系统自动降级到 Cockpit。
  *
  * ⚠️ 工具执行脱节(T18b,见 docs/architecture/t18-tool-executor-mainline-gap.md):
  * allowedTools 传给 worker 后由 claude-agent-sdk 内置执行器自行执行工具,不回调

@@ -70,7 +70,7 @@ export class HmrWebSocketClient implements IMatrixClient {
   }
   
   async sendMessage(roomId: string, content: string): Promise<void> {
-    // 通过 WebSocket 发送到 OpenClaw Agent
+    // 通过 WebSocket 发送到 Cockpit Agent
     this.ws?.send(JSON.stringify({
       type: 'message',
       data: { roomId, content, timestamp: Date.now() }

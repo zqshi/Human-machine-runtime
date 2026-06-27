@@ -39,7 +39,7 @@ cd server && npm run dev   # 日志应见 "matrix bot started" + simulation:fals
 
 ### 1.4 LiteLLM 就绪
 
-bot 对话经 LiteLLM 调国产模型（glm-4-flash）。确认 LiteLLM（4000）+ LITELLM_API_KEY 配置（见 memory grey-zone-runtime-env）。`/api/openclaw/chat` 手测能回。
+bot 对话经 LiteLLM 调国产模型（glm-4-flash）。确认 LiteLLM（4000）+ LITELLM_API_KEY 配置（见 memory grey-zone-runtime-env）。`/api/cockpit/chat` 手测能回。
 
 ## 2. 实测用例
 

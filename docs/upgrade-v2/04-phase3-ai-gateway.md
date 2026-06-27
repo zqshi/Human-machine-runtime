@@ -21,7 +21,7 @@ service/hmr-ai-gateway/
 │   │   ├── runtime.py             # 运行时管理
 │   │   ├── analytics.py           # Token/成本统计
 │   │   ├── models.py              # 模型发现
-│   │   ├── openclaw.py            # OpenClaw 实例管理
+│   │   ├── cockpit.py            # Cockpit 实例管理
 │   │   ├── objectives.py          # 目标/判断/决策
 │   │   ├── knowledge.py           # 知识管理 API
 │   │   ├── collaboration.py       # 协作 API
@@ -43,7 +43,7 @@ service/hmr-ai-gateway/
 │   │   └── cost_calculator.py     # 成本计算
 │   ├── k8s/
 │   │   ├── __init__.py
-│   │   └── provisioner.py         # ← OpenClawProvisioner.js
+│   │   └── provisioner.py         # ← CockpitProvisioner.js
 │   ├── integrations/
 │   │   ├── __init__.py
 │   │   ├── matrix_relay.py        # ← MatrixRelay.js
@@ -84,7 +84,7 @@ service/hmr-ai-gateway/
 |--------|--------|---------|
 | LLMClient.js | llm/client.py | 多 provider 适配、流式响应、重试 |
 | LLMClient.test.js | tests/test_llm_client.py | 单元测试 |
-| OpenClawProvisioner.js | k8s/provisioner.py | K8s Pod/PVC/Service 编排 |
+| CockpitProvisioner.js | k8s/provisioner.py | K8s Pod/PVC/Service 编排 |
 | SqliteStore.js | (删除) | 功能转移到 Prisma |
 | PostgresStore.js | (保留引用) | 配置中心（portal）已有 |
 | FileStore.js | (评估) | 如需文件存储改用 S3 兼容对象存储 |
@@ -107,14 +107,14 @@ service/hmr-ai-gateway/
 | adminCompatTools | (移到 admin-be) | 工具管理 |
 | adminModelDiscovery | models.py | 模型发现 |
 | adminAnalytics | analytics.py | 分析统计 |
-| openclawRoutes | openclaw.py | OpenClaw 管理 |
-| openclawObjectiveRoutes | objectives.py | 目标管理 |
+| cockpitRoutes | cockpit.py | Cockpit 管理 |
+| cockpitObjectiveRoutes | objectives.py | 目标管理 |
 | knowledgeAudits | knowledge.py | 知识审计 |
 | matrix | websocket.py | 消息通道 |
 | auth | (移到共享认证) | |
 | health | health.py | 健康检查 |
 | documents | knowledge.py | 文档管理 |
-| instances | openclaw.py | 实例管理 |
+| instances | cockpit.py | 实例管理 |
 | runtime | runtime.py | 运行时 |
 | categories | (移到 admin-be) | |
 | weknora | collaboration.py | 外部集成 |
@@ -163,14 +163,14 @@ class ConnectionManager:
     """管理 HMR 用户端的 WebSocket 连接
     
     消息流：
-    HMR Web Client ←WebSocket→ hmr-ai-gateway ←HTTP/WS→ OpenClaw Pod
+    HMR Web Client ←WebSocket→ hmr-ai-gateway ←HTTP/WS→ Cockpit Pod
     """
     
     async def connect(self, ws: WebSocket, user_id: str):
         """用户连接：验证 session → 注册连接 → 查找/启动实例"""
         
     async def send_to_agent(self, user_id: str, message: AgentMessage):
-        """发送消息到用户的 OpenClaw 实例"""
+        """发送消息到用户的 Cockpit 实例"""
         
     async def receive_from_agent(self, user_id: str, reply: AgentReply):
         """接收 Agent 回复 → 推送到 WebSocket"""
@@ -184,4 +184,4 @@ class ConnectionManager:
 - [ ] AI Trace 记录写入 MySQL
 - [ ] 成本计算正确
 - [ ] WebSocket 通道可建立连接
-- [ ] OpenClaw Provisioner 可查询 K8s Pod 状态
+- [ ] Cockpit Provisioner 可查询 K8s Pod 状态

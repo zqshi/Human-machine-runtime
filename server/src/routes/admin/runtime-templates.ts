@@ -27,7 +27,7 @@ export function createAdminRuntimeTemplateRoutes() {
 
   /** 声明态 runtimeType → AgentFramework adapter 映射(治本 D8,前端创建向导展示用) */
   app.get('/runtime-types', (c) => {
-    const types = ['claude', 'openclaw', 'hermes'] as const;
+    const types = ['claude', 'cockpit', 'hermes'] as const;
     return c.json({
       items: types.map((t) => ({
         runtimeType: t,

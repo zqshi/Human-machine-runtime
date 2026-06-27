@@ -372,15 +372,15 @@
 | GET | `/api/framework` | 框架信息 |
 | GET | `/api/metrics` | 指标数据 |
 
-### 16.2 OpenClaw 配置
+### 16.2 Cockpit 配置
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/admin/runtime/openclaw-config` | 当前配置 |
-| POST | `/api/admin/runtime/openclaw-config` | 更新配置 |
-| GET | `/api/admin/runtime/openclaw-config/snapshots` | 配置快照列表 |
-| POST | `/api/admin/runtime/openclaw-config/snapshots/:id/restore` | 恢复快照 |
-| GET | `/api/admin/runtime/openclaw-config/snapshots/:id1/diff/:id2` | 快照差异对比 |
+| GET | `/api/admin/runtime/cockpit-config` | 当前配置 |
+| POST | `/api/admin/runtime/cockpit-config` | 更新配置 |
+| GET | `/api/admin/runtime/cockpit-config/snapshots` | 配置快照列表 |
+| POST | `/api/admin/runtime/cockpit-config/snapshots/:id/restore` | 恢复快照 |
+| GET | `/api/admin/runtime/cockpit-config/snapshots/:id1/diff/:id2` | 快照差异对比 |
 
 ### 16.3 分析指标
 

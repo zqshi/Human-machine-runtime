@@ -39,7 +39,7 @@ export interface MarketplaceKeySyncDeps {
   };
 }
 
-/** 默认模型名(与 chat.ts DEFAULT_MODEL 对齐,marketplace agent 走 openclaw chat) */
+/** 默认模型名(与 chat.ts DEFAULT_MODEL 对齐,marketplace agent 走 cockpit chat) */
 const DEFAULT_MODEL_NAME = 'claude-sonnet-4-6';
 
 export interface MarketplaceSkill {
@@ -304,7 +304,7 @@ export class MarketplaceService {
    * marketplace agent 模板 → AgentDefinition(声明式 CRD,persona/runtime/boundTools 填默认)
    * → createInstance 关联 agentDefinitionId。跨 context 编排 agent-core + tenant-instance。
    *
-   * 返回 instanceId 供前端 sharedAgentChatService.openInstalledInstance → 设置 openclawStore
+   * 返回 instanceId 供前端 sharedAgentChatService.openInstalledInstance → 设置 cockpitStore
    * .activeInstanceId → useAgentChat chat 请求带真 instanceId → chat route 拉 persona/apiKey/guardrail
    * 真响应(替代原 setDock 空跳转)。详见 docs/architecture/t20a-marketplace-chat-decision.md。
    *
@@ -327,8 +327,8 @@ export class MarketplaceService {
         ...base.persona,
         systemPrompt: `你是${agent.name}，${agent.description || '一个 AI 助手'}。`,
       },
-      // marketplace agent 走 openclaw chat 对话路径(chat route 按 instanceId 拉 persona/apiKey)
-      runtime: { runtimeType: 'openclaw' },
+      // marketplace agent 走 cockpit chat 对话路径(chat route 按 instanceId 拉 persona/apiKey)
+      runtime: { runtimeType: 'cockpit' },
       boundTools: [], // 市场模板未声明工具;需工具时走 AgentDefinition 编辑
     };
     const def = await this.agentDefinitionService.create(

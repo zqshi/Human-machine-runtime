@@ -1,8 +1,8 @@
 /**
  * AgentRuntimePort — Agent 对话运行时抽象(治本 D8)。
  *
- * useAgentChat 经此 port 调用对话后端,不硬绑 weKnoraApi/openclawApiAdapter,
- * 运行时可按 AgentDefinition.runtime.runtimeType 替换(claude/openclaw/hermes)。
+ * useAgentChat 经此 port 调用对话后端,不硬绑 weKnoraApi/cockpitApiAdapter,
+ * 运行时可按 AgentDefinition.runtime.runtimeType 替换(claude/cockpit/hermes)。
  *
  * 与 AgentRuntime.ts(运行状态实体)区分:本文件是「对话运行时」接口,彼为「运行状态」值对象。
  * 命名同为 AgentRuntime* 但语义不同,按文件后缀(Port vs 实体类)区分。
@@ -51,13 +51,13 @@ export interface AgentChatCallbacks {
 export interface AgentChatInput {
   sessionId: string;
   prompt: string;
-  /** 当前实例 id(openclaw chat fallback body 需要) */
+  /** 当前实例 id(cockpit chat fallback body 需要) */
   instanceId?: string | null;
   /** 人设(软约束 systemPrompt 注入 prompt;guardrails 由调用方先拦截) */
   persona?: PersonaSpec;
   /**
    * 对话历史(多轮记忆,修复"无记忆"缺陷)。OpenAI messages 格式:
-   * role='user'|'assistant',content 为消息文本。后端 /api/openclaw/chat
+   * role='user'|'assistant',content 为消息文本。后端 /api/cockpit/chat
    * 已支持 body.history(chat.ts),前端此前不传致每轮失忆。
    * 由 useAgentChat 从 store 历史消息转换(CoTMessage role 'agent' → 'assistant')。
    */
@@ -67,7 +67,7 @@ export interface AgentChatInput {
 /**
  * Agent 对话运行时 port(治本 D8:运行时可替换)。
  *
- * 实现位于 infrastructure 层(WeKnoraRuntimePort/OpenClawRuntimePort),
+ * 实现位于 infrastructure 层(WeKnoraRuntimePort/CockpitRuntimePort),
  * 按 AgentDefinition.runtime.runtimeType 路由。
  */
 export interface IAgentRuntimePort {

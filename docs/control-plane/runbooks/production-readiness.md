@@ -39,7 +39,7 @@
 - [ ] Alerting configured for failed provisioning
 
 ## Operations
-- [ ] OpenClaw lock commit verified
+- [ ] Cockpit lock commit verified
 - [ ] CI green on lint + test + lock verify
 - [ ] Runbooks reviewed
 - [ ] Asset governance process enabled (`/api/control/assets/*`: report/review/bind)

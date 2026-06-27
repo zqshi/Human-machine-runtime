@@ -1,6 +1,6 @@
 /**
  * Dock — 左侧 80px 图标导航栏
- * Switches between IM / OpenClaw item sets based on appMode.
+ * Switches between IM / Cockpit item sets based on appMode.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -32,9 +32,9 @@ const IM_BOTTOM_ITEMS: DockItem[] = [
   { key: 'settings', icon: 'settings', label: '设置' },
 ];
 
-/* ── OpenClaw mode items ── */
+/* ── Cockpit mode items ── */
 const OC_TOP_ITEMS: DockItem[] = [
-  { key: 'openclaw', icon: 'terminal', label: '工作面板' },
+  { key: 'cockpit', icon: 'terminal', label: '工作面板' },
   { key: 'knowledge', icon: 'menu_book', label: '知识库' },
   { key: 'studio', icon: 'category', label: 'Studio' },
   { key: 'marketplace', icon: 'storefront', label: '共享' },
@@ -60,7 +60,7 @@ export function Dock({ onLogout }: DockProps) {
   const avatarRef = useRef<HTMLButtonElement>(null);
   const [menuPos, setMenuPos] = useState({ bottom: 0, left: 0 });
 
-  const isOC = appMode === 'openclaw';
+  const isOC = appMode === 'cockpit';
 
   const topItems = isOC ? OC_TOP_ITEMS : IM_TOP_ITEMS;
   const bottomItems = isOC ? OC_BOTTOM_ITEMS : IM_BOTTOM_ITEMS;
@@ -131,7 +131,7 @@ export function Dock({ onLogout }: DockProps) {
       {/* Logo / Mode Toggle */}
       <button
         type="button"
-        onClick={() => setAppMode(isOC ? 'im' : 'openclaw')}
+        onClick={() => setAppMode(isOC ? 'im' : 'cockpit')}
         title={isOC ? '切换到 IM 模式' : '切换到工作面板模式'}
         className={`w-10 h-10 rounded-xl flex items-center justify-center text-white mb-1 transition-all ${
           isOC
@@ -158,7 +158,7 @@ export function Dock({ onLogout }: DockProps) {
       {/* Divider */}
       <div className={`w-8 h-px ${isOC ? 'bg-white/10' : 'bg-border'}`} />
 
-      {/* Growth Journey — OpenClaw only */}
+      {/* Growth Journey — Cockpit only */}
       {isOC && (
         <button
           type="button"

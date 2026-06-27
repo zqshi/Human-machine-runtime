@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../components/ui/Icon';
 import { AgentCard } from './AgentCard';
 import { useAgentStore } from '../../../application/stores/agentStore';
-import { useOpenClawStore } from '../../../application/stores/openclawStore';
+import { useCockpitStore } from '../../../application/stores/cockpitStore';
 import { getMatrixClient, globalSelectRoom } from '../../../application/hooks/useMatrixClient';
 import { useUIStore } from '../../../application/stores/uiStore';
 import { useChatStore } from '../../../application/stores/chatStore';
@@ -34,7 +34,7 @@ export function AgentsHub() {
   const setDock = useUIStore((s) => s.setDock);
   const appMode = useUIStore((s) => s.appMode);
   const imChatAgentId = useUIStore((s) => s.imChatAgentId);
-  const isOC = appMode === 'openclaw';
+  const isOC = appMode === 'cockpit';
 
   useEffect(() => {
     loadPersistedAgents();
@@ -43,10 +43,10 @@ export function AgentsHub() {
   const handleChat = useCallback(
     (agentId: string, agentUserId?: string, agentName?: string) => {
       // Almighty 模式：留 Almighty 内置对话，不跳 IM 消息
-      if (appMode === 'openclaw') {
-        useOpenClawStore.getState().setSharedAgentMeta(agentId, agentName ?? 'Agent');
-        useOpenClawStore.getState().startSharedAgentChat(agentId);
-        setDock('openclaw');
+      if (appMode === 'cockpit') {
+        useCockpitStore.getState().setSharedAgentMeta(agentId, agentName ?? 'Agent');
+        useCockpitStore.getState().startSharedAgentChat(agentId);
+        setDock('cockpit');
         return;
       }
 

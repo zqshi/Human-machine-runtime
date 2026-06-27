@@ -42,7 +42,7 @@ function mockClusterInstanceClient() {
     listInstances: vi.fn().mockResolvedValue({
       items: [
         {
-          name: 'openclaw-1',
+          name: 'cockpit-1',
           podName: 'pod-1',
           status: 'running',
           nodeName: 'node-1',
@@ -57,7 +57,7 @@ function mockClusterInstanceClient() {
           isActive: true,
         },
         {
-          name: 'openclaw-2',
+          name: 'cockpit-2',
           podName: 'pod-2',
           status: 'stopped',
           nodeName: 'node-1',

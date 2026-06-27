@@ -134,9 +134,9 @@
 - [P3-17] 实现 analytics.py（统计 API）
 - [P3-18] 实现 models.py（模型发现 API）
 
-### 3.4 K8s + OpenClaw (4 tasks)
-- [P3-19] 迁移 OpenClawProvisioner.js → k8s/provisioner.py
-- [P3-20] 实现 openclaw.py（实例管理 API）
+### 3.4 K8s + Cockpit (4 tasks)
+- [P3-19] 迁移 CockpitProvisioner.js → k8s/provisioner.py
+- [P3-20] 实现 cockpit.py（实例管理 API）
 - [P3-21] 实现 objectives.py（目标/判断 API）
 - [P3-22] 实现 collaboration.py（协作 API）
 
@@ -174,7 +174,7 @@
 - [P4-13] 升级 agentStore（clawhub agents API）
 - [P4-14] 升级 AgentsHub.tsx + SkillsCenter.tsx（真实数据）
 - [P4-15] 升级 AppCenterPage.tsx（xspace apps）
-- [P4-16] 升级 OpenClaw 决策中心各面板（真实数据）
+- [P4-16] 升级 Cockpit 决策中心各面板（真实数据）
 
 ### 4.4 验证 (4 tasks)
 - [P4-17] E2E 测试：登录 → 首页 → 各功能页面

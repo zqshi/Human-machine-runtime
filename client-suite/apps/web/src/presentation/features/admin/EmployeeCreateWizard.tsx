@@ -58,7 +58,7 @@ const initialDraft: OrganizationEmployeeCreateDraft = {
     channelId: '',
     channelAppId: '',
     channelName: '',
-    agentRuntime: 'openclaw',
+    agentRuntime: 'cockpit',
     modelId: 'gpt-4o',
     systemPrompt: '',
     enableMemory: true,
@@ -406,7 +406,7 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
           <label className={labelCls}>Agent Runtime</label>
           <select
             value={draft.basic.agentRuntime}
-            onChange={(e) => updateBasic('agentRuntime', e.target.value as 'openclaw' | 'harness')}
+            onChange={(e) => updateBasic('agentRuntime', e.target.value as 'cockpit' | 'harness')}
             className={inputCls}
           >
             {RUNTIME_OPTIONS.map((item) => (

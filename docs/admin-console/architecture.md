@@ -40,8 +40,8 @@ src/interfaces/http/admin-ui/
   auth-core.js                      # 全局鉴权核心（JWT/权限/侧栏/页面门控）
   login.html / login.js             # 登录页
 
-  openclaw-statistics.html / .js    # 数据统计（着陆页）
-  openclaw-monitor.html / .js       # 平台运营（SLO/成本/保留策略）
+  cockpit-statistics.html / .js    # 数据统计（着陆页）
+  cockpit-monitor.html / .js       # 平台运营（SLO/成本/保留策略）
 
   employees.html / .js              # 员工/实例管理
   employee-detail-renderer.js       # 员工详情渲染器

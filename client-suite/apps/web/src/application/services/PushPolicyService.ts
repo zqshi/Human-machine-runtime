@@ -14,9 +14,9 @@ function handleCreated(payload: { decisionId: string; agentId: string; urgency: 
     case 'critical':
       useToastStore.getState().addToast(`[紧急决策] 需要立即处理`, 'error');
       setTimeout(() => {
-        import('../stores/openclawStore')
-          .then(({ useOpenClawStore }) => {
-            useOpenClawStore.getState().selectBColumnDecision(payload.decisionId);
+        import('../stores/cockpitStore')
+          .then(({ useCockpitStore }) => {
+            useCockpitStore.getState().selectBColumnDecision(payload.decisionId);
           })
           .catch(() => {});
       }, 0);

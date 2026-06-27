@@ -9,7 +9,7 @@ interface DrawerContent {
 
 /**
  * Sub-view identifier for secondary views within a Dock tab.
- * Format: 'tabKey:viewName' e.g. 'knowledge:drafts', 'openclaw:task-detail'
+ * Format: 'tabKey:viewName' e.g. 'knowledge:drafts', 'cockpit:task-detail'
  */
 type SubView = string | null;
 
@@ -23,7 +23,7 @@ interface UIState {
   drawerWidth: number;
   isDraggingDrawer: boolean;
   subView: SubView;
-  /** OpenClaw: currently selected agent id */
+  /** Cockpit: currently selected agent id */
   selectedAgentId: string | null;
   /** Contacts: department filter */
   contactsDept: string;
@@ -79,7 +79,7 @@ export const useUIStore = create<UIState>((set) => ({
     // 跨模式 dock（knowledge/apps/contacts/tasks/calendar/agents/studio/marketplace/settings）
     // 不动 appMode，保持当前模式主题（OC 模式点知识库仍留 OC 主题）。
     const alignedMode: AppMode | null =
-      tab === 'openclaw' ? 'openclaw' : tab === 'messages' ? 'im' : null;
+      tab === 'cockpit' ? 'cockpit' : tab === 'messages' ? 'im' : null;
     set({
       currentDock: tab,
       subView: null,
@@ -90,7 +90,7 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setAppMode(mode) {
-    const dock: DockTab = mode === 'openclaw' ? 'openclaw' : 'messages';
+    const dock: DockTab = mode === 'cockpit' ? 'cockpit' : 'messages';
     set({
       appMode: mode,
       currentDock: dock,

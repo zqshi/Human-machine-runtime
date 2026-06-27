@@ -39,8 +39,8 @@ export interface EmployeeResourceConfig {
   customizedBy: string | null;
 }
 
-/** Agent 运行时类型（openclaw / harness）。注意与 domain/agent/AgentRuntime 类同名但不同物。 */
-export type AgentRuntime = 'openclaw' | 'harness';
+/** Agent 运行时类型（cockpit / harness）。注意与 domain/agent/AgentRuntime 类同名但不同物。 */
+export type AgentRuntime = 'cockpit' | 'harness';
 
 export interface EmployeeRemote {
   podName?: string;

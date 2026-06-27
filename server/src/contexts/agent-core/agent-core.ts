@@ -8,7 +8,7 @@ import type { AdapterRegistry } from './sandbox/adapter-registry.js';
  * 组合三层:
  *   - session:状态持久化(决策、任务 artifact)
  *   - harness:执行编排(LLM 意图分类、dispatchTask 路由)
- *   - sandbox:Agent 框架适配器注册中心(claude-agent-sdk / openclaw / dify...)
+ *   - sandbox:Agent 框架适配器注册中心(claude-agent-sdk / cockpit / dify...)
  *
  * AppContext.agentCore 是所有需要 agent 能力的调用方的统一入口。
  * 旧的 ctx.agentRuntimeService / ctx.agentAdapterRegistry 字段保留为兼容 getter,

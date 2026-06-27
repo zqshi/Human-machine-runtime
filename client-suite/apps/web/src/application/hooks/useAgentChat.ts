@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useOpenClawStore } from '../stores/openclawStore';
+import { useCockpitStore } from '../stores/cockpitStore';
 import { useAgentStore } from '../stores/agentStore';
 import { AgentRoutingService } from '../../domain/agent/AgentRoutingService';
-import { openclawApiAdapter } from '../../infrastructure/api/openclawApiAdapter';
+import { cockpitApiAdapter } from '../../infrastructure/api/cockpitApiAdapter';
 import {
   weKnoraRuntimePort,
-  openclawRuntimePort,
+  cockpitRuntimePort,
   getAgentRuntimePort,
 } from '../../infrastructure/api/agentRuntimePort';
 import { instanceApi } from '../../infrastructure/api/adminApiClient';
@@ -92,21 +92,21 @@ function detectStudioIntent(text: string): MessageBlock | null {
  * persona 来源:activeInstanceId → instanceApi.get → agentDefinitionId → agentDefinitionApi.get → spec.persona
  * (替代原 capabilityRegistry template.systemPrompt)。persona.systemPrompt 由 runtime port 注入 prompt 前置。
  * guardrails 前端轻量拦截(block 直接拒答,不调 runtime;review 放行后端兜底)。
- * 运行时按 persona.runtime.runtimeType 路由(openclaw→OpenClawRuntimePort,默认→WeKnoraRuntimePort)。
+ * 运行时按 persona.runtime.runtimeType 路由(cockpit→CockpitRuntimePort,默认→WeKnoraRuntimePort)。
  *
  * Artifact 创建由后端 AgentExecutor 判断,前端通过 SSE artifact:* 事件接收。
  */
 export function useAgentChat() {
-  const activeConversationId = useOpenClawStore((s) => s.activeConversationId);
-  const conversations = useOpenClawStore((s) => s.conversations);
+  const activeConversationId = useCockpitStore((s) => s.activeConversationId);
+  const conversations = useCockpitStore((s) => s.conversations);
   const conversation = conversations[activeConversationId] ?? EMPTY_MESSAGES;
   const messages = conversation.length > 0 ? conversation : EMPTY_MESSAGES;
-  const isSending = useOpenClawStore((s) => s.isSending);
-  const appendMessage = useOpenClawStore((s) => s.appendMessage);
-  const updateLastMessage = useOpenClawStore((s) => s.updateLastMessage);
-  const setIsSending = useOpenClawStore((s) => s.setIsSending);
-  const sessionId = useOpenClawStore((s) => s.sessionId);
-  const activeInstanceId = useOpenClawStore((s) => s.activeInstanceId);
+  const isSending = useCockpitStore((s) => s.isSending);
+  const appendMessage = useCockpitStore((s) => s.appendMessage);
+  const updateLastMessage = useCockpitStore((s) => s.updateLastMessage);
+  const setIsSending = useCockpitStore((s) => s.setIsSending);
+  const sessionId = useCockpitStore((s) => s.sessionId);
+  const activeInstanceId = useCockpitStore((s) => s.activeInstanceId);
   const abortRef = useRef<AbortController | null>(null);
 
   /** persona 缓存(治本 D8 + #1:从后端 AgentDefinition 拉,替代 capabilityRegistry) */
@@ -149,7 +149,7 @@ export function useAgentChat() {
   }, [activeInstanceId]);
 
   const getPrimaryAgentName = useCallback((): string => {
-    const activeSharedAgentId = useOpenClawStore.getState().activeSharedAgentId;
+    const activeSharedAgentId = useCockpitStore.getState().activeSharedAgentId;
     if (activeSharedAgentId) {
       const sharedAgent = useAgentStore
         .getState()
@@ -164,7 +164,7 @@ export function useAgentChat() {
   const triggerAgentExecution = useCallback(
     (userText: string, responseText: string) => {
       if (!sessionId) return;
-      openclawApiAdapter.executeAgent(userText, responseText, sessionId).catch(() => {
+      cockpitApiAdapter.executeAgent(userText, responseText, sessionId).catch(() => {
         useToastStore.getState().addToast('智能创建服务暂不可用，对话功能正常', 'info');
       });
     },
@@ -223,7 +223,7 @@ export function useAgentChat() {
 
       // 能力路由(保留 routedCapName/invokeAgent 作 UI 提示与能力激活;
       // systemPrompt 不再取自 capabilityRegistry template,由 runtime port 注入 persona.systemPrompt)
-      const activeSharedAgentId = useOpenClawStore.getState().activeSharedAgentId;
+      const activeSharedAgentId = useCockpitStore.getState().activeSharedAgentId;
       let routedCapName = '';
 
       if (activeSharedAgentId) {
@@ -320,7 +320,7 @@ export function useAgentChat() {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const openclawPrimary = runtimeType === 'openclaw';
+      const cockpitPrimary = runtimeType === 'cockpit';
       const primaryPort = getAgentRuntimePort(runtimeType);
       // 多轮记忆:从 store 实时取历史消息构造 OpenAI messages(history),修复"每轮失忆"缺陷。
       // 用 getState() 实时读而非闭包 messages,避免 messages 进 useCallback 依赖致每次重建(流式中断)。
@@ -328,7 +328,7 @@ export function useAgentChat() {
       // CoTMessage role 'agent' → 'assistant'。占位特征:文本以"正在"/"🔀"/"抱歉，AI 服务"开头。
       const PLACEHOLDER_RE = /^(正在|🔀|抱歉，AI 服务)/;
       const liveMessages =
-        useOpenClawStore.getState().conversations[activeConversationId] ?? EMPTY_MESSAGES;
+        useCockpitStore.getState().conversations[activeConversationId] ?? EMPTY_MESSAGES;
       const history = liveMessages
         .filter((m) => (m.role === 'user' || m.role === 'agent') && m.text.trim().length > 0)
         .filter((m) => !PLACEHOLDER_RE.test(m.text.trim()))
@@ -342,9 +342,9 @@ export function useAgentChat() {
         let streamFailed = false;
         let accumulated = '';
 
-        if (openclawPrimary) {
-          // openclaw runtime 主路径:直答(/api/openclaw/chat),失败错误提示
-          await openclawRuntimePort.chat(chatInput, {
+        if (cockpitPrimary) {
+          // cockpit runtime 主路径:直答(/api/cockpit/chat),失败错误提示
+          await cockpitRuntimePort.chat(chatInput, {
             signal: controller.signal,
             onChunk: (chunk) => {
               accumulated += chunk;
@@ -354,7 +354,7 @@ export function useAgentChat() {
                     ...thinkingStep,
                     status: 'done' as const,
                     label: 'AI 直接回答',
-                    detail: 'openclaw 运行时',
+                    detail: 'cockpit 运行时',
                   },
                 ])
               );
@@ -380,7 +380,7 @@ export function useAgentChat() {
                   ...thinkingStep,
                   status: 'done' as const,
                   label: '服务暂不可用',
-                  detail: 'openclaw 运行时不可用',
+                  detail: 'cockpit 运行时不可用',
                 },
               ])
             );
@@ -480,7 +480,7 @@ export function useAgentChat() {
               );
               triggerAgentExecution(text, result.answer);
             } catch {
-              // WeKnora 全部失败 → fallback 到 openclaw runtime 直答
+              // WeKnora 全部失败 → fallback 到 cockpit runtime 直答
               try {
                 updateLastMessage((m) =>
                   m
@@ -488,7 +488,7 @@ export function useAgentChat() {
                     .withSteps([{ ...thinkingStep, detail: '知识库不可用，切换到 AI 直接对话...' }])
                 );
                 let fallbackAcc = '';
-                await openclawRuntimePort.chat(chatInput, {
+                await cockpitRuntimePort.chat(chatInput, {
                   signal: controller.signal,
                   onChunk: (chunk) => {
                     fallbackAcc += chunk;

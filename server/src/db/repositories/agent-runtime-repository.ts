@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import type { Database } from '../client.js';
-import { openclawEntities } from '../schema/operational.js';
+import { cockpitEntities } from '../schema/operational.js';
 import type { IMapStore } from '../../contexts/agent-core/session/domain/map-store.js';
 
 export class DbMapStore<V> implements IMapStore<V> {
@@ -16,8 +16,8 @@ export class DbMapStore<V> implements IMapStore<V> {
     if (this.loaded) return;
     const rows = await this.db
       .select()
-      .from(openclawEntities)
-      .where(eq(openclawEntities.entityType, this.entityType));
+      .from(cockpitEntities)
+      .where(eq(cockpitEntities.entityType, this.entityType));
     for (const row of rows) {
       this.cache.set(row.id, row.data as V);
     }
@@ -31,7 +31,7 @@ export class DbMapStore<V> implements IMapStore<V> {
   set(key: string, value: V): void {
     this.cache.set(key, value);
     this.db
-      .insert(openclawEntities)
+      .insert(cockpitEntities)
       .values({
         id: key,
         entityType: this.entityType,
@@ -39,7 +39,7 @@ export class DbMapStore<V> implements IMapStore<V> {
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
-        target: openclawEntities.id,
+        target: cockpitEntities.id,
         set: {
           data: value as Record<string, unknown>,
           updatedAt: new Date(),
@@ -64,7 +64,7 @@ export class DbMapStore<V> implements IMapStore<V> {
   async delete(key: string): Promise<void> {
     this.cache.delete(key);
     await this.db
-      .delete(openclawEntities)
-      .where(and(eq(openclawEntities.id, key), eq(openclawEntities.entityType, this.entityType)));
+      .delete(cockpitEntities)
+      .where(and(eq(cockpitEntities.id, key), eq(cockpitEntities.entityType, this.entityType)));
   }
 }

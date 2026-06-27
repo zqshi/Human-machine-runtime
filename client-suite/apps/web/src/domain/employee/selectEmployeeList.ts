@@ -25,7 +25,7 @@ export interface EmployeeListFilters {
   roleFilter: string;
   /** 实例范围（个人/组织）精确匹配，缺省归一为 organization */
   scopeFilter: '' | InstanceScope;
-  /** Agent 运行时类型（openclaw / harness），缺省归一为 openclaw */
+  /** Agent 运行时类型（cockpit / harness），缺省归一为 cockpit */
   agentType: AgentRuntime | '';
   /** 集群类型（k8s / cubesandbox），按 remote.cluster 归一匹配 */
   clusterType: '' | 'k8s' | 'cubesandbox';
@@ -53,7 +53,7 @@ export const EMPTY_EMPLOYEE_FILTERS: EmployeeListFilters = {
  * 按筛选条件过滤员工列表，并按 createdAt 倒序排序。
  *
  * 等价于原组件 `employees.filter(...).sort(...)`，逻辑分支保持一致：
- * 1. agentType：归一（缺省 openclaw）后不等则排除
+ * 1. agentType：归一（缺省 cockpit）后不等则排除
  * 2. clusterType：remote.cluster 归一小写后不等则排除
  * 3. keyword：id / name / displayName / matrixRoomId 任一包含
  * 4. channelFilter：matrixRoomId 包含
@@ -68,7 +68,7 @@ export function selectFilteredEmployees(
 ): Employee[] {
   return employees
     .filter((e) => {
-      if (filters.agentType && (e.agentRuntime || 'openclaw') !== filters.agentType) {
+      if (filters.agentType && (e.agentRuntime || 'cockpit') !== filters.agentType) {
         return false;
       }
       if (filters.clusterType) {

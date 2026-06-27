@@ -100,7 +100,7 @@ Matrix 是 HMR 自有 IM 基础设施，不强依赖任何第三方 IM 系统：
 | 数据库 | PostgreSQL + Drizzle ORM | 主数据库，类型安全 |
 | IM 基础设施 | Matrix (Conduit/Synapse) | 自有 homeserver，支持 Federation |
 | AI 模型路由 | LiteLLM | 统一多模型代理（隔离供应商） |
-| 容器编排 | Kubernetes | OpenClaw 实例生命周期 |
+| 容器编排 | Kubernetes | Cockpit 实例生命周期 |
 | 对象存储 | S3 兼容对象存储（如 MinIO/云厂商对象存储） | 文件/资产存储 |
 | 包管理 | npm workspaces (前端) + 独立 server | — |
 
@@ -153,7 +153,7 @@ server/src/
 |---|---|---|
 | User | identity-access | 平台用户 + 角色 + 权限 |
 | Tenant | tenant-management | 租户 + 配额 + 特性开关 |
-| Instance | tenant-instance | OpenClaw 实例 + K8s 资源 |
+| Instance | tenant-instance | Cockpit 实例 + K8s 资源 |
 | Audit | audit-observability | 全链路审计事件 |
 | Skill/Asset | shared-assets | 技能包 + 审核状态 |
 | Document | document | 知识库文档 + 分类 |
@@ -186,7 +186,7 @@ server/src/
 │  ChannelAdapter (pluggable bridge)                        │
 │    ├── MatrixNativeChannel → Matrix 原生收发              │
 │    ├── WpsImAdapter        → 协作工具 (via 实例编排 claw-farm) │
-│    ├── FeishuAdapter       → 飞书 (OpenClaw Channel)     │
+│    ├── FeishuAdapter       → 飞书 (Cockpit Channel)     │
 │    ├── DingtalkAdapter     → 钉钉                         │
 │    └── WebChatAdapter      → 浏览器内嵌 WebChat           │
 │                                                           │

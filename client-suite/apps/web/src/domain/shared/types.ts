@@ -17,7 +17,7 @@ export type DockTab =
   | 'contacts'
   | 'calendar'
   | 'subscription'
-  | 'openclaw'
+  | 'cockpit'
   | 'settings'
   | 'strategic-cockpit'
   | 'orchestration'
@@ -27,7 +27,7 @@ export type DockTab =
   | 'studio'
   | 'marketplace';
 
-export type AppMode = 'im' | 'openclaw';
+export type AppMode = 'im' | 'cockpit';
 
 export type DrawerContentType =
   | 'doc'

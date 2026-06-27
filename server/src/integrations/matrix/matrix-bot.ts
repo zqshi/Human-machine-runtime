@@ -239,7 +239,7 @@ export class MatrixBot {
     const instance = await this.resolveInstanceByRoomId(roomId);
     if (!instance) return null;
     const mode = this.resolveConversationMode();
-    if (mode === 'openclaw_channel') {
+    if (mode === 'cockpit_channel') {
       await this.audit('matrix.channel.delegated', {
         traceId,
         roomId,
@@ -298,7 +298,7 @@ export class MatrixBot {
       .trim()
       .toLowerCase();
     if (raw === 'runtime_proxy') return 'runtime_proxy';
-    return 'openclaw_channel';
+    return 'cockpit_channel';
   }
 
   buildProvisionRequestId(params: {

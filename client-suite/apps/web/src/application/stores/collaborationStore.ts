@@ -12,7 +12,7 @@ import {
   type IntentDTO,
   type CollaborationSessionDTO,
   type AgentProfileDTO,
-} from '../../infrastructure/api/openclawCollaborationApiAdapter';
+} from '../../infrastructure/api/cockpitCollaborationApiAdapter';
 import { appEvents } from '../events/eventBus';
 
 export interface EscalationEvent {

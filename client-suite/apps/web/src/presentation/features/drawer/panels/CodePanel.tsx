@@ -147,7 +147,7 @@ export default function CodePanel({ data, onChange }: PanelProps) {
         <CodeMirror
           value={code}
           extensions={langExts}
-          theme={appMode === 'openclaw' ? 'dark' : 'light'}
+          theme={appMode === 'cockpit' ? 'dark' : 'light'}
           onChange={(val) => onChange?.({ ...data, code: val })}
           className="h-full text-sm"
           basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }}

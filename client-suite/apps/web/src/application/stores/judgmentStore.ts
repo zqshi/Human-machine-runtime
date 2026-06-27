@@ -4,7 +4,7 @@ import type { DecisionSource } from '../../domain/agent/DecisionHub';
 import {
   fetchJudgmentRecords,
   createJudgmentRecord,
-} from '../../infrastructure/api/openclawApiAdapter';
+} from '../../infrastructure/api/cockpitApiAdapter';
 
 const STORAGE_KEY = 'hmr-judgment-records';
 

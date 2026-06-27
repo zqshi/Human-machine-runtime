@@ -227,7 +227,7 @@ test       → vitest run
 | 样式     | Tailwind CSS 3.4                      | 通过 `@hmr/ui-tokens` preset |
 | 状态     | zustand                               | 一个 store 一个文件          |
 | 设计语言 | Apple HIG glass morphism              | 主色 `#007AFF`               |
-| 暗色模式 | `[data-mode="openclaw"]` CSS 变量覆盖 | —                            |
+| 暗色模式 | `[data-mode="cockpit"]` CSS 变量覆盖 | —                            |
 | 测试     | vitest                                | —                            |
 | 包管理   | npm workspaces                        | —                            |
 

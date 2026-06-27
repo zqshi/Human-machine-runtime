@@ -13,8 +13,8 @@ describe('RuntimeRegistry', () => {
       expect(registry.mapRuntimeType('claude')).toBe('claude-agent-sdk');
     });
 
-    it('openclaw → openclaw adapter', () => {
-      expect(registry.mapRuntimeType('openclaw')).toBe('openclaw');
+    it('cockpit → cockpit adapter', () => {
+      expect(registry.mapRuntimeType('cockpit')).toBe('cockpit');
     });
 
     it('hermes → custom adapter(待 hermes adapter 实现后改)', () => {

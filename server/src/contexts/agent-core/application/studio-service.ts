@@ -1,7 +1,7 @@
 /**
- * StudioService — openclaw Studio 资产聚合与 Agent 编排配置(T13)。
+ * StudioService — cockpit Studio 资产聚合与 Agent 编排配置(T13)。
  *
- * 替代 routes/openclaw/studio.ts 的 STUB 假数据:接真实 DB 聚合
+ * 替代 routes/cockpit/studio.ts 的 STUB 假数据:接真实 DB 聚合
  * Agent(AgentDefinition) + Skill(sharedAssets) + MCP(ToolDefinition),
  * 区分 origin: created(自建) / installed(assetBindings) / shared(组织共享)。
  *

@@ -2,7 +2,7 @@
  * workspaceStore — "造" 功能状态管理
  *
  * 管理 workspace 列表、当前活跃 workspace、SSE 流式生成状态。
- * 数据源：openclawWorkspaceApiClient
+ * 数据源：cockpitWorkspaceApiClient
  */
 
 import { create } from 'zustand';
@@ -11,8 +11,8 @@ import type {
   WorkspaceConversationDTO,
   WorkspaceAppDTO,
   WorkspaceAgentDTO,
-} from '../../infrastructure/api/openclawWorkspaceApiClient';
-import { workspaceApi } from '../../infrastructure/api/openclawWorkspaceApiClient';
+} from '../../infrastructure/api/cockpitWorkspaceApiClient';
+import { workspaceApi } from '../../infrastructure/api/cockpitWorkspaceApiClient';
 
 export interface GenerationChunk {
   id: string;

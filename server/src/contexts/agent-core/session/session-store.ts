@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../../db/client.js';
-import { openclawEntities } from '../../../db/schema/operational.js';
+import { cockpitEntities } from '../../../db/schema/operational.js';
 import { DbMapStore } from '../../../db/repositories/agent-runtime-repository.js';
 import { appEventBus } from '../../../shared/event-bus.js';
 import { decisionsCreatedTotal } from '../../../shared/metrics.js';
@@ -76,7 +76,7 @@ export class SessionStore {
    *
    * 注:Decision 类型本身没有 tenantId 字段,此处暂不做租户隔离。
    * 多租户场景由上层(bootstrap 注入时按 tenant 分别构造 SessionStore)或
-   * 调用方自行过滤。tenant_id 列存在于 openclawEntities 表,但 cache 中未保留,
+   * 调用方自行过滤。tenant_id 列存在于 cockpitEntities 表,但 cache 中未保留,
    * 未来需要时再扩展 IMapStore 接口。
    */
   listRecentDecisions(limit = 10): Decision[] {
@@ -89,8 +89,8 @@ export class SessionStore {
   async rawListByEntityType(entityType: string): Promise<unknown[]> {
     const rows = await this.db
       .select()
-      .from(openclawEntities)
-      .where(eq(openclawEntities.entityType, entityType));
+      .from(cockpitEntities)
+      .where(eq(cockpitEntities.entityType, entityType));
     return rows.map((r) => r.data);
   }
 }

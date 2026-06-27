@@ -198,11 +198,11 @@ describe('MarketplaceService', () => {
     expect(result.agentDefinitionId).toBe('adef-1');
     expect(result.name).toBe('客服助手');
 
-    // spec 转换:persona.systemPrompt 含 name+description,runtime=openclaw,boundTools 空
+    // spec 转换:persona.systemPrompt 含 name+description,runtime=cockpit,boundTools 空
     const createdSpec = agentDefinitionService.create.mock.calls[0][0].spec;
     expect(createdSpec.persona.systemPrompt).toContain('客服助手');
     expect(createdSpec.persona.systemPrompt).toContain('处理客户咨询');
-    expect(createdSpec.runtime.runtimeType).toBe('openclaw');
+    expect(createdSpec.runtime.runtimeType).toBe('cockpit');
     expect(createdSpec.boundTools).toEqual([]);
 
     // instance 关联 agentDefinitionId,source=marketplace,creator=actor

@@ -12,13 +12,13 @@
 | 类别 | 项 | 版本归属 | 阻断条件 | 执行入口 |
 |---|---|---|---|---|
 | A 立即可执行 | 残留分支清理 | 杂项 | 无（已核查可安全删） | §A1 |
-| A 立即可执行 | openclaw 聚合端点性能优化 | backlog D12 | 无（P3 低优） | §A2 |
+| A 立即可执行 | cockpit 聚合端点性能优化 | backlog D12 | 无（P3 低优） | §A2 |
 | A 立即可执行 | JSONB filter 索引优化 | backlog D13 | 无（P3 低优） | §A2 |
 | B 需用户决策 | v1.2.2 计费 T4-T11 | v1.2.2 current | 商业化时机 | §B1 |
 | B 需用户决策 | v2.0 架构升级 C1-C15 激活 | v2.0 next | 启动确认+current唯一性 | §B2 |
 | B 需用户决策 | v1.2.2 §14 版本归档 | v1.2.2 current | 判定范围内任务全done | §B3 |
 | C 需外部条件 | Matrix 端到端实测 | v1.2.2 T57遗留 | 用户侧环境 | §C1 |
-| C 需外部条件 | openclawStore 浏览器实测 | backlog D10 | 用户侧浏览器 | §C2 |
+| C 需外部条件 | cockpitStore 浏览器实测 | backlog D10 | 用户侧浏览器 | §C2 |
 | C 需外部条件 | CubeSandbox KVM 宿主部署 | backlog D14 | 运维侧 KVM 宿主 | §C3 |
 
 ---
@@ -32,7 +32,7 @@ git branch -d fix/grey-zone-defects-t24-t26   # -d 因已合并不会拒绝
 ```
 （`git diff` 显示 139 文件差异是因 main 后续发展远超该分支 tip，正常，不影响删除安全性。）
 
-### A2 — openclaw 性能优化（D12/D13，P3 低优，可择机）
+### A2 — cockpit 性能优化（D12/D13，P3 低优，可择机）
 - **D12**：4 聚合统计端点（`/inbox`、`/judgment-analytics`、`/evaluation dual-track`、`/trends`）全量 reduce 性能优化。返回聚合指标非列表，不属 §7.2.1 分页管辖（T58 已判定不改分页），但全量读取是性能债。
 - **D13**：带 filter 端点（objective.level/decision.status 等）当前 `list+filter+slice`，改 DB 层 JSONB where filter 消除全量读。实体 EAV+JSONB，需索引设计。
 - 两者均非阻断，可并入任意会话顺手做或单独立任务。
@@ -78,7 +78,7 @@ T57（Matrix bot 对话闭环）代码 done，端到端实测待用户。清单 
 - 注册 `@hmr-bot` 拿 access token
 - 前端 IM 对话验证：bot 回复 / 多轮记忆 / 人↔人不介入
 
-### C2 — openclawStore 浏览器实测（用户侧，backlog D10）
+### C2 — cockpitStore 浏览器实测（用户侧，backlog D10）
 IM 模式共享 Agent 对话真请求流式回包未经浏览器验证（tsc/vitest 测不出）。需 IM 模式实际发一条消息确认。类 `migrate.ts 不跑 .sql` 风险。
 
 ### C3 — CubeSandbox KVM 宿主部署（运维侧，backlog D14）
@@ -116,6 +116,6 @@ v2.0 C8（CubeSandboxExecutor）实测前置。需支持 KVM 的 x86_64 Linux PV
 
 ## 不在本清单（已完成，勿重复）
 
-- T58/T59（openclaw 全量返回 + chat 用量入账）已 done 合并 main（commit `f15e138`）。
+- T58/T59（cockpit 全量返回 + chat 用量入账）已 done 合并 main（commit `f15e138`）。
 - v2.0 设计文档 + 任务图已落库（commit `3174793`），但 C1-C15 实施**未做**（属 B2）。
 - T40-T57（投产收尾 + 架构债 T45/T46/T47 + Matrix bot 闭环）均 done。

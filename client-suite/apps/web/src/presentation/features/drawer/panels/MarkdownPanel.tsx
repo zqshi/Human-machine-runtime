@@ -24,7 +24,7 @@ export default function MarkdownPanel({ data, onChange }: PanelProps) {
     <CodeMirror
       value={md}
       extensions={[markdown()]}
-      theme={appMode === 'openclaw' ? 'dark' : 'light'}
+      theme={appMode === 'cockpit' ? 'dark' : 'light'}
       onChange={(val) => onChange?.({ ...data, markdown: val })}
       className="h-full text-sm"
       basicSetup={{ lineNumbers: true, foldGutter: false }}

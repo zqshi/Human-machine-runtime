@@ -70,7 +70,7 @@ import { ContainerOrchestratorWsBridge } from '../contexts/gateway/clients/conta
 import { MarketplaceService } from '../contexts/marketplace/marketplace-service.js';
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
 import { AgentProfileService } from '../contexts/agent-profile/agent-profile-service.js';
-import { OpenclawRepository } from '../db/repositories/openclaw-repository.js';
+import { CockpitRepository } from '../db/repositories/cockpit-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
 import { AgentProfileRepository } from '../db/repositories/agent-profile-repository.js';
@@ -178,7 +178,7 @@ export function createAppContext(db: Database): AppContext {
   const documentRepo = new DocumentRepository(db);
   const aiGatewayRepo = new AiGatewayRepository(db);
   const configRepo = new ConfigRepository(db);
-  const openclawRepo = new OpenclawRepository(db);
+  const cockpitRepo = new CockpitRepository(db);
   const operationalRepo = new OperationalRepository(db);
   const agentProfileRepo = new AgentProfileRepository(db);
   const tokenUsageRepo = new TokenUsageRepository(db);
@@ -329,7 +329,7 @@ export function createAppContext(db: Database): AppContext {
   );
 
   // ToolLoopAdapter(实例任务真执行,不被模型绑定):经 LiteLLM 国产模型做多轮工具循环 +
-  // registry.invoke 真工具闭环(审批/凭证/租户隔离/计费/callLog)。替代假桩 OpenClawAdapter
+  // registry.invoke 真工具闭环(审批/凭证/租户隔离/计费/callLog)。替代假桩 CockpitAdapter
   // 接 dispatchTask 主链路(见 plan moonlit-dreaming-parrot)。依赖 agentLlmClient + toolRegistryService
   // 均已构造,故在此注册(buildAgentAdapters 早于 toolRegistryService 构造,无法在彼处注入)。
   const toolLoopExecutor = new ToolLoopExecutor(agentLlmClient, toolRegistryService);
@@ -444,12 +444,12 @@ export function createAppContext(db: Database): AppContext {
   );
 
   // v1.9:激活 PersonaProvider(人设注入 + guardrail 拦截,#1)。复用 createAppContext 顶层 agentDefinitionRepo(T2)。
-  // T15:同一实例亦注入 openclaw chat route 作后端 guardrail 兜底(chat 经 LiteLLM 不经 harness)。
+  // T15:同一实例亦注入 cockpit chat route 作后端 guardrail 兜底(chat 经 LiteLLM 不经 harness)。
   const personaProvider = buildPersonaProvider(instanceRepo, agentDefinitionRepo);
   agentHarness.setPersonaProvider(personaProvider);
 
   /* ──── ChatService / Matrix bot 对话闭环(T57) ──── */
-  // ChatService:对话能力核心(persona/guardrail/history/LiteLLM),openclaw chat route +
+  // ChatService:对话能力核心(persona/guardrail/history/LiteLLM),cockpit chat route +
   // RuntimeProxyService(Matrix bot)共用(DRY)。RuntimeProxyService 实现 IRuntimeProxyService
   // (此前未实现,MatrixBot runtime_proxy 模式必走失败分支),经它调 LLM 生成回复,经
   // MatrixChannelAdapter.sendMessage 发回(消息始终走 Matrix 协议,非绕进 HMR 内部)。
@@ -492,7 +492,7 @@ export function createAppContext(db: Database): AppContext {
   const matrixConversationStore = new MatrixConversationStore();
   const runtimeProxyService = new RuntimeProxyService(chatService, matrixConversationStore);
 
-  // T13:openclaw Studio 资产聚合 service(替代 studio route STUB 假数据)。
+  // T13:cockpit Studio 资产聚合 service(替代 studio route STUB 假数据)。
   const studioService = new StudioService(
     agentDefinitionRepo,
     new ToolDefinitionRepository(db),
@@ -664,7 +664,7 @@ export function createAppContext(db: Database): AppContext {
     modelGrantChecker,
     llmKeySyncService,
     operationalRepo,
-    openclawRepo,
+    cockpitRepo,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,

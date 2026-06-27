@@ -12,7 +12,7 @@ const sedimentationPolicySchema = z
   })
   .passthrough();
 
-const openclawConfigSchema = z.record(z.unknown());
+const cockpitConfigSchema = z.record(z.unknown());
 
 export function createAdminRuntimeRoutes(configSvc: SystemConfigService) {
   const app = new Hono();
@@ -28,24 +28,24 @@ export function createAdminRuntimeRoutes(configSvc: SystemConfigService) {
     return c.json({ success: true });
   });
 
-  app.get('/openclaw-config', async (c) => {
-    return c.json(await configSvc.getOpenclawConfig());
+  app.get('/cockpit-config', async (c) => {
+    return c.json(await configSvc.getCockpitConfig());
   });
 
-  app.post('/openclaw-config', async (c) => {
-    const parsed = await parseBody(c, openclawConfigSchema);
+  app.post('/cockpit-config', async (c) => {
+    const parsed = await parseBody(c, cockpitConfigSchema);
     if ('error' in parsed) return badRequest(c, parsed.error);
-    await configSvc.setOpenclawConfig(parsed.data);
+    await configSvc.setCockpitConfig(parsed.data);
     return c.json({ success: true });
   });
 
-  app.get('/openclaw-config/snapshots', async (c) => {
-    const snapshots = await configSvc.listOpenclawConfigSnapshots();
+  app.get('/cockpit-config/snapshots', async (c) => {
+    const snapshots = await configSvc.listCockpitConfigSnapshots();
     return c.json({ snapshots });
   });
 
-  app.post('/openclaw-config/snapshots/:snapshotId/restore', async (c) => {
-    const ok = await configSvc.restoreOpenclawConfigSnapshot(c.req.param('snapshotId'));
+  app.post('/cockpit-config/snapshots/:snapshotId/restore', async (c) => {
+    const ok = await configSvc.restoreCockpitConfigSnapshot(c.req.param('snapshotId'));
     if (!ok) return c.json({ error: 'snapshot not found' }, 404);
     return c.json({ success: true });
   });

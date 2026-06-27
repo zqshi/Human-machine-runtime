@@ -73,7 +73,7 @@ describe('AgentRuntimeAdapterRegistry - register/unregister/get/listRegistered',
 
   it('get returns undefined for unregistered framework', () => {
     const reg = new AgentRuntimeAdapterRegistry();
-    expect(reg.get('openclaw')).toBeUndefined();
+    expect(reg.get('cockpit')).toBeUndefined();
   });
 
   it('register overwrites previous adapter of same framework', () => {

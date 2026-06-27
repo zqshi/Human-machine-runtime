@@ -10,7 +10,7 @@
  * 国产模型(支持 OpenAI function calling)即可用。registry.invoke 复用 ToolRegistryService
  * 现有闭环(审批 gate/凭证解密/租户隔离/计费/callLog),执行器只编排不重写。
  *
- * 替代 OpenClawAdapter 假桩(simulateProgress)接到 dispatchTask 主链路。
+ * 替代 CockpitAdapter 假桩(simulateProgress)接到 dispatchTask 主链路。
  */
 import type { ILLMClient, ChatMessage, ToolDefinition } from './agent-executor.js';
 import type {

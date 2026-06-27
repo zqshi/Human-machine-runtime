@@ -86,7 +86,7 @@ describe('admin employee routes', () => {
         name: 'Finance Assistant',
         scope: 'organization',
         department: 'finance',
-        role: 'openclaw',
+        role: 'cockpit',
         channelId: 'ch-1',
         channelAppId: 'app-finance',
         riskLevel: 'L1',
@@ -102,7 +102,7 @@ describe('admin employee routes', () => {
       matrixRoomId: 'app-finance',
       creator: 'admin',
       enterpriseUserId: null,
-      jobTitle: 'openclaw',
+      jobTitle: 'cockpit',
       department: 'finance',
     });
     expect(deps.agentProfileRepo.upsert).toHaveBeenCalledWith(

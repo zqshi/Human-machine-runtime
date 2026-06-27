@@ -49,7 +49,7 @@
 
 ## M3: K8s 多租户隔离 + 高级特性 [规划中]
 
-- OpenClawProvisioner namespace 策略改为 per-tenant
+- CockpitProvisioner namespace 策略改为 per-tenant
 - 租户暂停 → 批量停止所有实例
 - 配额校验（创建实例时检查 maxInstances / maxUsers）
 - 租户级 AI Gateway 预算隔离

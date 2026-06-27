@@ -4,7 +4,7 @@ import type { GuardrailCheckResult, GuardrailRule } from './AgentRuntimePort';
  * GuardrailChecker — 拒答规则匹配(纯逻辑,domain 层,零外部依赖)。
  *
  * 复刻后端 server/src/contexts/agent-core/domain/guardrail-checker.ts 语义,
- * 供 useAgentChat 在 openclaw 对话路径前端轻量拦截(#1);后端实例路径由 harness 兜底(T3)。
+ * 供 useAgentChat 在 cockpit 对话路径前端轻量拦截(#1);后端实例路径由 harness 兜底(T3)。
  *
  * 匹配规则:
  *   - keyword: prompt 包含关键词(大小写不敏感) → 命中

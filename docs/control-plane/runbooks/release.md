@@ -6,7 +6,7 @@
 1. `npm ci`
 2. `npm run lint`
 3. `npm test`
-4. `npm run verify:openclaw-lock`
+4. `npm run verify:cockpit-lock`
 5. `npm run check:k8s-manifests`
 6. `npm run check:helm-chart`
 7. `npm run check:prod-config`
@@ -37,7 +37,7 @@
    - `HEALTH_UNHEALTHY_*` and `HEALTH_DEGRADED_*`
 
 ## Release Steps
-1. Update `versions.lock.json` if OpenClaw dependency changed.
+1. Update `versions.lock.json` if Cockpit dependency changed.
 2. Tag and push.
 3. Deploy control plane.
    - `npm run k8s:apply`

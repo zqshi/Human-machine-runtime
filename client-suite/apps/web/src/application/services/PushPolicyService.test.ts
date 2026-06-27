@@ -6,8 +6,8 @@ vi.mock('../stores/toastStore', () => ({
   useToastStore: { getState: () => ({ addToast: mockAddToast }) },
 }));
 
-vi.mock('../stores/openclawStore', () => ({
-  useOpenClawStore: { getState: () => ({ selectBColumnDecision: vi.fn() }) },
+vi.mock('../stores/cockpitStore', () => ({
+  useCockpitStore: { getState: () => ({ selectBColumnDecision: vi.fn() }) },
 }));
 
 import { appEvents } from '../events/eventBus';

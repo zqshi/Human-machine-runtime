@@ -267,7 +267,7 @@ export function ChatPane() {
           onCancelEdit={() => setEditing(null)}
         />
       </div>
-      {appMode !== 'openclaw' && <Drawer />}
+      {appMode !== 'cockpit' && <Drawer />}
     </div>
   );
 }

@@ -53,29 +53,29 @@ describe('SystemConfigService', () => {
     expect(repo.setPlatformConfig).toHaveBeenCalledWith('skill-sedimentation-policy', custom);
   });
 
-  it('getOpenclawConfig returns default when not set', async () => {
+  it('getCockpitConfig returns default when not set', async () => {
     const repo = mockConfigRepo();
     const svc = new SystemConfigService(repo);
-    const cfg = await svc.getOpenclawConfig();
+    const cfg = await svc.getCockpitConfig();
     expect(cfg).toEqual(expect.objectContaining({ runtime: expect.any(Object) }));
   });
 
-  it('restoreOpenclawConfigSnapshot returns false for unknown id', async () => {
+  it('restoreCockpitConfigSnapshot returns false for unknown id', async () => {
     const repo = mockConfigRepo();
     const svc = new SystemConfigService(repo);
-    expect(await svc.restoreOpenclawConfigSnapshot('nope')).toBe(false);
+    expect(await svc.restoreCockpitConfigSnapshot('nope')).toBe(false);
   });
 
-  it('restoreOpenclawConfigSnapshot restores valid snapshot', async () => {
+  it('restoreCockpitConfigSnapshot restores valid snapshot', async () => {
     const repo = mockConfigRepo();
     const snapshots = [{ id: 'snap1', config: { runtime: {} } }];
     await (repo.setPlatformConfig as ReturnType<typeof vi.fn>)(
-      'openclaw-config-snapshots',
+      'cockpit-config-snapshots',
       snapshots
     );
     const svc = new SystemConfigService(repo);
-    const ok = await svc.restoreOpenclawConfigSnapshot('snap1');
+    const ok = await svc.restoreCockpitConfigSnapshot('snap1');
     expect(ok).toBe(true);
-    expect(repo.setPlatformConfig).toHaveBeenCalledWith('openclaw-config', { runtime: {} });
+    expect(repo.setPlatformConfig).toHaveBeenCalledWith('cockpit-config', { runtime: {} });
   });
 });

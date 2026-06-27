@@ -26,7 +26,7 @@ service/hmr-admin-be/
 │   │       ├── tools.py           # 工具/MCP Provider 管理
 │   │       ├── models.py          # LLM 模型配置
 │   │       ├── risk_rules.py      # 风控规则 CRUD
-│   │       ├── instances.py       # OpenClaw 实例监控
+│   │       ├── instances.py       # Cockpit 实例监控
 │   │       ├── members.py         # 租户成员管理
 │   │       ├── analytics.py       # 用量统计
 │   │       ├── logs.py            # 审计日志
@@ -112,7 +112,7 @@ dependencies = [
 | skills.js + skill-detail-renderer.js + skills-policy.js | `SkillsSection.tsx` | 技能列表/详情/策略配置 |
 | tools.js + tools-approvals.js | `ToolsSection.tsx` | 工具列表/审批流 |
 | ai-gateway.js + ai-gw.js + ai-gateway-templates.js | `AIGatewaySection.tsx` | 4-Tab（模型/风控/追踪/成本） |
-| openclaw-monitor.js + openclaw-statistics.js | `InstancesSection.tsx` | 实例状态/统计面板 |
+| cockpit-monitor.js + cockpit-statistics.js | `InstancesSection.tsx` | 实例状态/统计面板 |
 | logs.js + logs-filters.js + logs-stats.js | `LogsSection.tsx` | 日志列表/筛选/统计 |
 | auth*.js (6个文件) | `AuthSection.tsx` | 成员/角色/权限/审计 |
 | shared-agents.js | `SharedAgentsSection.tsx` | 共享Agent管理 |

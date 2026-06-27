@@ -4,8 +4,8 @@ import type { AgentRuntimeType } from './agent-definition.js';
 /**
  * RuntimeRegistry — 运行时声明态 → adapter 映射(治本 D8 后端侧)。
  *
- * AgentDefinition.spec.runtime.runtimeType 是声明态值(claude/openclaw/hermes),
- * adapter 注册用 AgentFramework(claude-agent-sdk/openclaw/dify/...)。
+ * AgentDefinition.spec.runtime.runtimeType 是声明态值(claude/cockpit/hermes),
+ * adapter 注册用 AgentFramework(claude-agent-sdk/cockpit/dify/...)。
  * 本 registry 做映射:声明态 runtimeType → 实际 AgentFramework adapter,
  * 让 AgentDefinition 声明的运行时可替换(hemes 等),不与具体 adapter 实现硬绑。
  *
@@ -62,7 +62,7 @@ export const DEFAULT_SANDBOX_TEMPLATE = 'basic';
  */
 const RUNTIME_TYPE_TO_FRAMEWORK: Record<AgentRuntimeType, AgentFramework> = {
   claude: 'claude-agent-sdk',
-  openclaw: 'openclaw',
+  cockpit: 'cockpit',
   hermes: 'custom', // hermes 走 custom adapter(待 hermes adapter 实现后改)
 };
 

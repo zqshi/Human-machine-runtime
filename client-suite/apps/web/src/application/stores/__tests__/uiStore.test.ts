@@ -30,15 +30,15 @@ describe('uiStore', () => {
       expect(s.drawerOpen).toBe(false);
     });
 
-    it("setDock('openclaw') aligns appMode to openclaw (防撕裂)", () => {
-      useUIStore.getState().setDock('openclaw');
+    it("setDock('cockpit') aligns appMode to cockpit (防撕裂)", () => {
+      useUIStore.getState().setDock('cockpit');
       const s = useUIStore.getState();
-      expect(s.currentDock).toBe('openclaw');
-      expect(s.appMode).toBe('openclaw');
+      expect(s.currentDock).toBe('cockpit');
+      expect(s.appMode).toBe('cockpit');
     });
 
     it("setDock('messages') aligns appMode to im (防反向撕裂)", () => {
-      useUIStore.getState().setAppMode('openclaw');
+      useUIStore.getState().setAppMode('cockpit');
       useUIStore.getState().setDock('messages');
       const s = useUIStore.getState();
       expect(s.currentDock).toBe('messages');
@@ -46,18 +46,18 @@ describe('uiStore', () => {
     });
 
     it('setDock(跨模式 dock) 不改变 appMode', () => {
-      useUIStore.getState().setAppMode('openclaw');
+      useUIStore.getState().setAppMode('cockpit');
       useUIStore.getState().setDock('knowledge');
       const s = useUIStore.getState();
       expect(s.currentDock).toBe('knowledge');
-      expect(s.appMode).toBe('openclaw');
+      expect(s.appMode).toBe('cockpit');
     });
   });
 
   describe('setAppMode', () => {
-    it('openclaw mode sets dock to openclaw', () => {
-      useUIStore.getState().setAppMode('openclaw');
-      expect(useUIStore.getState().currentDock).toBe('openclaw');
+    it('cockpit mode sets dock to cockpit', () => {
+      useUIStore.getState().setAppMode('cockpit');
+      expect(useUIStore.getState().currentDock).toBe('cockpit');
     });
 
     it('im mode sets dock to messages', () => {
@@ -111,7 +111,7 @@ describe('uiStore', () => {
   describe('reset', () => {
     it('restores all defaults', () => {
       useUIStore.getState().setDock('knowledge');
-      useUIStore.getState().setAppMode('openclaw');
+      useUIStore.getState().setAppMode('cockpit');
       useUIStore.getState().setSidebarWidth(400);
       useUIStore.getState().setContactsDept('engineering');
       useUIStore.getState().setImChatAgentId('sa-1');

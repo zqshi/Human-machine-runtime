@@ -127,7 +127,7 @@ export const config = {
     llmModel: optional('AGENT_LLM_MODEL', ''),
   },
 
-  // Claude Agent SDK 配置。apiKey 留空时 bootstrap 不注册 ClaudeAgentSdkAdapter,系统降级到 OpenClaw。
+  // Claude Agent SDK 配置。apiKey 留空时 bootstrap 不注册 ClaudeAgentSdkAdapter,系统降级到 Cockpit。
   claude: {
     apiKey: optional('ANTHROPIC_API_KEY', ''),
     // 私有化:经此 URL 转发企业 Anthropic 兼容代理(LiteLLM /v1/messages 或自建代理)。

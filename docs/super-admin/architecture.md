@@ -11,7 +11,7 @@
 - **租户生命周期管理**：开通 / 暂停 / 归档 / 配额调整
 - **平台用户管理**：platform_admin / platform_ops 角色的 CRUD
 - **跨租户运营监控**：健康指标 / SLA / 成本聚合 / 告警
-- **全局配置管理**：OpenClaw 运行时配置 / 模型 Provider / 风控规则
+- **全局配置管理**：Cockpit 运行时配置 / 模型 Provider / 风控规则
 - **跨租户审计**：审计日志查询 / 导出
 
 **与租户管理后台（Tenant Admin Console）完全独立**，两者定位不同、功能不重叠。
@@ -299,8 +299,8 @@ active ──suspend──► suspended ──activate──► active
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/platform/config/openclaw` | 当前 OpenClaw 全局配置 |
-| POST | `/api/platform/config/openclaw` | 更新 OpenClaw 全局配置 |
+| GET | `/api/platform/config/cockpit` | 当前 Cockpit 全局配置 |
+| POST | `/api/platform/config/cockpit` | 更新 Cockpit 全局配置 |
 | GET | `/api/platform/config/providers` | 模型 Provider 列表 |
 | POST | `/api/platform/config/providers` | 更新 Provider 配置 |
 

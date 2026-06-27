@@ -1,9 +1,9 @@
 /**
  * AgentRuntimePort 实现(治本 D8) — infrastructure 层。
  *
- * 把对话后端(weKnoraApi / /api/openclaw/chat)封装为 IAgentRuntimePort,
+ * 把对话后端(weKnoraApi / /api/cockpit/chat)封装为 IAgentRuntimePort,
  * useAgentChat 经此 port 调用,不再硬绑 weKnoraApi。运行时按
- * AgentDefinition.runtime.runtimeType 路由(openclaw→OpenClawRuntimePort,默认→WeKnoraRuntimePort)。
+ * AgentDefinition.runtime.runtimeType 路由(cockpit→CockpitRuntimePort,默认→WeKnoraRuntimePort)。
  *
  * persona.systemPrompt 作为软约束注入 prompt 前置(与原 useAgentChat systemHint 语义一致)。
  */
@@ -41,14 +41,14 @@ class WeKnoraRuntimePort implements IAgentRuntimePort {
 }
 
 /**
- * OpenClawRuntimePort — OpenClaw 直答(/api/openclaw/chat,非流式一次性返回)。
- * 用作 openclaw runtimeType 主路径,或 weKnora 失败时的 fallback。
+ * CockpitRuntimePort — Cockpit 直答(/api/cockpit/chat,非流式一次性返回)。
+ * 用作 cockpit runtimeType 主路径,或 weKnora 失败时的 fallback。
  */
-class OpenClawRuntimePort implements IAgentRuntimePort {
+class CockpitRuntimePort implements IAgentRuntimePort {
   async chat(input: AgentChatInput, cb: AgentChatCallbacks): Promise<void> {
     try {
       const prompt = injectPersona(input.prompt, input.persona?.systemPrompt);
-      const res = await fetch('/api/openclaw/chat', {
+      const res = await fetch('/api/cockpit/chat', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -61,7 +61,7 @@ class OpenClawRuntimePort implements IAgentRuntimePort {
         signal: cb.signal,
       });
       if (!res.ok) {
-        throw new Error(`openclaw chat ${res.status} ${res.statusText}`);
+        throw new Error(`cockpit chat ${res.status} ${res.statusText}`);
       }
       const data = (await res.json()) as { reply?: string };
       if (data.reply) cb.onChunk(data.reply);
@@ -74,17 +74,17 @@ class OpenClawRuntimePort implements IAgentRuntimePort {
 }
 
 export const weKnoraRuntimePort = new WeKnoraRuntimePort();
-export const openclawRuntimePort = new OpenClawRuntimePort();
+export const cockpitRuntimePort = new CockpitRuntimePort();
 
 /**
  * 按 runtimeType 选 runtime port(治本 D8:运行时可替换)。
- * - openclaw → OpenClawRuntimePort
+ * - cockpit → CockpitRuntimePort
  * - claude/hermes/缺省 → WeKnoraRuntimePort(前端对话主路径,RAG 流式)
  *
  * 注:claude 运行时实际经后端 harness(claude-worker),前端 useAgentChat 是 IM 对话,
- * 仍走 weKnora/openclaw 流式;claude 实例路径的 persona/guardrail 由后端 harness 注入(T3)。
+ * 仍走 weKnora/cockpit 流式;claude 实例路径的 persona/guardrail 由后端 harness 注入(T3)。
  */
 export function getAgentRuntimePort(runtimeType?: string): IAgentRuntimePort {
-  if (runtimeType === 'openclaw') return openclawRuntimePort;
+  if (runtimeType === 'cockpit') return cockpitRuntimePort;
   return weKnoraRuntimePort;
 }

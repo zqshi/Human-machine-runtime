@@ -53,9 +53,9 @@ import { MarketplacePage } from '../features/studio/MarketplacePage';
 // Settings
 import { SettingsSidebar, SettingsPage } from '../features/settings/SettingsPage';
 
-// OpenClaw
-import { OpenClawPage } from '../features/openclaw/OpenClawPage';
-import { OpenClawErrorBoundary } from '../features/openclaw/OpenClawErrorBoundary';
+// Cockpit
+import { CockpitPage } from '../features/cockpit/CockpitPage';
+import { CockpitErrorBoundary } from '../features/cockpit/CockpitErrorBoundary';
 
 export function registerAllRoutes() {
   // Top navigation (matches Dock TOP_ITEMS order)
@@ -159,16 +159,16 @@ export function registerAllRoutes() {
     position: 'bottom',
   });
 
-  // OpenClaw — wrapped with dedicated error boundary
+  // Cockpit — wrapped with dedicated error boundary
   registerDockRoute({
-    key: 'openclaw',
+    key: 'cockpit',
     icon: 'terminal',
     label: '工作面板',
     Sidebar: null,
     Main: () => (
-      <OpenClawErrorBoundary>
-        <OpenClawPage />
-      </OpenClawErrorBoundary>
+      <CockpitErrorBoundary>
+        <CockpitPage />
+      </CockpitErrorBoundary>
     ),
     position: 'top',
   });

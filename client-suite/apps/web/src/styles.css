@@ -56,9 +56,9 @@
 }
 
 /* ================================================================
-   OpenClaw dark mode — variable overrides
+   Cockpit dark mode — variable overrides
    ================================================================ */
-[data-mode="openclaw"] {
+[data-mode="cockpit"] {
   --c-primary: 0 212 184;
   --c-primary-light: 51 228 204;
   --c-primary-dark: 0 170 147;
@@ -95,7 +95,7 @@
   --color-surface-dark: #1a1f35;
   --color-fill-tertiary: rgba(255, 255, 255, 0.05);
 
-  /* Block tokens — used by OpenClaw MessageBlock renderers */
+  /* Block tokens — used by Cockpit MessageBlock renderers */
   --block-border: rgba(255, 255, 255, 0.1);
   --block-bg: rgba(255, 255, 255, 0.03);
   --block-bg-hover: rgba(255, 255, 255, 0.06);
@@ -197,15 +197,15 @@ select:focus-visible {
 }
 
 /* ================================================================
-   OpenClaw dark-mode scrollbar override
+   Cockpit dark-mode scrollbar override
    ================================================================ */
-[data-mode="openclaw"] .dcf-scrollbar::-webkit-scrollbar-thumb {
+[data-mode="cockpit"] .dcf-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
 }
-[data-mode="openclaw"] .dcf-scrollbar::-webkit-scrollbar-thumb:hover {
+[data-mode="cockpit"] .dcf-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
-[data-mode="openclaw"] * {
+[data-mode="cockpit"] * {
   overscroll-behavior: none;
 }
 
@@ -317,7 +317,7 @@ select:focus-visible {
 .cm-editor.cm-focused {
   outline: none;
 }
-[data-mode="openclaw"] .cm-editor {
+[data-mode="cockpit"] .cm-editor {
   background: var(--bg-white);
 }
 

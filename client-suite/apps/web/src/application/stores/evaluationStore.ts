@@ -4,7 +4,7 @@ import {
   fetchKnowledgePatterns,
   type ScorecardDTO,
   type KnowledgePatternDTO,
-} from '../../infrastructure/api/openclawSensingApiAdapter';
+} from '../../infrastructure/api/cockpitSensingApiAdapter';
 
 export type { ScorecardDTO, KnowledgePatternDTO };
 

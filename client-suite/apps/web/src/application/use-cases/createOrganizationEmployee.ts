@@ -25,7 +25,7 @@ export interface OrganizationEmployeeCreateDraft {
     channelId: string;
     channelAppId: string;
     channelName: string;
-    agentRuntime: 'openclaw' | 'harness';
+    agentRuntime: 'cockpit' | 'harness';
     modelId: string;
     systemPrompt: string;
     enableMemory: boolean;

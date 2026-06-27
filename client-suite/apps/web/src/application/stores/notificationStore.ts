@@ -6,7 +6,7 @@ import { notificationApi } from '../../infrastructure/api/hmrApiClient';
 import { appEvents } from '../events/eventBus';
 import { channelAdapterRegistry } from '../../infrastructure/channels/ChannelAdapterRegistry';
 import type { ChannelType, TriageStatus } from '../../domain/shared/types';
-import { useOpenClawStore } from './openclawStore';
+import { useCockpitStore } from './cockpitStore';
 
 type ActiveTab = 'all' | 'unread' | 'approvals';
 type InboxFilter = 'all' | TriageStatus | ChannelType;
@@ -135,7 +135,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       body: `${taskName} 已完成执行`,
       timestamp: new Date().toISOString(),
       read: false,
-      sender: { name: 'OpenClaw' },
+      sender: { name: 'Cockpit' },
       agentTaskId: taskId,
       triageStatus: 'auto-handled',
       agentReaction: { summary: '任务已完成', actionTaken: `自动完成 ${taskName}` },
@@ -152,11 +152,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
     // 互斥：选通知时清除 B 栏任务，切回 primary 对话，同步重建 A 栏
     if (id) {
-      useOpenClawStore.getState().selectBColumnTask(null);
-      useOpenClawStore.getState().selectBColumnGoal(null);
-      useOpenClawStore.getState().selectBColumnDecision(null);
-      useOpenClawStore.getState().switchConversation('primary');
-      useOpenClawStore.getState().rebuildAttentionItems();
+      useCockpitStore.getState().selectBColumnTask(null);
+      useCockpitStore.getState().selectBColumnGoal(null);
+      useCockpitStore.getState().selectBColumnDecision(null);
+      useCockpitStore.getState().switchConversation('primary');
+      useCockpitStore.getState().rebuildAttentionItems();
     }
   },
 

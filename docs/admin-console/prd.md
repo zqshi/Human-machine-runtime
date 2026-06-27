@@ -13,7 +13,7 @@
 - 全量审计日志与可观测仪表盘
 - AI Gateway 模型路由与成本管控
 
-用户在此处**治理和运营**，不在此处与数字员工对话——对话发生在 Matrix 客户端或 OpenClaw Client Suite。
+用户在此处**治理和运营**，不在此处与数字员工对话——对话发生在 Matrix 客户端或 Cockpit Client Suite。
 
 ## 2. 用户角色与权限
 

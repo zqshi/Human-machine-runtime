@@ -1,7 +1,7 @@
 import type { ConfigRepository } from '../../db/repositories/config-repository.js';
 
-const DEFAULT_OPENCLAW_CONFIG = {
-  runtime: { openclawImage: '', openclawRuntimeVersion: 'v2', openclawSourcePath: '' },
+const DEFAULT_COCKPIT_CONFIG = {
+  runtime: { cockpitImage: '', cockpitRuntimeVersion: 'v2', cockpitSourcePath: '' },
   permissionTemplate: { commandAllowlist: [], approvalByRisk: {} },
   retention: {
     auditLogTtlDays: 90,
@@ -46,26 +46,26 @@ export class SystemConfigService {
     await this.configRepo.setPlatformConfig('skill-sedimentation-policy', policy);
   }
 
-  async getOpenclawConfig() {
-    const row = await this.configRepo.getPlatformConfig('openclaw-config');
-    return row?.value ?? DEFAULT_OPENCLAW_CONFIG;
+  async getCockpitConfig() {
+    const row = await this.configRepo.getPlatformConfig('cockpit-config');
+    return row?.value ?? DEFAULT_COCKPIT_CONFIG;
   }
 
-  async setOpenclawConfig(config: Record<string, unknown>) {
-    await this.configRepo.setPlatformConfig('openclaw-config', config);
+  async setCockpitConfig(config: Record<string, unknown>) {
+    await this.configRepo.setPlatformConfig('cockpit-config', config);
   }
 
-  async listOpenclawConfigSnapshots() {
-    const row = await this.configRepo.getPlatformConfig('openclaw-config-snapshots');
+  async listCockpitConfigSnapshots() {
+    const row = await this.configRepo.getPlatformConfig('cockpit-config-snapshots');
     return (row?.value as unknown as unknown[]) ?? [];
   }
 
-  async restoreOpenclawConfigSnapshot(snapshotId: string): Promise<boolean> {
-    const row = await this.configRepo.getPlatformConfig('openclaw-config-snapshots');
+  async restoreCockpitConfigSnapshot(snapshotId: string): Promise<boolean> {
+    const row = await this.configRepo.getPlatformConfig('cockpit-config-snapshots');
     const snapshots = (row?.value as unknown as Record<string, unknown>[]) ?? [];
     const snapshot = snapshots.find((s) => s.id === snapshotId);
     if (!snapshot?.config) return false;
-    await this.configRepo.setPlatformConfig('openclaw-config', snapshot.config);
+    await this.configRepo.setPlatformConfig('cockpit-config', snapshot.config);
     return true;
   }
 

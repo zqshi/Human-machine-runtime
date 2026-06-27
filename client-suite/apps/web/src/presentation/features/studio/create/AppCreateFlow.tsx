@@ -97,7 +97,7 @@ export function AppCreateFlow({ onBack }: Props) {
     ): Promise<{ conclusion?: string; toolCallsLog?: unknown[]; error?: string }> => {
       for (let i = 0; i < 30; i++) {
         await sleep(1500);
-        const res = await fetch(`/api/openclaw/agent/status/${taskId}`, {
+        const res = await fetch(`/api/cockpit/agent/status/${taskId}`, {
           credentials: 'include',
         });
         const data = await res.json();
@@ -117,7 +117,7 @@ export function AppCreateFlow({ onBack }: Props) {
 
   /** 从 sandbox 读取文件树(search 递归返回子树 → buildFileTree 按路径构建嵌套树) */
   const loadSandboxFiles = useCallback(async (): Promise<FileNode[]> => {
-    const res = await fetch(`/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`, {
+    const res = await fetch(`/api/cockpit/agent/sandbox/${STUDIO_INSTANCE}/files?path=.`, {
       credentials: 'include',
     });
     const data = await res.json();
@@ -128,7 +128,7 @@ export function AppCreateFlow({ onBack }: Props) {
   /** 读取 sandbox 单个文件内容 */
   const loadFileContent = useCallback(async (path: string): Promise<string> => {
     const res = await fetch(
-      `/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/files?path=${encodeURIComponent(path)}`,
+      `/api/cockpit/agent/sandbox/${STUDIO_INSTANCE}/files?path=${encodeURIComponent(path)}`,
       { credentials: 'include' }
     );
     const data = await res.json();
@@ -146,7 +146,7 @@ export function AppCreateFlow({ onBack }: Props) {
     try {
       addLog('→ dispatch tool-loop 任务(app-studio sandbox)');
       // 真实 dispatch:LLM 经 tool-loop 调 write_file 真实创建文件
-      const dispatchRes = await fetch('/api/openclaw/agent/dispatch', {
+      const dispatchRes = await fetch('/api/cockpit/agent/dispatch', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -240,7 +240,7 @@ export function AppCreateFlow({ onBack }: Props) {
     setRightTab('preview');
     try {
       // npm install 可能 120s + vite 8s,超时给 150s
-      const res = await fetch(`/api/openclaw/agent/sandbox/${STUDIO_INSTANCE}/preview`, {
+      const res = await fetch(`/api/cockpit/agent/sandbox/${STUDIO_INSTANCE}/preview`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

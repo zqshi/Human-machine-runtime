@@ -31,7 +31,7 @@ const MODEL_OPTIONS = [
 ];
 
 const RUNTIME_OPTIONS: { value: AgentRuntime; label: string }[] = [
-  { value: 'openclaw', label: 'OpenClaw' },
+  { value: 'cockpit', label: 'Cockpit' },
   { value: 'harness', label: 'Harness' },
 ];
 
@@ -59,7 +59,7 @@ function buildDefaultPrompt(input: {
   return [
     `你是组织级数字员工「${name}」。`,
     input.department ? `你归属于「${input.department}」部门。` : '你服务于组织内的通用业务场景。',
-    `你的运行类型是 ${input.agentRuntime || 'openclaw'}，默认模型是 ${input.modelId || 'gpt-4o'}。`,
+    `你的运行类型是 ${input.agentRuntime || 'cockpit'}，默认模型是 ${input.modelId || 'gpt-4o'}。`,
     '',
     '你的工作目标：',
     input.description || '根据组织授权，为员工提供准确、稳定、可追踪的任务处理和信息支持。',
@@ -103,7 +103,7 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
         department: valueToString(d.department),
         ownerId: valueToString(d.ownerId || d.enterpriseUserId),
         description: valueToString(d.description || d.personality),
-        agentRuntime: (d.agentRuntime === 'harness' ? 'harness' : 'openclaw') as AgentRuntime,
+        agentRuntime: (d.agentRuntime === 'harness' ? 'harness' : 'cockpit') as AgentRuntime,
         modelId: valueToString(d.model || runtime.modelId || 'gpt-4o'),
         status: valueToString(d.status || 'active'),
         scope: (d.scope === 'personal' ? 'personal' : 'organization') as InstanceScope,
@@ -145,7 +145,7 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
     department: '',
     ownerId: '',
     description: '',
-    agentRuntime: 'openclaw' as AgentRuntime,
+    agentRuntime: 'cockpit' as AgentRuntime,
     modelId: 'gpt-4o',
     status: 'active',
     scope: 'organization' as InstanceScope,
@@ -224,7 +224,7 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
           department: valueToString(d.department || prev.department),
           ownerId: valueToString(d.ownerId || d.enterpriseUserId || prev.ownerId),
           description: valueToString(profile.knowMe || d.description || prev.description),
-          agentRuntime: (d.jobTitle === 'harness' || runtimeProfile.agentRuntime === 'harness') ? 'harness' : 'openclaw',
+          agentRuntime: (d.jobTitle === 'harness' || runtimeProfile.agentRuntime === 'harness') ? 'harness' : 'cockpit',
           modelId: valueToString(runtimeProfile.modelId || d.model || prev.modelId),
           status: valueToString(d.state || d.status || prev.status),
           scope: (settings.scope === 'personal' ? 'personal' : 'organization') as InstanceScope,

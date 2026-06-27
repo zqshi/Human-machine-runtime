@@ -1,6 +1,6 @@
 > ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5435）。
 
-# 全链路验收 Runbook（Matrix + OpenClaw + 管理后台）
+# 全链路验收 Runbook（Matrix + Cockpit + 管理后台）
 
 ## 1. 目标
 - 验证 `Matrix -> 数字工厂Bot -> 创建数字员工实例 -> 管理后台可观测` 的完整链路。
@@ -28,7 +28,7 @@ BASE_URL=http://127.0.0.1:3010 ADMIN_USERNAME=admin ADMIN_PASSWORD=admin123 npm 
 - 输出 `instance_id=<...>` 和 `room_id=<...>`
 - 生成报告文件：`runtime/e2e/full-validation-<timestamp>.md`
 - 报告中以下项均为 `PASS`：
-  - OpenClaw/Matrix 栈健康
+  - Cockpit/Matrix 栈健康
   - Matrix 创建数字员工
   - 管理后台实例详情 `checks.matrix`
   - 共享Agent页面可访问
@@ -36,7 +36,7 @@ BASE_URL=http://127.0.0.1:3010 ADMIN_USERNAME=admin ADMIN_PASSWORD=admin123 npm 
 
 ## 5. 常见失败
 - 管理员登录失败：检查 `ADMIN_USERNAME/ADMIN_PASSWORD` 是否正确。
-- Matrix 创建失败：先执行 `npm run openclaw:check` 查看 Synapse/relay 状态。
+- Matrix 创建失败：先执行 `npm run cockpit:check` 查看 Synapse/relay 状态。
 - 详情字段缺失：检查实例详情接口 `GET /api/admin/instances/:id` 是否返回 `checks.matrix`。
 - 接口非410：说明身份映射人工维护接口未下线完成。
 

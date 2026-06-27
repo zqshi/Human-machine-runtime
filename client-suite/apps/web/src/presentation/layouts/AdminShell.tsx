@@ -22,8 +22,8 @@ import {
   EvalSuiteDetail,
 } from '../features/admin/eval';
 import { ScheduledTasksSection } from '../features/admin/scheduled-tasks/ScheduledTasksSection';
-import { OpenClawMonitorSection } from '../features/admin/OpenClawMonitorSection';
-import { OpenClawStatisticsSection } from '../features/admin/OpenClawStatisticsSection';
+import { CockpitMonitorSection } from '../features/admin/CockpitMonitorSection';
+import { CockpitStatisticsSection } from '../features/admin/CockpitStatisticsSection';
 import { UserAnalysisSection } from '../features/admin/UserAnalysisSection';
 import { OpsWeeklySection } from '../features/admin/OpsWeeklySection';
 import { ChannelManagementSection } from '../features/admin/ChannelManagementSection';
@@ -109,10 +109,10 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const DATA_SECTIONS: { key: AdminSection; Component: () => JSX.Element }[] = [
-  { key: 'data-overview', Component: OpenClawStatisticsSection },
+  { key: 'data-overview', Component: CockpitStatisticsSection },
   { key: 'user-analysis', Component: UserAnalysisSection },
   { key: 'ops-weekly', Component: OpsWeeklySection },
-  { key: 'realtime-monitor', Component: OpenClawMonitorSection },
+  { key: 'realtime-monitor', Component: CockpitMonitorSection },
 ];
 
 const DATA_SECTION_KEYS = new Set(DATA_SECTIONS.map((s) => s.key));

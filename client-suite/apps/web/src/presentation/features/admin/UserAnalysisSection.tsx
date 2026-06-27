@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { openclawStatisticsApi } from '../../../application/services/adminApi';
+import { cockpitStatisticsApi } from '../../../application/services/adminApi';
 import { Icon } from '../../components/ui/Icon';
 
 type Period = 'this-week' | 'last-week' | '7d' | '30d';
@@ -88,8 +88,8 @@ export function UserAnalysisSection() {
     };
 
     Promise.all([
-      openclawStatisticsApi.userAnalysis(params),
-      openclawStatisticsApi.messages({ startDate: range.startDate, endDate: range.endDate }),
+      cockpitStatisticsApi.userAnalysis(params),
+      cockpitStatisticsApi.messages({ startDate: range.startDate, endDate: range.endDate }),
     ])
       .then(([analysis, msgs]) => {
         setUsers(analysis.users || []);

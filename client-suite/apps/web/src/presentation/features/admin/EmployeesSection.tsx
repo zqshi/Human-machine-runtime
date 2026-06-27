@@ -272,7 +272,7 @@ export function EmployeesSection() {
             <div className="flex bg-gray-100 rounded-lg p-0.5">
               {[
                 { value: '' as AgentFilter, label: '全部', icon: 'apps' },
-                { value: 'openclaw' as AgentFilter, label: 'OpenClaw', icon: 'smart_toy' },
+                { value: 'cockpit' as AgentFilter, label: 'Cockpit', icon: 'smart_toy' },
                 { value: 'harness' as AgentFilter, label: 'Harness', icon: 'memory' },
               ].map((opt) => (
                 <button
@@ -325,7 +325,7 @@ export function EmployeesSection() {
             <div className="flex bg-gray-100 rounded-lg p-0.5">
               {[
                 { value: '' as AgentFilter, label: '全部', icon: 'apps' },
-                { value: 'openclaw' as AgentFilter, label: 'OpenClaw', icon: 'smart_toy' },
+                { value: 'cockpit' as AgentFilter, label: 'Cockpit', icon: 'smart_toy' },
                 { value: 'harness' as AgentFilter, label: 'Harness', icon: 'memory' },
               ].map((opt) => (
                 <button

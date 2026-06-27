@@ -5,7 +5,7 @@
  * 独立成文件方便 sandbox 模块边界清晰。
  *
  * 职责:
- *   - register/unregister:注册各 Agent 框架适配器(claude-agent-sdk / openclaw / dify...)
+ *   - register/unregister:注册各 Agent 框架适配器(claude-agent-sdk / cockpit / dify...)
  *   - dispatchTask:按 preferredFramework 路由任务到 adapter
  *   - healthCheckAll:统一健康探活
  *
@@ -58,7 +58,7 @@ export class AdapterRegistry {
   }
 
   private selectBestAdapter(_task: AgentTaskInput): IAgentRuntimeAdapter | undefined {
-    // 优先 tool-loop(实例任务真执行,不被模型绑定;替代假桩 openclaw 默认路由)
+    // 优先 tool-loop(实例任务真执行,不被模型绑定;替代假桩 cockpit 默认路由)
     const toolLoop = this.adapters.get('tool-loop');
     if (toolLoop) return toolLoop;
     const adapters = Array.from(this.adapters.values());

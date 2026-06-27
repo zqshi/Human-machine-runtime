@@ -1,5 +1,5 @@
 export type AgentFramework =
-  | 'openclaw'
+  | 'cockpit'
   | 'dify'
   | 'coze'
   | 'langchain'

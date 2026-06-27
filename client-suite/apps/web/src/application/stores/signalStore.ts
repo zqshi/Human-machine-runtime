@@ -1,7 +1,7 @@
 /**
  * signalStore — 统一信号状态管理
  *
- * 聚合 openclawStore 和 notificationStore 中的异构事件为 Signal[]，
+ * 聚合 cockpitStore 和 notificationStore 中的异构事件为 Signal[]，
  * 按 SignalPrioritizer 排序后供 UI 消费。
  */
 
@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { Signal, type SignalProps } from '../../domain/agent/Signal';
 import { SignalPrioritizer } from '../../domain/agent/SignalPrioritizer';
 import { PushPolicy, type PushChannel, type PushPolicyProps } from '../../domain/agent/PushPolicy';
-import { fetchSignals } from '../../infrastructure/api/openclawApiAdapter';
+import { fetchSignals } from '../../infrastructure/api/cockpitApiAdapter';
 
 interface SignalState {
   signals: Signal[];

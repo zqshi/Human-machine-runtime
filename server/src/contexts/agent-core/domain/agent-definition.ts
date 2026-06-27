@@ -69,12 +69,12 @@ export interface AgentPersonaSpec {
  * 声明 Agent 使用的运行时类型,runtime-registry 据此路由到对应 adapter。
  * sandboxTemplate 仍在 spec 顶层(docker-worker-runner 消费),此处只声明 runtimeType。
  */
-export type AgentRuntimeType = 'claude' | 'openclaw' | 'hermes';
+export type AgentRuntimeType = 'claude' | 'cockpit' | 'hermes';
 
 export interface RuntimeDeclaration {
   /** 运行时类型声明(决定走哪个 adapter;治本 D8) */
   runtimeType: AgentRuntimeType;
-  /** 运行时特定配置(可选,如 openclaw 版本/claude worker 镜像引用) */
+  /** 运行时特定配置(可选,如 cockpit 版本/claude worker 镜像引用) */
   config?: Record<string, unknown>;
 }
 
@@ -186,7 +186,7 @@ export function validateAgentDefinitionSpec(
   // v1.9:runtime 声明(治本 D8)
   if (!spec.runtime || typeof spec.runtime !== 'object') {
     errors.push({ field: 'runtime', message: 'required' });
-  } else if (!['claude', 'openclaw', 'hermes'].includes(spec.runtime.runtimeType)) {
+  } else if (!['claude', 'cockpit', 'hermes'].includes(spec.runtime.runtimeType)) {
     errors.push({ field: 'runtime.runtimeType', message: 'invalid' });
   }
 

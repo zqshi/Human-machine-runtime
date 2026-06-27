@@ -17,7 +17,7 @@ export const MODEL_OPTIONS = [
 ];
 
 export const RUNTIME_OPTIONS = [
-  { value: 'openclaw', label: 'OpenClaw' },
+  { value: 'cockpit', label: 'Cockpit' },
   { value: 'harness', label: 'Harness' },
 ] as const;
 

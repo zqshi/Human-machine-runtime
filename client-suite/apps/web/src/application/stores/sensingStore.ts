@@ -5,7 +5,7 @@ import {
   fetchDetectedPatterns,
   type EmergentSignalDTO,
   type DetectedPatternDTO,
-} from '../../infrastructure/api/openclawSensingApiAdapter';
+} from '../../infrastructure/api/cockpitSensingApiAdapter';
 import { appEvents } from '../events/eventBus';
 
 interface SensingState {

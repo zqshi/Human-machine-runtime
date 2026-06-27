@@ -14,7 +14,7 @@
 | 1 | T9 流式 SSE 真请求 | 浏览器流式回包 | v1.9 遗留 1 |
 | 2 | T18b canUseTool 审批闭环 | 跨进程容器调用 | backlog D3 |
 | 3 | T20b marketplace 安装即对话 | 真 LLM 响应 | backlog D9 |
-| 4 | D10 openclawStore 自举(IM 共享 Agent) | instanceId 全链路接线 | backlog D10 |
+| 4 | D10 cockpitStore 自举(IM 共享 Agent) | instanceId 全链路接线 | backlog D10 |
 
 ---
 
@@ -30,7 +30,7 @@ cd server && npm run dev
 # 0.3 client (5176)
 cd client-suite/apps/web && npm run dev
 
-# 0.4 真实 LLM 网关(openclaw chat 经 LiteLLM,不经 harness)
+# 0.4 真实 LLM 网关(cockpit chat 经 LiteLLM,不经 harness)
 #   LiteLLM 服务可达 + aiGatewayRepo 有实例 apiKey 记录(见验证项 3/4 排查)
 
 # 0.5 claude-worker(仅验证项 2 需要)
@@ -47,13 +47,13 @@ cd client-suite/apps/web && npm run dev
 ## 验证项 1 — T9 流式 SSE 真请求
 
 > **2026-06-25 后端 curl 实测结果(已执行)**:
-> - ✅ `POST /api/openclaw/chat/stream` 200 + `Content-Type: text/event-stream` + `Transfer-Encoding: chunked`,SSE 分块 `data:{"choices":[{"delta":{"content":"..."}}]}` 真到达(GLM via LiteLLM)
+> - ✅ `POST /api/cockpit/chat/stream` 200 + `Content-Type: text/event-stream` + `Transfer-Encoding: chunked`,SSE 分块 `data:{"choices":[{"delta":{"content":"..."}}]}` 真到达(GLM via LiteLLM)
 > - ✅ guardrail 硬约束拦截生效:命中 keyword"密码"→ `{"reply":refusalResponse,"model":"guardrail","blocked":true}`
 > - ⚠️ **发现代码缺陷:persona.systemPrompt 未注入 LLM**。chat.ts:104 `systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT`,persona.systemPrompt 被忽略。问"你是谁"回复"没有具体名字",不知自己是 persona 声明的 Alice。v1.9 T15"注入 PersonaProvider 作后端 guardrail 兜底"只实现了 guardrails 拦截,人设软约束漏了。**记入 current.md 计划外工作,待修复**
 > - ⚠️ **chat/stream 是伪流式**:line 205 先调 chatCompletion(非 stream:true 拿完整回复),line 224-232 再按 chunkSize=20 切块用 SSE 吐。非真正 LLM 逐 token 流式。非 bug 但与"流式"预期有差距,前端逐字渲染依赖此
 > - **实测环境补齐**:docker-compose `--profile litellm` 拉起 LiteLLM + config.yaml 加 GLM 路由(claude-sonnet-4-6→glm-4-flash via open.bigmodel.cn/api/paas/v4)+ GLM_API_KEY 注入 + 跑 db:migrate(补 persona/bound_knowledge/runtime 三列,migration 之前未执行)+ 插 instance_llm_keys(master key)+ agent_definitions(带 persona/guardrail)+ 关联 instance
 
-**目标**: 确认 useAgentChat 重构(AgentRuntimePort 解耦 + persona 从 instance→agentDefinitionId 拉)后,IM 模式对话流式回包正常,未破坏 openclaw/weKnora 主路径。
+**目标**: 确认 useAgentChat 重构(AgentRuntimePort 解耦 + persona 从 instance→agentDefinitionId 拉)后,IM 模式对话流式回包正常,未破坏 cockpit/weKnora 主路径。
 
 ### 前置
 - 通用环境 0.1-0.4
@@ -62,7 +62,7 @@ cd client-suite/apps/web && npm run dev
 ### 操作步骤
 1. 浏览器打开 client(127.0.0.1:5176),登录,进入 IM 对话
 2. 选一个已有共享 Agent / 实例,发一条消息(如"你好")
-3. DevTools → Network 找 `POST /api/openclaw/chat/stream` 请求
+3. DevTools → Network 找 `POST /api/cockpit/chat/stream` 请求
 4. 观察 Response: Content-Type 应为 `text/event-stream`
 
 ### 预期信号(成功)
@@ -78,7 +78,7 @@ cd client-suite/apps/web && npm run dev
 | 503 | LiteLLM 未配置 / aiGatewayRepo 无该 instance apiKey → `SELECT * FROM ai_gateway_keys WHERE instance_id=...` |
 | 502 | LiteLLM 调用失败 → server 日志看 LiteLLM 上游错误 |
 | 一次性返回非流式 | 走了 fallback mock 分块(chat.ts:224-231)→ 检查 LiteLLM 是否真调用,非真调用会回落 mock |
-| 回复无 persona 风格 | `activeInstanceId` 为 null → useAgentChat:325 chat 请求 instanceId 字段;查 openclawStore.activeInstanceId 是否设非 null(见验证项 4) |
+| 回复无 persona 风格 | `activeInstanceId` 为 null → useAgentChat:325 chat 请求 instanceId 字段;查 cockpitStore.activeInstanceId 是否设非 null(见验证项 4) |
 | 前端报 SSE error | useAgentChat:434 `streamFailed` → fallback 重试;查 console.warn 消息 |
 
 ### tsc/vitest 为何测不出
@@ -165,8 +165,8 @@ worker→server 是跨 docker 容器真实 HTTP 调用,vitest 只测 server rout
 
 ### 预期信号(成功)
 - ✅ install 返回 201 + instanceId(新建 AgentDefinition + instance)
-- ✅ 跳转后 openclawStore.activeInstanceId = 返回的 instanceId(非 null)
-- ✅ 对话请求 `POST /api/openclaw/chat/stream` 的 instanceId 字段非 null
+- ✅ 跳转后 cockpitStore.activeInstanceId = 返回的 instanceId(非 null)
+- ✅ 对话请求 `POST /api/cockpit/chat/stream` 的 instanceId 字段非 null
 - ✅ 真对话响应(经 LiteLLM,非空转/非 mock fallback)
 - ✅ persona 生效: 回复风格符合 installAgent 设的 `你是{name},{description}`
 
@@ -175,16 +175,16 @@ worker→server 是跨 docker 容器真实 HTTP 调用,vitest 只测 server rout
 |------|-----|
 | install 400/500 | routes/control/marketplace.ts zod 校验 + marketplace-service.installAgent 日志 |
 | 安装后对话空转 | activeInstanceId 未设 → `sharedAgentChatService.openInstalledInstance` 是否调 `setActiveInstanceId` |
-| chat instanceId null | openclawStore.activeInstanceId 仍 null → 验证项 4 同源问题 |
+| chat instanceId null | cockpitStore.activeInstanceId 仍 null → 验证项 4 同源问题 |
 | 503 | 安装后 instance 无 apiKey → aiGatewayRepo 需为该 instance 配 key |
 | 重复安装产生多个 instance | 非幂等(已知遗留,T20b 未覆盖)→ 每次新建,非本次阻断项 |
 
 ### tsc/vitest 为何测不出
-installAgent 链路跨 marketplace/agent-core/tenant-instance 三个 context 集成,真 LLM 响应经 LiteLLM 运行时。vitest 测 installAgent 2 测 + openInstalledInstance 1 测(纯逻辑),测不到 openclawStore 状态机真切换 + LiteLLM 真请求。
+installAgent 链路跨 marketplace/agent-core/tenant-instance 三个 context 集成,真 LLM 响应经 LiteLLM 运行时。vitest 测 installAgent 2 测 + openInstalledInstance 1 测(纯逻辑),测不到 cockpitStore 状态机真切换 + LiteLLM 真请求。
 
 ---
 
-## 验证项 4 — D10 openclawStore 自举(IM 共享 Agent 对话)
+## 验证项 4 — D10 cockpitStore 自举(IM 共享 Agent 对话)
 
 **目标**: 确认 IM 模式共享 Agent(sa-* 及其他路径)对话时,activeInstanceId 真设非 null,persona/apiKey/guardrail 不失效。**此项是验证项 1/3 的根因核查**——T20b 文档发现 activeInstanceId 之前全链路 null(仅 marketplace 路径已修)。
 
@@ -195,7 +195,7 @@ installAgent 链路跨 marketplace/agent-core/tenant-instance 三个 context 集
 ### 操作步骤
 1. IM 模式选一个 sa-* 共享 Agent 对话
 2. DevTools → Network 看 chat 请求 `instanceId` 字段
-3. Console 执行 `useOpenClawStore.getState().activeInstanceId` 看值
+3. Console 执行 `useCockpitStore.getState().activeInstanceId` 看值
 
 ### 预期信号(成功)
 - ✅ `activeInstanceId` 非 null(应为真实 instanceId)
@@ -214,7 +214,7 @@ installAgent 链路跨 marketplace/agent-core/tenant-instance 三个 context 集
 - marketplace 路径(验证项 3)已修,可作为"正确接线"参照
 
 ### tsc/vitest 为何测不出
-openclawStore 状态机在运行时由多个 action 切换,activeInstanceId 的 setter 调用时机是运行时行为。vitest 测 store 初始值/reset,测不到"哪个 action 在何时设非 null"。
+cockpitStore 状态机在运行时由多个 action 切换,activeInstanceId 的 setter 调用时机是运行时行为。vitest 测 store 初始值/reset,测不到"哪个 action 在何时设非 null"。
 
 ---
 
@@ -225,7 +225,7 @@ openclawStore 状态机在运行时由多个 action 切换,activeInstanceId 的 
 | 1 | T9 流式 SSE | ✅ pass(后端) | Claude | 2026-06-25 | SSE 真响应+guardrail 拦截生效;**发现 persona.systemPrompt 未注入 LLM**(chat.ts:104);chat/stream 是伪流式(先完整回复再切块)。前端逐字渲染待浏览器实测 |
 | 2 | T18b 审批闭环 | ⚠️ 部分(server pass/worker 受限) | Claude | 2026-06-25 | server tool-check route 运行时完整验证(守卫+风险表+enforce 三态);worker 镜像构建+SDK 启动成功,但 GLM 不完整支持 SDK 工具调用流程→canUseTool 未触发(模型兼容限制,非 HMR) |
 | 3 | T20b marketplace 对话 | ✅ pass(后端) | Claude | 2026-06-25 | install 端到端成功(落 AgentDefinition+instance+关联);**发现 installAgent 不触发 instance_llm_keys 同步**→新 instance 无法直接对话;persona.systemPrompt 未注入(同 T9) |
-| 4 | D10 openclawStore 自举 | ⏳ 待浏览器 | — | — | 后端 instanceId 链路已验证(chat 带 instanceId 真响应);前端 activeInstanceId 是否真设非 null 待浏览器 Console 验证 |
+| 4 | D10 cockpitStore 自举 | ⏳ 待浏览器 | — | — | 后端 instanceId 链路已验证(chat 带 instanceId 真响应);前端 activeInstanceId 是否真设非 null 待浏览器 Console 验证 |
 
 ### 实测发现的真实代码缺陷(应入 current.md 计划外工作)
 

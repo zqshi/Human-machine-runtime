@@ -72,7 +72,7 @@ import type { ChatService } from '../../contexts/agent-core/application/chat-ser
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
 import type { ConfigRepository } from '../../db/repositories/config-repository.js';
-import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
 import type { OperationalRepository } from '../../db/repositories/operational-repository.js';
 import type { AgentProfileRepository } from '../../db/repositories/agent-profile-repository.js';
 import type { EvalBenchmarkRepository } from '../../db/repositories/eval-benchmark-repository.js';
@@ -91,18 +91,18 @@ export interface AppContext {
   credentialService: CredentialService;
   leaseService: LeaseService;
   credentialManagementService: CredentialManagementService;
-  /** v1.9 T3 PersonaProvider(人设 + guardrails);T15 openclaw chat route 复用作后端 guardrail 兜底 */
+  /** v1.9 T3 PersonaProvider(人设 + guardrails);T15 cockpit chat route 复用作后端 guardrail 兜底 */
   personaProvider: IPersonaProvider;
-  /** T13 openclaw Studio 资产聚合 service(替代 studio route STUB) */
+  /** T13 cockpit Studio 资产聚合 service(替代 studio route STUB) */
   studioService: StudioService;
-  /** T57 对话能力核心(persona/guardrail/history/LiteLLM);openclaw chat route + Matrix bot 共用(DRY)。
+  /** T57 对话能力核心(persona/guardrail/history/LiteLLM);cockpit chat route + Matrix bot 共用(DRY)。
    *  T59 bootstrap 注入 onUsage 回调(recordUsage+recordEvent),chat 成功即入账。 */
   chatService: ChatService;
   channelService: ChannelService;
   decisionConsole: DecisionConsole;
   mcpService: McpService;
   tokenUsageService: TokenUsageService;
-  openclawRepo: OpenclawRepository;
+  cockpitRepo: CockpitRepository;
   marketplaceService: MarketplaceService;
   workspaceService: WorkspaceService;
   agentProfileService: AgentProfileService;

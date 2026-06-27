@@ -1,8 +1,8 @@
 /**
- * ChatService — 对话能力核心(从 routes/openclaw/chat.ts 抽取,DRY 共用)。
+ * ChatService — 对话能力核心(从 routes/cockpit/chat.ts 抽取,DRY 共用)。
  *
  * 封装 persona 解析 + guardrail 拦截 + 授权校验 + per-instance key + LiteLLM 调用 +
- * trace 落库,供 openclaw chat route(HTTP 对话)与 RuntimeProxyService(Matrix bot 对话)共用。
+ * trace 落库,供 cockpit chat route(HTTP 对话)与 RuntimeProxyService(Matrix bot 对话)共用。
  *
  * 设计:返回带 status 的 ChatResult,让调用方(route/handler)只做 HTTP/协议适配,
  * 业务逻辑下沉 service。行为与原 chat.ts /chat 端点一致(T24 persona/T49 history/T15 guardrail)。
@@ -36,7 +36,7 @@ export interface ChatOptions {
   systemPrompt?: string;
   /** 多轮历史(Matrix bot 由 store 维护;HTTP chat 由前端传入) */
   history?: ChatHistoryMessage[];
-  /** trace 来源标记(openclaw-chat / matrix-bot) */
+  /** trace 来源标记(cockpit-chat / matrix-bot) */
   traceSource?: string;
   /** 租户归户(HTTP chat 从 auth principal 取;Matrix bot 传 'unknown',IM opt-in 不绑定) */
   tenantId?: string;
@@ -207,8 +207,8 @@ export class ChatService {
         ],
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.maxTokens ?? 1024,
-        user: opts.userId || 'openclaw-user',
-        metadata: { source: opts.traceSource || 'openclaw-chat' },
+        user: opts.userId || 'cockpit-user',
+        metadata: { source: opts.traceSource || 'cockpit-chat' },
         ...(apiKey ? { apiKey } : {}),
       });
 
@@ -227,9 +227,9 @@ export class ChatService {
         this.aiGatewayRepo
           .insertTrace({
             traceId,
-            sessionId: opts.sessionId || 'openclaw-fallback',
+            sessionId: opts.sessionId || 'cockpit-fallback',
             requestId: traceId,
-            userId: opts.userId || 'openclaw-user',
+            userId: opts.userId || 'cockpit-user',
             requestedModel: modelName,
             actualModel: completion?.model ?? undefined,
             providerType: 'litellm',
@@ -252,7 +252,7 @@ export class ChatService {
             model: completion?.model ?? modelName,
             promptTokens: completion.usage.prompt_tokens ?? 0,
             completionTokens: completion.usage.completion_tokens ?? 0,
-            source: opts.traceSource || 'openclaw-chat',
+            source: opts.traceSource || 'cockpit-chat',
           });
         } catch {
           /* non-blocking:入账失败不影响回复 */

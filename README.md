@@ -13,7 +13,7 @@ HMR（Human-Machine Runtime，人机运行时）是面向**央国企及中大型
 | 卖点 | 说明 |
 |------|------|
 | **跨平台政治护城河** | 钉钉不会帮你聚合飞书消息，飞书不会帮你聚合企微——只有中立第三方能做跨 IM 聚合。这不是技术壁垒，是政治壁垒 |
-| **三层解耦架构** | Agent 框架可换（OpenClaw/Dify/Coze）、渠道可换（钉钉/飞书/企微/Matrix）——运行时层消息归一化+决策引擎+执行编排不可替代 |
+| **三层解耦架构** | Agent 框架可换（Cockpit/Dify/Coze）、渠道可换（钉钉/飞书/企微/Matrix）——运行时层消息归一化+决策引擎+执行编排不可替代 |
 | **运行时即价值** | 不造 Agent，只调度 Agent；不替代 IM，只聚合 IM。做的是"信息到决策"的运行时，类比 Harness 做"代码到生产"的运行时 |
 | **效果付费** | 不要求企业采购。IM 内免费装"决策助理"，按决策闭环次数收费。零迁移成本，零采购门槛 |
 
@@ -31,7 +31,7 @@ HMR（Human-Machine Runtime，人机运行时）是面向**央国企及中大型
 ```mermaid
 graph TB
   subgraph Upper["上层 · Agent 框架（可插拔）"]
-    OC["OpenClaw"] ~~~ Dify ~~~ Coze ~~~ Custom["自研框架"]
+    OC["Cockpit"] ~~~ Dify ~~~ Coze ~~~ Custom["自研框架"]
   end
 
   ARA{{"AgentRuntimeAdapter 标准接口"}}
@@ -125,7 +125,7 @@ graph TB
   subgraph RuntimePlane["Runtime Plane"]
     direction LR
     Adapter["AgentRuntimeAdapter"]
-    OC2["OpenClaw (默认)"]
+    OC2["Cockpit (默认)"]
     Other["Dify / Coze / 自研"]
     Adapter --- OC2 & Other
   end
@@ -213,11 +213,11 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 
 | 子系统 | 功能 | 前端入口 | 后端路由 |
 |--------|------|----------|----------|
-| **战略驾驶舱** | 目标树、信心度仪表盘、战略提问器、部门矩阵 | `strategic-cockpit` | `/api/openclaw/objectives` |
-| **编排中心** | 协作链管理、Agent 调度、升维时间线 | `orchestration` | `/api/openclaw/orchestration/*` |
-| **感知反馈** | 信号雷达、模式识别、紧急信号检测 | `sensing` | `/api/openclaw/signals/*` |
-| **考核评估** | 人机双轨仪表盘、趋势分析、记分卡 | `evaluation` | `/api/openclaw/evaluation/*` |
-| **判断推理** | 判断工作台、信号时间线、修正图谱 | `judgment` | `/api/openclaw/decisions/*` |
+| **战略驾驶舱** | 目标树、信心度仪表盘、战略提问器、部门矩阵 | `strategic-cockpit` | `/api/cockpit/objectives` |
+| **编排中心** | 协作链管理、Agent 调度、升维时间线 | `orchestration` | `/api/cockpit/orchestration/*` |
+| **感知反馈** | 信号雷达、模式识别、紧急信号检测 | `sensing` | `/api/cockpit/signals/*` |
+| **考核评估** | 人机双轨仪表盘、趋势分析、记分卡 | `evaluation` | `/api/cockpit/evaluation/*` |
+| **判断推理** | 判断工作台、信号时间线、修正图谱 | `judgment` | `/api/cockpit/decisions/*` |
 
 ---
 
@@ -249,7 +249,7 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 | 通知 | notifications | 通知中心 |
 | 日历 | calendar | 日程管理 |
 | 动态 | subscription | 信息流订阅 |
-| 工作面板 | openclaw | 决策中心（任务/信号/协作/渠道） |
+| 工作面板 | cockpit | 决策中心（任务/信号/协作/渠道） |
 | Agent | agents | Agent Hub + 详情/配置 |
 | 战略 | strategic-cockpit | Enterprise Agent OS · 战略驾驶舱 |
 | 编排 | orchestration | Enterprise Agent OS · 编排中心 |
@@ -261,7 +261,7 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 
 | 模块 | 说明 |
 |------|------|
-| 运营数据 | OpenClaw 统计概览 + 运行监控 |
+| 运营数据 | Cockpit 统计概览 + 运行监控 |
 | 员工管理 | 数字员工 CRUD + 详情/编辑/资源/话题 |
 | 共享 Agent | 跨租户共享 Agent 注册/绑定 |
 | 技能管理 | 技能详情 + 策略配置 |
@@ -353,7 +353,7 @@ interface IChannelAdapter {
 
 ```typescript
 interface IAgentRuntimeAdapter {
-  readonly framework: AgentFramework; // 'openclaw' | 'dify' | 'coze' | 'langchain' | 'claude-agent-sdk' | 'custom'
+  readonly framework: AgentFramework; // 'cockpit' | 'dify' | 'coze' | 'langchain' | 'claude-agent-sdk' | 'custom'
   submitTask(task: AgentTaskInput): Promise<{ taskId: string; accepted: boolean }>;
   getTaskStatus(taskId: string): Promise<AgentTaskStatus>;
   cancelTask(taskId: string): Promise<{ cancelled: boolean }>;
@@ -368,7 +368,7 @@ interface IAgentRuntimeAdapter {
 | 框架 | 适配器 | 说明 |
 |------|--------|------|
 | **Claude Agent SDK** | `ClaudeAgentSdkAdapter` | 主执行引擎。在 Docker 沙箱(`claude-worker`)内通过 Claude Agent SDK 执行真实 Agent 任务,支持预算熔断/会话续接/Token 用量入账 |
-| **OpenClaw** | `OpenClawAdapter` | 降级方案。对接实例管理服务管理实例,在 `ANTHROPIC_API_KEY` 未配置时自动启用 |
+| **Cockpit** | `CockpitAdapter` | 降级方案。对接实例管理服务管理实例,在 `ANTHROPIC_API_KEY` 未配置时自动启用 |
 
 ---
 
@@ -386,19 +386,19 @@ Agent 创建走 7 步声明式向导（`AgentCreateFlow`),声明完整 `AgentDef
 4. 技能（boundSkills）
 5. 知识（boundKnowledge,RAG 召回范围）
 6. 工具（boundTools,按 riskLevel 走审批）
-7. 运行时（runtimeType: claude/openclaw/hermes + sandboxTemplate）
+7. 运行时（runtimeType: claude/cockpit/hermes + sandboxTemplate）
 
 API:`/api/admin/agent-definitions`(CRUD + 分页,admin 聚合层挂 auth + requireRole)。
 
 ### 投产阻断项补全
 
-- **#1 任务边界/拒答**:persona.systemPrompt 软约束注入 + guardrails 硬约束拦截(keyword/regex block 直接拒答,intent review 转 LLM 复核)。实例路径 harness 注入(T3);openclaw 对话路径 useAgentChat 前端拦截 + 后端兜底。
+- **#1 任务边界/拒答**:persona.systemPrompt 软约束注入 + guardrails 硬约束拦截(keyword/regex block 直接拒答,intent review 转 LLM 复核)。实例路径 harness 注入(T3);cockpit 对话路径 useAgentChat 前端拦截 + 后端兜底。
 - **#7 执行审批**:工具 riskLevel + 实例 approvalPolicy 阈值,超阈值走 `tool_approvals` 审批队列,admin approve 触发续执行。
 - **#13 灰度发布**:feature flag(enabled + rolloutPct 确定性 hash 灰度 + allowedTenants 白名单 + killSwitch 紧急关停),guardrails/approval 默认 off,灰度逐步 enforce。
 
 ### D8 运行时解耦(治本)
 
-`useAgentChat` 经 `AgentRuntimePort` 抽象调用对话后端(WeKnora/OpenClaw),不再硬绑 `weKnoraApi`;persona 从 `instance → agentDefinitionId → AgentDefinition.persona` 拉取,替代 capabilityRegistry template.systemPrompt。运行时可按 `runtime.runtimeType` 替换。
+`useAgentChat` 经 `AgentRuntimePort` 抽象调用对话后端(WeKnora/Cockpit),不再硬绑 `weKnoraApi`;persona 从 `instance → agentDefinitionId → AgentDefinition.persona` 拉取,替代 capabilityRegistry template.systemPrompt。运行时可按 `runtime.runtimeType` 替换。
 
 ### 管理后台投产管控
 
@@ -441,19 +441,19 @@ API:`/api/admin/agent-definitions`(CRUD + 分页,admin 聚合层挂 auth + requi
 | GET | `/api/admin/mcp` | MCP 管理 |
 | POST | `/api/admin/assistant` | AI 助手 |
 
-### 决策中心（/api/openclaw）
+### 决策中心（/api/cockpit）
 
 | 路径 | 说明 |
 |------|------|
-| `/api/openclaw/tasks/*` | 任务管理 |
-| `/api/openclaw/decisions/*` | 决策管理 |
-| `/api/openclaw/signals/*` | 信号/模式/修正 |
-| `/api/openclaw/objectives/*` | 目标/战略分解 |
-| `/api/openclaw/collaboration` | 协作 |
-| `/api/openclaw/orchestration/*` | 编排链/升维/Agent 注册 |
-| `/api/openclaw/evaluation/*` | 指标/记分卡/双轨/趋势 |
-| `/api/openclaw/channels` | 渠道管理 |
-| `/api/openclaw/workspace` | 工作空间 |
+| `/api/cockpit/tasks/*` | 任务管理 |
+| `/api/cockpit/decisions/*` | 决策管理 |
+| `/api/cockpit/signals/*` | 信号/模式/修正 |
+| `/api/cockpit/objectives/*` | 目标/战略分解 |
+| `/api/cockpit/collaboration` | 协作 |
+| `/api/cockpit/orchestration/*` | 编排链/升维/Agent 注册 |
+| `/api/cockpit/evaluation/*` | 指标/记分卡/双轨/趋势 |
+| `/api/cockpit/channels` | 渠道管理 |
+| `/api/cockpit/workspace` | 工作空间 |
 
 ### Gateway 代理（/api/proxy）
 
@@ -482,7 +482,7 @@ human-machine-runtime/
         platform/                        # L1 运管平台路由
         admin/                           # L2 租户管理路由
         control/                         # L2 控制面路由
-        openclaw/                        # 用户端决策中心 + Enterprise Agent OS
+        cockpit/                        # 用户端决策中心 + Enterprise Agent OS
       contexts/                          # DDD 限界上下文 ×29
         runtime-engine/                  # 核心运行时引擎（消息归一化/优先级/去重/推荐/回执）
         agent-core/                      # Agent 执行 + AgentRuntimeAdapter 接口
@@ -679,5 +679,5 @@ helm upgrade --install hmr-server deploy/helm/human-machine-runtime \
 | [租户运营平台](docs/super-admin/) | 架构/PRD/里程碑 |
 | [租户管理后台](docs/admin-console/) | 架构/PRD/里程碑 |
 | [控制面](docs/control-plane/) | 架构/API 契约 |
-| [用户端](docs/openclaw-client/) | 架构/PRD |
+| [用户端](docs/cockpit-client/) | 架构/PRD |
 | [监控配置](docs/shared/monitoring/) | Prometheus + Grafana |

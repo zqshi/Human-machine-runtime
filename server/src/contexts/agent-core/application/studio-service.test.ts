@@ -53,7 +53,7 @@ const agentDef = {
     modelConfig: { primaryModel: 'claude-sonnet-4', fallbackModels: [], maxConcurrency: 5 },
     persona: { systemPrompt: '你是SQL专家', guardrails: [], refusalResponse: '' },
     boundKnowledge: ['kb_1'],
-    runtime: { runtimeType: 'openclaw', config: { openingMessage: '你好', humanize: true } },
+    runtime: { runtimeType: 'cockpit', config: { openingMessage: '你好', humanize: true } },
   },
   description: 'SQL优化助手',
   status: 'active',

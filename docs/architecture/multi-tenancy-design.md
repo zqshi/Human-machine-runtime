@@ -252,7 +252,7 @@
 | `/api/platform/*` | L0 平台运营商 | 跨租户全局视图，tenantId 作为查询参数 |
 | `/api/admin/*` | L1 租户管理员 | 从 JWT 自动绑定 tenantId，强制隔离 |
 | `/api/control/*` | L1~L2 | 从 JWT 自动绑定 tenantId |
-| `/api/openclaw/*` | L2~L3 终端用户 | 从 JWT 自动绑定 tenantId |
+| `/api/cockpit/*` | L2~L3 终端用户 | 从 JWT 自动绑定 tenantId |
 
 ---
 

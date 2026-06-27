@@ -10,7 +10,7 @@ import { useAuthStore } from '../../application/stores/authStore';
 import { useAgentStore } from '../../application/stores/agentStore';
 import { useNotificationStore } from '../../application/stores/notificationStore';
 import { useTodoStore } from '../../application/stores/todoStore';
-import { useOpenClawStore } from '../../application/stores/openclawStore';
+import { useCockpitStore } from '../../application/stores/cockpitStore';
 import { useAppCatalogStore } from '../../application/stores/appCatalogStore';
 import { useMatrixClient } from '../../application/hooks/useMatrixClient';
 import { getDockRoute } from '../routing/dockRegistry';
@@ -44,12 +44,12 @@ export function WorkspacePage() {
     useAppCatalogStore.getState().fetchAppCatalog();
   }, [isBackendConnected]);
 
-  // Initialize OpenClaw store when entering openclaw mode
+  // Initialize Cockpit store when entering cockpit mode
   useEffect(() => {
-    if (appMode !== 'openclaw') return;
-    useOpenClawStore.getState().initialize();
+    if (appMode !== 'cockpit') return;
+    useCockpitStore.getState().initialize();
     return () => {
-      useOpenClawStore.getState().reset();
+      useCockpitStore.getState().reset();
     };
   }, [appMode]);
 

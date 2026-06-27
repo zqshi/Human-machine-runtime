@@ -1,11 +1,11 @@
 /**
- * ToolLoopAdapter — 实例任务真执行 adapter(framework='tool-loop'),替代假桩 OpenClawAdapter。
+ * ToolLoopAdapter — 实例任务真执行 adapter(framework='tool-loop'),替代假桩 CockpitAdapter。
  *
  * submitTask 异步不阻塞:构造 ToolLoopExecutor.run 跑 LLM 多轮工具循环,完成时触发
  * onTaskComplete 回调(带真 conclusion + toolCallsLog)。经 registry.invoke 真工具闭环
  * (审批/凭证/租户隔离/计费/callLog),调 LiteLLM 国产模型(不被 SDK 协议绑定)。
  *
- * 与 OpenClawAdapter(simulateProgress 假桩)区别:真调 LLM+真执行工具,非 setTimeout 假进度。
+ * 与 CockpitAdapter(simulateProgress 假桩)区别:真调 LLM+真执行工具,非 setTimeout 假进度。
  * 与 ClaudeAgentSdkAdapter(worker)区别:不经 claude-agent-sdk,不需 Anthropic tool_use 协议。
  *
  * 详见 docs/architecture/t18-tool-executor-mainline-gap.md + plan moonlit-dreaming-parrot。

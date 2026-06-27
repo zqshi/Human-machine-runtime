@@ -6,7 +6,7 @@
  * 每个节点显示实体名称 + 建议动作（颜色编码）。
  */
 import { useMemo } from 'react';
-import { useOpenClawStore } from '../../../application/stores/openclawStore';
+import { useCockpitStore } from '../../../application/stores/cockpitStore';
 import type { CorrectionPlan, CorrectionAction } from '../../../domain/agent/CorrectionPropagator';
 import { Icon } from '../../components/ui/Icon';
 
@@ -110,7 +110,7 @@ interface CorrectionGraphProps {
 }
 
 export function CorrectionGraph({ plan: propPlan }: CorrectionGraphProps) {
-  const storePlan = useOpenClawStore((s) => s.lastCorrectionPlan);
+  const storePlan = useCockpitStore((s) => s.lastCorrectionPlan);
   const plan = propPlan ?? storePlan;
 
   const graph = useMemo(() => {

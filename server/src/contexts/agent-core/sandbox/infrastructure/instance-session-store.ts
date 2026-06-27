@@ -7,7 +7,7 @@ import { DbMapStore } from '../../../../db/repositories/agent-runtime-repository
  * 用途:ClaudeAgentSdkAdapter 在每个 submitTask 前查询 instanceId 是否已有
  * sessionId,若有则 `resume` 到 Agent SDK 的 query(),实现跨任务上下文保留。
  *
- * 存储:复用 openclaw_entities 表(entityType='agent_instance_session'),
+ * 存储:复用 cockpit_entities 表(entityType='agent_instance_session'),
  * 与 agent_decision / agent_task 等共享 JSONB 存储,无 migration。
  *
  * TTL:24 小时无活动后失效,避免累积陈旧上下文。

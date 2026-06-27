@@ -12,7 +12,7 @@ export const instances = pgTable(
     name: varchar('name', { length: 128 }).notNull(),
     description: text('description'),
     source: varchar('source', { length: 32 }).notNull().default('api'),
-    type: varchar('type', { length: 32 }).notNull().default('openclaw'),
+    type: varchar('type', { length: 32 }).notNull().default('cockpit'),
     state: varchar('state', { length: 32 }).notNull().default('requested'),
     creator: varchar('creator', { length: 128 }),
     enterpriseUserId: varchar('enterprise_user_id', { length: 128 }),

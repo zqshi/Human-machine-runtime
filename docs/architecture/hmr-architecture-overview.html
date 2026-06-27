@@ -106,7 +106,7 @@
       <h2>1. 一句话总结</h2>
       <div class="callout success">
         HMR 把<strong>消息归一化、优先级评估、跨渠道去重、决策建议、执行回执</strong>这五件事做成了不可替代的中间层。
-        上层 Agent 框架（OpenClaw / Claude Agent SDK / Dify / Coze）可换、下层渠道（Matrix / WPS / 钉钉 / 飞书 / 企微）可换，
+        上层 Agent 框架（Cockpit / Claude Agent SDK / Dify / Coze）可换、下层渠道（Matrix / WPS / 钉钉 / 飞书 / 企微）可换，
         运行时层不动。这是跨平台政治护城河——钉钉不会帮聚合飞书，只有中立第三方能做。
       </div>
       <div class="grid">
@@ -128,7 +128,7 @@
         </article>
         <article class="card">
           <h3>双模式前端 <span class="tag purple">三入口</span></h3>
-          <p>单 SPA 三入口：<code>main</code>（用户端）/ <code>admin</code>（租户管理）/ <code>ops</code>（运管）。<code>appMode</code> 切换 IM/OpenClaw 两套 Dock。</p>
+          <p>单 SPA 三入口：<code>main</code>（用户端）/ <code>admin</code>（租户管理）/ <code>ops</code>（运管）。<code>appMode</code> 切换 IM/Cockpit 两套 Dock。</p>
         </article>
         <article class="card">
           <h3>声明/运行 reconcile <span class="tag">云原生</span></h3>
@@ -141,7 +141,7 @@
       <h2>2. 当前总体架构</h2>
       <p>
         浏览器访问三入口 SPA；Vite dev server（<code>:5176</code>）或 Nginx（容器 <code>:8080</code>）把同源 <code>/api</code> 代理到后端 Hono（<code>:3002</code>），
-        <code>/_matrix</code> 代理到 Conduit（<code>:6167</code>）。后端单进程内中间件链 → 路由六域（platform / admin / control / openclaw / proxy / mcp）→
+        <code>/_matrix</code> 代理到 Conduit（<code>:6167</code>）。后端单进程内中间件链 → 路由六域（platform / admin / control / cockpit / proxy / mcp）→
         29 个限界上下文 → 外部依赖（PostgreSQL / Redis / LiteLLM / WeKnora / Matrix / claude-worker 容器 / 外部网关）。
       </p>
       <div class="diagram">
@@ -155,7 +155,7 @@ flowchart TB
 
   subgraph Backend["HMR Server · Hono 单进程 :3002"]
     MW["中间件链<br/>errorHandler→secureHeaders→cors→rateLimit→metrics"]
-    Routes["路由六域<br/>platform · admin · control · openclaw · proxy · mcp · health"]
+    Routes["路由六域<br/>platform · admin · control · cockpit · proxy · mcp · health"]
     Contexts["29 限界上下文<br/>domain / application / adapters"]
   end
 
@@ -246,7 +246,7 @@ flowchart TB
           <tr><td><code>platform/</code></td><td><code>/api/platform</code></td><td><code>platform_admin</code></td><td>—</td><td>L1 运管：租户/用户/角色/审计/配置/监控/套餐/计费</td></tr>
           <tr><td><code>admin/</code></td><td><code>/api/admin</code></td><td><code>platform_admin</code></td><td>✓</td><td>L2 租户管理：员工/技能/工具/AI Gateway/配额/日志/共享 Agent/MCP/凭证/评测/定时任务/记忆/通知</td></tr>
           <tr><td><code>control/</code></td><td><code>/api/control</code></td><td><code>platform_admin</code> 或 <code>tenant_admin</code></td><td>—</td><td>L2 控制面：实例/部门/知识/文档/技能/存储/上传/市场目录/配额/应用目录/审计</td></tr>
-          <tr><td><code>openclaw/</code></td><td><code>/api/openclaw</code></td><td>登录用户</td><td>—</td><td>用户端决策中心 + Enterprise Agent OS（任务/决策/信号/目标/协作/编排/考核/判断/工作室/对话/渠道/工作空间）</td></tr>
+          <tr><td><code>cockpit/</code></td><td><code>/api/cockpit</code></td><td>登录用户</td><td>—</td><td>用户端决策中心 + Enterprise Agent OS（任务/决策/信号/目标/协作/编排/考核/判断/工作室/对话/渠道/工作空间）</td></tr>
           <tr><td>gateway proxy</td><td><code>/api/proxy</code></td><td>登录用户</td><td>—</td><td>收敛外部出口：marketplace / profile / workspace / channel / mcp 五条 proxy</td></tr>
           <tr><td><code>mcp-endpoint/</code></td><td><code>/api/mcp</code></td><td>登录用户</td><td>—</td><td>MCP tool-server 端点（Agent Runtime 调用工具）</td></tr>
           <tr><td><code>health/</code></td><td><code>/health</code> + <code>/metrics</code></td><td>公开</td><td>—</td><td>分级健康检查 + Prometheus 抓取（不经 rateLimit）</td></tr>
@@ -272,25 +272,25 @@ flowchart TB
           <p>
             三个 HTML 入口分别渲染 <code>App</code> / <code>AdminApp</code> / <code>OpsApp</code>，启动前都调 <code>bootstrapApp()</code> 注入 session 过期回调（清 authStore）。
             <code>App.tsx</code> 检测 URL：<code>?code&state</code> → OIDC 回调（<code>SSOCallback</code>）；<code>?loginToken</code> → Matrix SSO 回调；否则按 <code>isLoggedIn</code> 切 <code>LoginPage</code>/<code>WorkspacePage</code>。
-            <code>uiStore</code> 持有 <code>appMode</code>（<code>'im'</code>/<code>'openclaw'</code>），<code>Dock</code> 据此渲染两套 item：IM 模式（消息/轻应用/通讯录…+ 工作面板切换键）、OpenClaw 模式（工作面板/Agent/Team…）。
+            <code>uiStore</code> 持有 <code>appMode</code>（<code>'im'</code>/<code>'cockpit'</code>），<code>Dock</code> 据此渲染两套 item：IM 模式（消息/轻应用/通讯录…+ 工作面板切换键）、Cockpit 模式（工作面板/Agent/Team…）。
             <code>sharedAgentChatService</code> 在 IM 模式内复用 <code>useAgentChat</code>，幂等 <code>initConversation</code> 准备会话状态机。
           </p>
         </article>
         <article class="card">
           <h3>设计语言</h3>
-          <p>Apple HIG glass morphism，主色 <code>#007AFF</code>。暗色模式经 <code>[data-mode="openclaw"]</code> CSS 变量覆盖。</p>
+          <p>Apple HIG glass morphism，主色 <code>#007AFF</code>。暗色模式经 <code>[data-mode="cockpit"]</code> CSS 变量覆盖。</p>
         </article>
         <article class="card">
           <h3>API 适配层</h3>
-          <p><code>infrastructure/api/</code> 24 个 client/adapter，<code>openclawApiAdapter</code> 收敛决策中心调用，<code>sessionHandler</code> 统一处理 401 过期，与后端六域路由对齐。</p>
+          <p><code>infrastructure/api/</code> 24 个 client/adapter，<code>cockpitApiAdapter</code> 收敛决策中心调用，<code>sessionHandler</code> 统一处理 401 过期，与后端六域路由对齐。</p>
         </article>
         <article class="card">
           <h3>stores（节选）</h3>
-          <p><code>authStore / openclawStore / agentStore / chatStore / marketplaceStore / uiStore</code> 等 28 个，一个 store 一个文件。</p>
+          <p><code>authStore / cockpitStore / agentStore / chatStore / marketplaceStore / uiStore</code> 等 28 个，一个 store 一个文件。</p>
         </article>
       </div>
       <div class="callout warn">
-        <strong>已知技术债 D8/D9/D10</strong>：<code>useAgentChat</code> 仍直接 import <code>openclawStore</code>，完整 <code>AgentRuntimePort</code> 抽象未做，
+        <strong>已知技术债 D8/D9/D10</strong>：<code>useAgentChat</code> 仍直接 import <code>cockpitStore</code>，完整 <code>AgentRuntimePort</code> 抽象未做，
         Agent 定义与运行时未彻底分离（影响替换为 Hermes 等框架）。marketplace「对话」半成品（<code>mk-*</code> 与 <code>sa-*</code> id 体系不兼容）。
         IM 模式流式回包待浏览器真实验证。
       </div>
@@ -316,7 +316,7 @@ flowchart TB
           <ul>
             <li><strong>Session</strong> — <code>session-store.ts</code> 会话状态</li>
             <li><strong>Harness</strong> — <code>harness.ts</code> 编排 + <code>litellm-llm-client</code> + <code>budget-guard</code> 预算熔断</li>
-            <li><strong>Sandbox</strong> — <code>adapter-registry</code> + <code>claude-agent-sdk-adapter</code>（主）+ <code>openclaw-adapter</code>（降级）+ <code>infrastructure/</code></li>
+            <li><strong>Sandbox</strong> — <code>adapter-registry</code> + <code>claude-agent-sdk-adapter</code>（主）+ <code>cockpit-adapter</code>（降级）+ <code>infrastructure/</code></li>
             <li><strong>domain</strong> — <code>agent-executor</code> / <code>agent-definition</code> / <code>assembly-provider</code>（按定义组装工具+skill）/ <code>rag-context-provider</code> / <code>trace-recorder</code> / <code>pricing</code></li>
           </ul>
         </div>
@@ -342,7 +342,7 @@ flowchart TB
       <p class="muted">
         退出码：0 完成 / 1 故障或超时 / 2 <code>CLAUDE_TASK_JSON</code> 缺失。支持会话续接（<code>sessionId</code> resume）、
         预算熔断（<code>budget-guard</code>，<code>CLAUDE_DEFAULT_BUDGET_USD</code>）、RAG 上下文块与 skill 上下文块前置注入。
-        <code>ANTHROPIC_API_KEY</code> 未配置时不注册 adapter，系统降级到 OpenClaw adapter。
+        <code>ANTHROPIC_API_KEY</code> 未配置时不注册 adapter，系统降级到 Cockpit adapter。
       </p>
     </section>
 
@@ -368,7 +368,7 @@ flowchart TB
         </div>
       </div>
       <div class="callout">
-        <code>chat.ts</code>（<code>/api/openclaw/chat</code>）是用户端对话端点：优先调 LiteLLM，不可用时自动返回 mock 回复（保证前端全链路可演示，不依赖外部服务）。<code>DEFAULT_MODEL = claude-sonnet-4-6</code>。
+        <code>chat.ts</code>（<code>/api/cockpit/chat</code>）是用户端对话端点：优先调 LiteLLM，不可用时自动返回 mock 回复（保证前端全链路可演示，不依赖外部服务）。<code>DEFAULT_MODEL = claude-sonnet-4-6</code>。
       </div>
     </section>
 
@@ -437,7 +437,7 @@ sequenceDiagram
         <pre class="mermaid">
 sequenceDiagram
   autonumber
-  participant Chat as /api/openclaw/chat
+  participant Chat as /api/cockpit/chat
   participant Grant as ModelGrantChecker
   participant Exec as AgentExecutor
   participant Harness as Harness + budget-guard
@@ -543,7 +543,7 @@ sequenceDiagram
           <tr><td><code>billing.ts</code> / <code>plan.ts</code></td><td>billing / tenant-management</td><td><code>billing_accounts</code>、套餐（Free/Pro/Team）</td></tr>
           <tr><td><code>observability.ts</code> / <code>audit.ts</code></td><td>observability / audit-observability</td><td>指标追踪、跨租户审计日志</td></tr>
           <tr><td><code>eval-benchmark.ts</code></td><td>eval-benchmark</td><td>dataset、eval run、trajectory</td></tr>
-          <tr><td><code>operational.ts</code></td><td>多支撑域</td><td><code>openclaw_entities</code>、<code>notifications</code>、<code>push_channels</code>、<code>tool_configs</code>、<code>ai_budgets</code>、<code>ai_failover_chains</code>、<code>workspaces</code></td></tr>
+          <tr><td><code>operational.ts</code></td><td>多支撑域</td><td><code>cockpit_entities</code>、<code>notifications</code>、<code>push_channels</code>、<code>tool_configs</code>、<code>ai_budgets</code>、<code>ai_failover_chains</code>、<code>workspaces</code></td></tr>
           <tr><td><code>config.ts</code></td><td>system-config</td><td><code>system_configs</code>、<code>platform_configs</code>（SSO 开关、模型授权灰度等）</td></tr>
           <tr><td><code>scheduled-tasks.ts</code> / <code>department.ts</code> / <code>app-catalog.ts</code> / <code>app-review.ts</code></td><td>scheduler / department / marketplace</td><td>定时任务、部门组织、应用目录、应用评审</td></tr>
         </tbody>
@@ -662,7 +662,7 @@ sequenceDiagram
           <ul>
             <li><strong>v1.2.2（current 待启动）</strong> 商业模式闭环：计费写侧补全（consume/deduct/reserve + 对账）+ 用量报表 API + 前端 + 异常告警</li>
             <li><strong>D7</strong> bootstrap god-file 已清（832→542 行，8 bundle）</li>
-            <li><strong>D8（P1 未排期）</strong> <code>AgentRuntimePort</code> 抽象未做，openclawStore 硬绑运行时</li>
+            <li><strong>D8（P1 未排期）</strong> <code>AgentRuntimePort</code> 抽象未做，cockpitStore 硬绑运行时</li>
             <li><strong>D9（P2）</strong> marketplace「对话」半成品（id 体系不兼容）</li>
             <li><strong>D2（P1）</strong> knowledge + memory 检索未进 agent 决策回路</li>
             <li>SSO（OIDC/SAML）待企业客户需求触发；数据层抽象后重开 react-hooks 规则</li>

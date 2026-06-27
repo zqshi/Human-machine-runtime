@@ -38,7 +38,7 @@ import { createAdminPushChannelRoutes } from './admin/push-channels.js';
 import { createAdminAnalyticsRoutes } from './admin/analytics.js';
 import { createAdminSharedAgentRoutes } from './admin/shared-agents.js';
 import { createAdminRuntimeRoutes } from './admin/runtime.js';
-import { createAdminOpenclawRoutes } from './admin/openclaw.js';
+import { createAdminCockpitRoutes } from './admin/cockpit.js';
 import { createAdminMcpRoutes } from './admin/mcp-management.js';
 import { createAdminDashboardRoutes } from './admin/dashboard.js';
 import { createAdminAssistantRoutes } from './admin/ai-assistant.js';
@@ -50,18 +50,18 @@ import { createAdminAgentDefinitionRoutes } from './admin/agent-definitions.js';
 import { createAdminToolApprovalRoutes } from './admin/tool-approvals.js';
 import { createAdminRuntimeTemplateRoutes } from './admin/runtime-templates.js';
 import { createAdminFeatureFlagRoutes } from './admin/feature-flags.js';
-import { createOpenclawTaskRoutes } from './openclaw/tasks.js';
-import { createOpenclawDecisionRoutes } from './openclaw/decisions.js';
-import { createOpenclawSignalRoutes } from './openclaw/signals.js';
-import { createOpenclawObjectiveRoutes } from './openclaw/objectives.js';
-import { createOpenclawCollaborationRoutes } from './openclaw/collaboration.js';
-import { createOpenclawBootstrapRoutes } from './openclaw/bootstrap.js';
-import { createOpenclawChannelRoutes } from './openclaw/channels.js';
-import { createOpenclawWorkspaceRoutes } from './openclaw/workspace.js';
-import { createOpenclawOrchestrationRoutes } from './openclaw/orchestration.js';
-import { createOpenclawEvaluationRoutes } from './openclaw/evaluation.js';
-import { createStudioRoutes } from './openclaw/studio.js';
-import { createOpenclawChatRoutes } from './openclaw/chat.js';
+import { createCockpitTaskRoutes } from './cockpit/tasks.js';
+import { createCockpitDecisionRoutes } from './cockpit/decisions.js';
+import { createCockpitSignalRoutes } from './cockpit/signals.js';
+import { createCockpitObjectiveRoutes } from './cockpit/objectives.js';
+import { createCockpitCollaborationRoutes } from './cockpit/collaboration.js';
+import { createCockpitBootstrapRoutes } from './cockpit/bootstrap.js';
+import { createCockpitChannelRoutes } from './cockpit/channels.js';
+import { createCockpitWorkspaceRoutes } from './cockpit/workspace.js';
+import { createCockpitOrchestrationRoutes } from './cockpit/orchestration.js';
+import { createCockpitEvaluationRoutes } from './cockpit/evaluation.js';
+import { createStudioRoutes } from './cockpit/studio.js';
+import { createCockpitChatRoutes } from './cockpit/chat.js';
 import { createMarketplaceProxyRoutes } from '../contexts/gateway/routes/marketplace-proxy.js';
 import { createProfileProxyRoutes } from '../contexts/gateway/routes/profile-proxy.js';
 import { createWorkspaceProxyRoutes } from '../contexts/gateway/routes/workspace-proxy.js';
@@ -171,7 +171,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   );
   admin.route('/agents/shared', createAdminSharedAgentRoutes(ctx.sharedAgentService));
   admin.route('/runtime', createAdminRuntimeRoutes(ctx.systemConfigService));
-  admin.route('/openclaw', createAdminOpenclawRoutes(ctx.analyticsService));
+  admin.route('/cockpit', createAdminCockpitRoutes(ctx.analyticsService));
   admin.route('/mcp', createAdminMcpRoutes(ctx.mcpService));
   admin.route(
     '/dashboard',
@@ -242,24 +242,24 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   control.route('/app-catalog', createAppCatalogRoutes(new AppCatalogRepository(ctx.db)));
   app.route('/api/control', control);
 
-  /* ──── OpenClaw (用户端决策中心) ──── */
+  /* ──── Cockpit (用户端决策中心) ──── */
 
-  const openclaw = new Hono();
-  openclaw.use('*', authMiddleware);
-  const taskRoutes = createOpenclawTaskRoutes(ctx.openclawRepo);
-  openclaw.route('/', taskRoutes);
-  openclaw.route('/', createOpenclawDecisionRoutes(ctx.openclawRepo));
-  openclaw.route('/', createOpenclawSignalRoutes(ctx.openclawRepo));
-  openclaw.route('/objectives', createOpenclawObjectiveRoutes(ctx.openclawRepo));
-  openclaw.route('/', createOpenclawCollaborationRoutes(ctx.openclawRepo));
-  openclaw.route('/', createOpenclawBootstrapRoutes(ctx.openclawRepo, ctx.agentCore));
-  openclaw.route('/', createOpenclawChannelRoutes(ctx.decisionConsole, ctx.channelService));
-  openclaw.route('/', createOpenclawWorkspaceRoutes(ctx.workspaceService));
-  openclaw.route('/', createOpenclawOrchestrationRoutes(ctx.openclawRepo));
-  openclaw.route('/', createOpenclawEvaluationRoutes(ctx.openclawRepo));
-  openclaw.route('/studio', createStudioRoutes(ctx.studioService));
-  openclaw.route('/', createOpenclawChatRoutes(ctx.chatService));
-  app.route('/api/openclaw', openclaw);
+  const cockpit = new Hono();
+  cockpit.use('*', authMiddleware);
+  const taskRoutes = createCockpitTaskRoutes(ctx.cockpitRepo);
+  cockpit.route('/', taskRoutes);
+  cockpit.route('/', createCockpitDecisionRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitSignalRoutes(ctx.cockpitRepo));
+  cockpit.route('/objectives', createCockpitObjectiveRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitCollaborationRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitBootstrapRoutes(ctx.cockpitRepo, ctx.agentCore));
+  cockpit.route('/', createCockpitChannelRoutes(ctx.decisionConsole, ctx.channelService));
+  cockpit.route('/', createCockpitWorkspaceRoutes(ctx.workspaceService));
+  cockpit.route('/', createCockpitOrchestrationRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitEvaluationRoutes(ctx.cockpitRepo));
+  cockpit.route('/studio', createStudioRoutes(ctx.studioService));
+  cockpit.route('/', createCockpitChatRoutes(ctx.chatService));
+  app.route('/api/cockpit', cockpit);
 
   /* ──── Proxy (Gateway → upstream services) ──── */
 

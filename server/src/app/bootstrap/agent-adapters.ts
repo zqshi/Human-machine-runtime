@@ -3,7 +3,7 @@
  *
  * 从 `bootstrap.ts` 拆出:AgentRuntimeAdapterRegistry + ClaudeAgentSdkAdapter(条件,
  * config.claude.apiKey)。实例任务真执行走 tool-loop(在 bootstrap.ts 注册,经 LiteLLM
- * 国产模型+registry.invoke 真闭环,替代已注销的 OpenClawAdapter 假桩)。onTaskComplete
+ * 国产模型+registry.invoke 真闭环,替代已注销的 CockpitAdapter 假桩)。onTaskComplete
  * 闭包捕获 receiptManager/tokenUsageService/billingService(由 runtime-engine 产出,
  * 作为输入注入),用于任务完成后回执 + token 用量入账 + billing 记账。
  */
@@ -33,9 +33,9 @@ export function buildAgentAdapters(
   clusterInstanceClient: ClusterInstanceClient
 ): AgentAdapters {
   const agentAdapterRegistry = new AgentRuntimeAdapterRegistry();
-  // OpenClawAdapter 假桩(simulateProgress)已注销——实例任务真执行走 tool-loop
+  // CockpitAdapter 假桩(simulateProgress)已注销——实例任务真执行走 tool-loop
   // (在 bootstrap.ts 注册,经 LiteLLM 国产模型+registry.invoke 真闭环)。假桩不应共存投产。
-  // clusterInstanceClient 保留入参(未来真 openclaw runtime 接入时用),当前未消费。
+  // clusterInstanceClient 保留入参(未来真 cockpit runtime 接入时用),当前未消费。
   void clusterInstanceClient;
 
   // Claude Agent SDK adapter(主执行引擎)。env 不配 ANTHROPIC_API_KEY 时跳过,

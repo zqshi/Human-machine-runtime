@@ -25,7 +25,7 @@ export interface SharedAgent {
 
 const LS_PRIMARY_AGENT_KEY = 'hmr_primary_agent';
 const LS_ACTIVE_CAPS_KEY = 'hmr_active_capabilities';
-const LS_OC_VISITED_KEY = 'hmr_openclaw_visited';
+const LS_OC_VISITED_KEY = 'hmr_cockpit_visited';
 
 interface PrimaryAgentSetupProps {
   name: string;
@@ -40,7 +40,7 @@ interface AgentState {
   primaryAgent: Agent | null;
   capabilityRegistry: CapabilityRegistry;
   isPrimaryAgentSetup: boolean;
-  /** True if user has never visited OpenClaw before (show intro card) */
+  /** True if user has never visited Cockpit before (show intro card) */
   isFirstVisit: boolean;
 
   /** Manual setup (kept for edge cases) */
@@ -245,7 +245,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时快速失败
-      const res = await fetch('/api/openclaw/workspace/agents', {
+      const res = await fetch('/api/cockpit/workspace/agents', {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,

@@ -90,7 +90,7 @@ export function RoomList({ onSelectRoom, onLeaveRoom }: RoomListProps) {
   const addRoomGroup = useChatStore((s) => s.addRoomGroup);
   const currentRoomId = useChatStore((s) => s.currentRoomId);
   const appMode = useUIStore((s) => s.appMode);
-  const isOC = appMode === 'openclaw';
+  const isOC = appMode === 'cockpit';
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [tabMenu, setTabMenu] = useState<{ groupId: string; x: number; y: number } | null>(null);

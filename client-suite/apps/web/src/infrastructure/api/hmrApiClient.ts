@@ -253,11 +253,11 @@ export interface TaskDTO {
 
 export const taskApi = {
   list(): Promise<TaskDTO[]> {
-    return request('/api/openclaw/tasks');
+    return request('/api/cockpit/tasks');
   },
 
   get(id: string): Promise<TaskDTO> {
-    return request(`/api/openclaw/tasks/${encodeURIComponent(id)}`);
+    return request(`/api/cockpit/tasks/${encodeURIComponent(id)}`);
   },
 };
 
@@ -543,9 +543,9 @@ export const systemApi = {
   },
 };
 
-// ─── OpenClaw ─────────────────────────────────────────────────────────
+// ─── Cockpit ─────────────────────────────────────────────────────────
 
-export const openclawApi = {
+export const cockpitApi = {
   async listRuntimes() {
     return request<{ runtimes: Record<string, unknown>[] }>('/api/admin/agents/runtime');
   },

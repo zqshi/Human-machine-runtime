@@ -45,10 +45,10 @@ export {
 export type { PlanDTO } from '../../infrastructure/api/platformApiClient';
 
 export {
-  openclawMonitorApi,
-  openclawStatisticsApi,
-  openclawConfigApi,
-} from '../../infrastructure/api/openclawAdminApiClient';
+  cockpitMonitorApi,
+  cockpitStatisticsApi,
+  cockpitConfigApi,
+} from '../../infrastructure/api/cockpitAdminApiClient';
 
 export {
   employeeApi,
@@ -65,11 +65,11 @@ export type {
 } from '../../infrastructure/api/hmrApiClient';
 
 export type {
-  OpenclawConfig,
+  CockpitConfig,
   ConfigSnapshot,
-} from '../../infrastructure/api/openclawAdminApiClient';
+} from '../../infrastructure/api/cockpitAdminApiClient';
 
-export type { WorkspaceDTO } from '../../infrastructure/api/openclawWorkspaceApiClient';
+export type { WorkspaceDTO } from '../../infrastructure/api/cockpitWorkspaceApiClient';
 
 export { evalApi } from '../../infrastructure/api/evalApiClient';
 export { scheduledTaskApi } from '../../infrastructure/api/scheduledTaskApiClient';

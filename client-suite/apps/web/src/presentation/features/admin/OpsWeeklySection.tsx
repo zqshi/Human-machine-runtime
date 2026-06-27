@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { openclawStatisticsApi } from '../../../application/services/adminApi';
+import { cockpitStatisticsApi } from '../../../application/services/adminApi';
 import { Icon } from '../../components/ui/Icon';
 
 type TrendData = { days: string[]; values: number[] };
@@ -63,10 +63,10 @@ export function OpsWeeklySection() {
     const range = getWeekRange(period);
     const opts = { startDate: range.startDate, endDate: range.endDate };
     Promise.all([
-      openclawStatisticsApi.dau(opts),
-      openclawStatisticsApi.messages(opts),
-      openclawStatisticsApi.tokens(opts),
-      openclawStatisticsApi.retention(opts),
+      cockpitStatisticsApi.dau(opts),
+      cockpitStatisticsApi.messages(opts),
+      cockpitStatisticsApi.tokens(opts),
+      cockpitStatisticsApi.retention(opts),
     ])
       .then(([dau, messages, tokens, retention]) => {
         setMetrics({

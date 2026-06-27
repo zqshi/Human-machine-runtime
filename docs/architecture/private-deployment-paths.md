@@ -48,9 +48,9 @@ claude-worker 在 Docker 沙箱内运行 Claude Agent SDK,SDK 默认直连 `api.
 
 `bootstrap.ts:346` 判断 `config.claude.apiKey`:
 - 有值 → 注册 `ClaudeAgentSdkAdapter`(路径 A),主路径
-- 无值 → 不注册,系统降级到 `OpenClawAdapter`(**注意:OpenClawAdapter 是模拟桩**,`simulateProgress` 5s 后硬编码返回"任务执行完成",非真实执行)
+- 无值 → 不注册,系统降级到 `CockpitAdapter`(**注意:CockpitAdapter 是模拟桩**,`simulateProgress` 5s 后硬编码返回"任务执行完成",非真实执行)
 
-> OpenClawAdapter 仅作"系统不崩"兜底,**不可作为生产降级**。真实降级应配 `AGENT_LLM_MODEL` 走路径 B,或配 `ANTHROPIC_API_KEY`+`ANTHROPIC_BASE_URL` 走路径 A。
+> CockpitAdapter 仅作"系统不崩"兜底,**不可作为生产降级**。真实降级应配 `AGENT_LLM_MODEL` 走路径 B,或配 `ANTHROPIC_API_KEY`+`ANTHROPIC_BASE_URL` 走路径 A。
 
 ## docker-compose 部署
 

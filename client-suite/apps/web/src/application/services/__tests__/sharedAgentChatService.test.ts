@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 
 /**
  * T20b-A:openInstalledInstance 是 marketplace「安装即对话」的前端入口。
- * 用 vi.mock 隔离 openclawStore/uiStore,避免触发真实 store 初始化副作用
- * (openclawStore import 链会读 localStorage,测试环境无)。
+ * 用 vi.mock 隔离 cockpitStore/uiStore,避免触发真实 store 初始化副作用
+ * (cockpitStore import 链会读 localStorage,测试环境无)。
  *
  * 核心断言:复用 open 的对话上下文 + 设 activeInstanceId(让 useAgentChat chat
- * 请求带真 instanceId → openclaw chat route 拉 persona/apiKey 真响应)。
+ * 请求带真 instanceId → cockpit chat route 拉 persona/apiKey 真响应)。
  */
 const mocks = vi.hoisted(() => ({
   setActiveInstanceId: vi.fn(),
@@ -16,8 +16,8 @@ const mocks = vi.hoisted(() => ({
   setImChatAgentId: vi.fn(),
 }));
 
-vi.mock('../../stores/openclawStore', () => ({
-  useOpenClawStore: {
+vi.mock('../../stores/cockpitStore', () => ({
+  useCockpitStore: {
     getState: () => ({
       initConversation: mocks.initConversation,
       setSharedAgentMeta: mocks.setSharedAgentMeta,

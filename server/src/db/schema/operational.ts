@@ -1,6 +1,6 @@
 import { pgTable, varchar, jsonb, timestamp, integer, text } from 'drizzle-orm/pg-core';
 
-export const openclawEntities = pgTable('openclaw_entities', {
+export const cockpitEntities = pgTable('cockpit_entities', {
   id: varchar('id', { length: 64 }).primaryKey(),
   entityType: varchar('entity_type', { length: 32 }).notNull(),
   tenantId: varchar('tenant_id', { length: 64 }),

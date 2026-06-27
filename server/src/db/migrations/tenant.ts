@@ -44,7 +44,7 @@ export async function migrateTenant(db: MigrateDb): Promise<void> {
       name VARCHAR(128) NOT NULL,
       description TEXT,
       source VARCHAR(32) NOT NULL DEFAULT 'api',
-      type VARCHAR(32) NOT NULL DEFAULT 'openclaw',
+      type VARCHAR(32) NOT NULL DEFAULT 'cockpit',
       state VARCHAR(32) NOT NULL DEFAULT 'requested',
       creator VARCHAR(128),
       enterprise_user_id VARCHAR(128),
@@ -82,4 +82,8 @@ export async function migrateTenant(db: MigrateDb): Promise<void> {
   await db.execute(
     sql`ALTER TABLE instances ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0`
   );
+
+  // T60: openclaw→cockpit 命名中性化(老库改 default + 历史行 type 值迁移,幂等)
+  await db.execute(sql`ALTER TABLE instances ALTER COLUMN type SET DEFAULT 'cockpit'`);
+  await db.execute(sql`UPDATE instances SET type='cockpit' WHERE type='openclaw'`);
 }
