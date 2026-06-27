@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { pagedResponse, filteredResponse } from './pagination.js';
 import { parseBody, badRequest } from '../../shared/validation.js';
 
 const createGoalSchema = z
@@ -33,14 +34,7 @@ export function createOpenclawTaskRoutes(repo: OpenclawRepository) {
   /* ──── Tasks ──── */
 
   app.get('/tasks', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      const result = await repo.listPaged('task', { limit, offset });
-      return c.json(result);
-    }
-    const items = await repo.list('task');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'task', (k) => c.req.query(k)));
   });
 
   app.patch('/tasks/:id', async (c) => {
@@ -73,19 +67,22 @@ export function createOpenclawTaskRoutes(repo: OpenclawRepository) {
   app.get('/goals', async (c) => {
     const ownerId = c.req.query('ownerId');
     const collaboratorId = c.req.query('collaboratorId');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!ownerId && !collaboratorId && (limit || offset)) {
-      const result = await repo.listPaged('goal', { limit, offset });
-      return c.json(result);
-    }
-    let items = await repo.list('goal');
-    if (ownerId) items = items.filter((g) => g.ownerId === ownerId);
-    if (collaboratorId)
-      items = items.filter((g) =>
-        (g.collaboratorIds as string[] | undefined)?.includes(collaboratorId)
-      );
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'goal',
+        (k) => c.req.query(k),
+        (items) => {
+          let filtered = items;
+          if (ownerId) filtered = filtered.filter((g) => g.ownerId === ownerId);
+          if (collaboratorId)
+            filtered = filtered.filter((g) =>
+              (g.collaboratorIds as string[] | undefined)?.includes(collaboratorId)
+            );
+          return filtered;
+        }
+      )
+    );
   });
 
   app.post('/goals', async (c) => {
@@ -166,20 +163,25 @@ export function createOpenclawTaskRoutes(repo: OpenclawRepository) {
 
   app.get('/workorders', async (c) => {
     const status = c.req.query('status');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!status && (limit || offset)) {
-      const result = await repo.listPaged('workorder', { limit, offset });
-      return c.json(result);
-    }
-    let items = await repo.list('workorder');
-    if (status) items = items.filter((w) => w.status === status);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'workorder',
+        (k) => c.req.query(k),
+        (items) => (status ? items.filter((w) => w.status === status) : items)
+      )
+    );
   });
 
   app.get('/workorders/sent', async (c) => {
-    const items = await repo.list('workorder');
-    return c.json({ items: items.filter((w) => w.direction === 'sent') });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'workorder',
+        (k) => c.req.query(k),
+        (items) => items.filter((w) => w.direction === 'sent')
+      )
+    );
   });
 
   app.post('/workorders', async (c) => {

@@ -6,6 +6,7 @@ import { newId, AppError } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { SSEEvent } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse } from './pagination.js';
 import type { AgentCore } from '../../contexts/agent-core/agent-core.js';
 import type { Principal } from '../../middleware/auth.js';
 
@@ -248,14 +249,20 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
 
   app.get('/knowledge/patterns', async (c) => {
     const keyword = c.req.query('keyword');
-    let items = await repo.list('knowledge_pattern');
-    if (keyword) {
-      const q = keyword.toLowerCase();
-      items = items.filter((p) =>
-        (p.keywords as string[] | undefined)?.some((k) => k.toLowerCase().includes(q))
-      );
-    }
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'knowledge_pattern',
+        (key) => c.req.query(key),
+        (items) => {
+          if (!keyword) return items;
+          const q = keyword.toLowerCase();
+          return items.filter((p) =>
+            (p.keywords as string[] | undefined)?.some((kw) => kw.toLowerCase().includes(q))
+          );
+        }
+      )
+    );
   });
 
   app.post('/knowledge/patterns', async (c) => {
@@ -269,9 +276,14 @@ export function createOpenclawBootstrapRoutes(repo: OpenclawRepository, agentCor
 
   app.get('/evaluation/scorecards', async (c) => {
     const type = c.req.query('type');
-    let items = await repo.list('scorecard');
-    if (type) items = items.filter((s) => s.type === type);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'scorecard',
+        (k) => c.req.query(k),
+        (items) => (type ? items.filter((s) => s.type === type) : items)
+      )
+    );
   });
 
   app.post('/evaluation/scorecards', async (c) => {

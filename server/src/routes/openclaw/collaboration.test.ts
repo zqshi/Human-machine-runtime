@@ -4,6 +4,7 @@ import { createOpenclawCollaborationRoutes } from './collaboration.js';
 function mockRepo() {
   return {
     list: vi.fn().mockResolvedValue([]),
+    listPaged: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 }),
     get: vi.fn().mockResolvedValue(null),
     upsert: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
@@ -11,15 +12,20 @@ function mockRepo() {
 }
 
 describe('openclaw collaboration routes', () => {
-  it('GET /intents returns intent list', async () => {
+  it('GET /intents returns intent list (paged)', async () => {
     const repo = mockRepo();
-    repo.list.mockResolvedValue([{ id: 'int-1', type: 'request' }]);
+    repo.listPaged.mockResolvedValue({
+      items: [{ id: 'int-1', type: 'request' }],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    });
     const app = createOpenclawCollaborationRoutes(repo as never);
     const res = await app.request('/intents');
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(1);
-    expect(repo.list).toHaveBeenCalledWith('intent');
+    expect(repo.listPaged).toHaveBeenCalledWith('intent', { limit: 50, offset: 0 });
   });
 
   it('POST /intents creates intent', async () => {
@@ -34,12 +40,12 @@ describe('openclaw collaboration routes', () => {
     expect(repo.upsert).toHaveBeenCalledWith('intent', expect.any(String), expect.any(Object));
   });
 
-  it('GET /sessions returns session list', async () => {
+  it('GET /sessions returns session list (paged)', async () => {
     const repo = mockRepo();
     const app = createOpenclawCollaborationRoutes(repo as never);
     const res = await app.request('/sessions');
     expect(res.status).toBe(200);
-    expect(repo.list).toHaveBeenCalledWith('collab_session');
+    expect(repo.listPaged).toHaveBeenCalledWith('collab_session', { limit: 50, offset: 0 });
   });
 
   it('POST /sessions creates session', async () => {
@@ -60,12 +66,12 @@ describe('openclaw collaboration routes', () => {
     expect(res.status).toBe(404);
   });
 
-  it('GET /agent-profiles returns profiles', async () => {
+  it('GET /agent-profiles returns profiles (paged)', async () => {
     const repo = mockRepo();
     const app = createOpenclawCollaborationRoutes(repo as never);
     const res = await app.request('/agent-profiles');
     expect(res.status).toBe(200);
-    expect(repo.list).toHaveBeenCalledWith('agent_profile');
+    expect(repo.listPaged).toHaveBeenCalledWith('agent_profile', { limit: 50, offset: 0 });
   });
 
   it('GET /agent-profiles/:id returns default when not found', async () => {

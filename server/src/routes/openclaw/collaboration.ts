@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { pagedResponse } from './pagination.js';
 
 export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   const app = new Hono();
@@ -9,13 +10,7 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Intents ──── */
 
   app.get('/intents', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('intent', { limit, offset }));
-    }
-    const items = await repo.list('intent');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'intent', (k) => c.req.query(k)));
   });
 
   app.post('/intents', async (c) => {
@@ -44,13 +39,7 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Sessions ──── */
 
   app.get('/sessions', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('collab_session', { limit, offset }));
-    }
-    const items = await repo.list('collab_session');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'collab_session', (k) => c.req.query(k)));
   });
 
   app.post('/sessions', async (c) => {
@@ -103,13 +92,7 @@ export function createOpenclawCollaborationRoutes(repo: OpenclawRepository) {
   /* ──── Agent Profiles ──── */
 
   app.get('/agent-profiles', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('agent_profile', { limit, offset }));
-    }
-    const items = await repo.list('agent_profile');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'agent_profile', (k) => c.req.query(k)));
   });
 
   app.get('/agent-profiles/:id', async (c) => {

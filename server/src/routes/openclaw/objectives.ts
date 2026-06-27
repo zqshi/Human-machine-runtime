@@ -2,20 +2,21 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse } from './pagination.js';
 
 export function createOpenclawObjectiveRoutes(repo: OpenclawRepository) {
   const app = new Hono();
 
   app.get('/', async (c) => {
     const level = c.req.query('level');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!level && (limit || offset)) {
-      return c.json(await repo.listPaged('objective', { limit, offset }));
-    }
-    let items = await repo.list('objective');
-    if (level) items = items.filter((o) => o.level === level);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'objective',
+        (k) => c.req.query(k),
+        (items) => (level ? items.filter((o) => o.level === level) : items)
+      )
+    );
   });
 
   app.post('/', async (c) => {

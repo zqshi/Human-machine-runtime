@@ -67,6 +67,7 @@ import type { BillingService } from '../../contexts/billing/billing-service.js';
 import type { AgentDefinitionService } from '../../contexts/agent-core/application/agent-definition-service.js';
 import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
 import type { StudioService } from '../../contexts/agent-core/application/studio-service.js';
+import type { ChatService } from '../../contexts/agent-core/application/chat-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -94,6 +95,9 @@ export interface AppContext {
   personaProvider: IPersonaProvider;
   /** T13 openclaw Studio 资产聚合 service(替代 studio route STUB) */
   studioService: StudioService;
+  /** T57 对话能力核心(persona/guardrail/history/LiteLLM);openclaw chat route + Matrix bot 共用(DRY)。
+   *  T59 bootstrap 注入 onUsage 回调(recordUsage+recordEvent),chat 成功即入账。 */
+  chatService: ChatService;
   channelService: ChannelService;
   decisionConsole: DecisionConsole;
   mcpService: McpService;

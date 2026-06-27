@@ -38,11 +38,23 @@ export interface ChatOptions {
   history?: ChatHistoryMessage[];
   /** trace 来源标记(openclaw-chat / matrix-bot) */
   traceSource?: string;
+  /** 租户归户(HTTP chat 从 auth principal 取;Matrix bot 传 'unknown',IM opt-in 不绑定) */
+  tenantId?: string;
 }
 
 export interface ChatUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
+}
+
+/** 用量入账事件(回调通知):ChatService 零跨聚合 import,由 bootstrap 注入实际
+ *  recordUsage/recordEvent。仅 chat() 成功路径触发(guardrail/503/403/502 无 LLM 消耗不入账)。 */
+export interface ChatUsageEvent {
+  tenantId: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  source: string;
 }
 
 export interface ChatResult {
@@ -66,7 +78,9 @@ export class ChatService {
     private readonly litellmClient: LiteLLMClient | null,
     private readonly personaProvider: IPersonaProvider | null | undefined,
     private readonly aiGatewayRepo: AiGatewayRepository | null,
-    private readonly grantChecker?: ModelGrantChecker | null
+    private readonly grantChecker?: ModelGrantChecker | null,
+    /** 用量入账回调(bootstrap 注入 recordUsage+estimateCostUsd+recordEvent);省略则不入账 */
+    private readonly onUsage?: (evt: ChatUsageEvent) => void
   ) {}
 
   /** LiteLLM 是否就绪 */
@@ -227,6 +241,22 @@ export class ChatService {
           .catch(() => {
             /* non-blocking */
           });
+      }
+
+      // 6. 用量入账(非阻塞回调;guardrail/503/403/502 路径不触发,无 LLM 消耗)。
+      // ChatService 不依赖 analytics/billing context(避跨聚合 §12 信号5),由 bootstrap 注入回调。
+      if (this.onUsage && completion?.usage) {
+        try {
+          this.onUsage({
+            tenantId: opts.tenantId ?? 'unknown',
+            model: completion?.model ?? modelName,
+            promptTokens: completion.usage.prompt_tokens ?? 0,
+            completionTokens: completion.usage.completion_tokens ?? 0,
+            source: opts.traceSource || 'openclaw-chat',
+          });
+        } catch {
+          /* non-blocking:入账失败不影响回复 */
+        }
       }
 
       return {

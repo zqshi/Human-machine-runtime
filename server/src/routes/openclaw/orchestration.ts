@@ -2,20 +2,21 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse, pagedResponse } from './pagination.js';
 
 export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
   const app = new Hono();
 
   app.get('/orchestration/chains', async (c) => {
     const status = c.req.query('status');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!status && (limit || offset)) {
-      return c.json(await repo.listPaged('orchestration_chain', { limit, offset }));
-    }
-    let items = await repo.list('orchestration_chain');
-    if (status) items = items.filter((ch) => ch.status === status);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'orchestration_chain',
+        (k) => c.req.query(k),
+        (items) => (status ? items.filter((ch) => ch.status === status) : items)
+      )
+    );
   });
 
   app.post('/orchestration/chains', async (c) => {
@@ -61,13 +62,7 @@ export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/orchestration/escalations', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('escalation', { limit, offset }));
-    }
-    const items = await repo.list('escalation');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'escalation', (k) => c.req.query(k)));
   });
 
   app.post('/orchestration/escalations', async (c) => {
@@ -94,13 +89,7 @@ export function createOpenclawOrchestrationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/orchestration/agents', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('orchestration_agent', { limit, offset }));
-    }
-    const items = await repo.list('orchestration_agent');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'orchestration_agent', (k) => c.req.query(k)));
   });
 
   app.post('/orchestration/agents', async (c) => {

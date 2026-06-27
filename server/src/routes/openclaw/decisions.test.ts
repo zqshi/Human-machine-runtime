@@ -11,7 +11,7 @@ function mockRepo() {
 }
 
 describe('openclaw decision routes', () => {
-  it('GET /decisions returns decision list', async () => {
+  it('GET /decisions returns decision list (default limit=50, no full return)', async () => {
     const repo = mockRepo();
     repo.list.mockResolvedValue([{ id: 'd-1', responseStatus: 'pending' }]);
     const app = createOpenclawDecisionRoutes(repo as never);
@@ -19,6 +19,7 @@ describe('openclaw decision routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(1);
+    expect(body.limit).toBe(50); // §7.2.1:默认非空,不传参不全量返回
   });
 
   it('GET /decisions filters by status', async () => {
@@ -33,11 +34,17 @@ describe('openclaw decision routes', () => {
     expect(body.items).toHaveLength(1);
   });
 
-  it('GET /decisions uses pagination when limit provided without status', async () => {
+  it('GET /decisions supports limit pagination (list+slice, not listPaged — filter path)', async () => {
     const repo = mockRepo();
+    repo.list.mockResolvedValue([{ id: 'd-1', responseStatus: 'pending' }]);
     const app = createOpenclawDecisionRoutes(repo as never);
-    await app.request('/decisions?limit=10&offset=0');
-    expect(repo.listPaged).toHaveBeenCalledWith('decision', { limit: 10, offset: undefined });
+    const res = await app.request('/decisions?limit=10&offset=0');
+    expect(res.status).toBe(200);
+    // 带 status filter 的端点走 list+filter+slice(listPaged 不支持 where filter)
+    expect(repo.list).toHaveBeenCalledWith('decision');
+    const body = await res.json();
+    expect(body.limit).toBe(10);
+    expect(body.offset).toBe(0);
   });
 
   it('POST /decisions/:id/respond returns 404 when not found', async () => {

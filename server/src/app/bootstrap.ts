@@ -458,7 +458,36 @@ export function createAppContext(db: Database): AppContext {
     litellmClient,
     personaProvider,
     aiGatewayRepo,
-    modelGrantChecker
+    modelGrantChecker,
+    // T59:chat 用量入账回调(仿 tool-loop onTaskComplete :343-375)。ChatService 零跨聚合 import,
+    // 由 bootstrap 注入 recordUsage+estimateCostUsd+recordEvent;HTTP chat 与 Matrix bot 两路径都入账。
+    (evt) => {
+      tokenUsageService
+        .recordUsage({
+          tenantId: evt.tenantId,
+          model: evt.model,
+          inputTokens: evt.promptTokens,
+          outputTokens: evt.completionTokens,
+          source: evt.source,
+        })
+        .catch((err) => logger.warn({ err: String(err) }, 'chat token usage record failed'));
+      const costUsd = estimateCostUsd(evt.model, evt.promptTokens, evt.completionTokens);
+      if (costUsd > 0) {
+        billingService
+          .recordEvent({
+            tenantId: evt.tenantId,
+            type: 'token_usage',
+            amount: costUsd,
+            metadata: {
+              model: evt.model,
+              inputTokens: evt.promptTokens,
+              outputTokens: evt.completionTokens,
+              source: evt.source,
+            },
+          })
+          .catch((err) => logger.warn({ err: String(err) }, 'chat billing record failed'));
+      }
+    }
   );
   const matrixConversationStore = new MatrixConversationStore();
   const runtimeProxyService = new RuntimeProxyService(chatService, matrixConversationStore);
@@ -622,6 +651,7 @@ export function createAppContext(db: Database): AppContext {
     credentialManagementService,
     personaProvider,
     studioService,
+    chatService,
     channelService,
     decisionConsole,
     mcpService,

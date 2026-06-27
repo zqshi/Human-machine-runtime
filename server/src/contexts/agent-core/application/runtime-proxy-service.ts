@@ -30,6 +30,7 @@ export class RuntimeProxyService implements IRuntimeProxyService {
       userId: payload.sender || 'matrix-bot',
       sessionId: payload.roomId,
       traceSource: 'matrix-bot',
+      tenantId: 'unknown', // IM opt-in 不绑定账号/房间,归户精度待后续从 instance 查
     });
 
     // 成功(含 guardrail blocked:reply 为拒答话术)→ 回填 output + 追加历史

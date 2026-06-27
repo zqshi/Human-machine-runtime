@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createOpenclawChatRoutes } from './chat.js';
+import {
+  ChatService,
+  type ChatUsageEvent,
+} from '../../contexts/agent-core/application/chat-service.js';
 import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
 import type { GuardrailRule } from '../../contexts/agent-core/domain/agent-definition.js';
 
@@ -28,7 +32,16 @@ function mockLitellmCapturing(captured: { systemPrompt: string }) {
           usage: { prompt_tokens: 1, completion_tokens: 1 },
         });
       }),
-  } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
+  } as never;
+}
+
+/** 构造 ChatService 实例(注入 mock litellm/persona + 可选 onUsage);route 签名改传 ChatService(T59) */
+function makeChatService(
+  litellm: unknown,
+  persona: unknown,
+  onUsage?: (evt: ChatUsageEvent) => void
+) {
+  return new ChatService(litellm as never, persona as never, null, undefined, onUsage);
 }
 
 const blockRule: GuardrailRule = {
@@ -41,7 +54,7 @@ const blockRule: GuardrailRule = {
 describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
   it('/chat 违禁输入(block 命中)被拦截,返回 refusal 不走 mock', async () => {
     const persona = mockPersona([blockRule]);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,7 +69,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
 
   it('/chat 正常输入放行但 LiteLLM 未配置 → 503(去 mock 后故障暴露)', async () => {
     const persona = mockPersona([blockRule]);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,7 +82,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
   });
 
   it('/chat 无 personaProvider → 放行(向后兼容)', async () => {
-    const app = createOpenclawChatRoutes(null, null, null, null);
+    const app = createOpenclawChatRoutes(makeChatService(null, null));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,7 +94,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
 
   it('/chat 无 instanceId → 放行(guardrail 不生效)', async () => {
     const persona = mockPersona([blockRule]);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -93,7 +106,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
 
   it('/chat persona 无 guardrails → 放行', async () => {
     const persona = mockPersona([], true);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,7 +118,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
 
   it('/chat/stream 违禁输入被拦截,流式返回 refusal', async () => {
     const persona = mockPersona([blockRule]);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,7 +132,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
 
   it('/chat review 规则不直接拦截(仅 block 拒答)', async () => {
     const persona = mockPersona([{ id: 'g2', type: 'keyword', pattern: '敏感', action: 'review' }]);
-    const app = createOpenclawChatRoutes(null, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(null, persona));
     const res = await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -134,7 +147,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     const captured = { systemPrompt: '' };
     const persona = mockPersona([], true, '你是 Alice,财务助手,只回答财务问题');
     const litellm = mockLitellmCapturing(captured);
-    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(litellm, persona));
     await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -147,7 +160,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     const captured = { systemPrompt: '' };
     const persona = mockPersona([], true, '');
     const litellm = mockLitellmCapturing(captured);
-    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(litellm, persona));
     await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -160,7 +173,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     const captured = { systemPrompt: '' };
     const persona = mockPersona([], true, '你是 Carol,HR 助手');
     const litellm = mockLitellmCapturing(captured);
-    const app = createOpenclawChatRoutes(litellm, null, null, persona);
+    const app = createOpenclawChatRoutes(makeChatService(litellm, persona));
     await app.request('/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +185,7 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
   it('/chat 无 personaProvider → 用默认 systemPrompt(向后兼容,不抛错)', async () => {
     const captured = { systemPrompt: '' };
     const litellm = mockLitellmCapturing(captured);
-    const app = createOpenclawChatRoutes(litellm, null, null, null);
+    const app = createOpenclawChatRoutes(makeChatService(litellm, null));
     await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -194,8 +207,8 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
           captured.messages = params.messages;
           return Promise.resolve({ choices: [{ message: { content: 'mock' } }] });
         }),
-    } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
-    const app = createOpenclawChatRoutes(litellm, null, null, null);
+    } as never;
+    const app = createOpenclawChatRoutes(makeChatService(litellm, null));
     await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -225,8 +238,8 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
         captured.systemCount = params.messages.filter((m) => m.role === 'system').length;
         return Promise.resolve({ choices: [{ message: { content: 'mock' } }] });
       }),
-    } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
-    const app = createOpenclawChatRoutes(litellm, null, null, null);
+    } as never;
+    const app = createOpenclawChatRoutes(makeChatService(litellm, null));
     await app.request('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -252,8 +265,8 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
         captured.len = params.messages.length;
         return Promise.resolve({ choices: [{ message: { content: 'mock' } }] });
       }),
-    } as unknown as Parameters<typeof createOpenclawChatRoutes>[0];
-    const app = createOpenclawChatRoutes(litellm, null, null, null);
+    } as never;
+    const app = createOpenclawChatRoutes(makeChatService(litellm, null));
     const bigHistory = Array.from({ length: 50 }, (_, i) => ({
       role: i % 2 === 0 ? 'user' : 'assistant',
       content: `msg${i}`,
@@ -265,5 +278,57 @@ describe('createOpenclawChatRoutes — T15 guardrail 后端兜底', () => {
     });
     // system(1) + 截断后 40 条 history + 当前 user(1) = 42
     expect(captured.len).toBe(42);
+  });
+});
+
+describe('createOpenclawChatRoutes — T59 用量入账', () => {
+  it('/chat 成功 → onUsage 触发(source=openclaw-chat + usage + tenantId)', async () => {
+    const onUsage = vi.fn();
+    const litellm = {
+      isConfigured: () => true,
+      chatCompletion: vi.fn().mockResolvedValue({
+        choices: [{ message: { content: 'hi' } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      }),
+    };
+    const app = createOpenclawChatRoutes(makeChatService(litellm, null, onUsage));
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
+    });
+    expect(onUsage).toHaveBeenCalledTimes(1);
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'openclaw-chat',
+        promptTokens: 10,
+        completionTokens: 5,
+        tenantId: 'unknown', // test 无 auth 中间件,c.get('user') undefined → 'unknown'
+      })
+    );
+  });
+
+  it('/chat LiteLLM 未配置(503) → onUsage 不触发', async () => {
+    const onUsage = vi.fn();
+    const app = createOpenclawChatRoutes(makeChatService(null, null, onUsage));
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', instanceId: 'inst_1' }),
+    });
+    expect(onUsage).not.toHaveBeenCalled();
+  });
+
+  it('/chat guardrail 命中(blocked) → onUsage 不触发(无 LLM 消耗)', async () => {
+    const onUsage = vi.fn();
+    const persona = mockPersona([blockRule]);
+    const litellm = { isConfigured: () => true, chatCompletion: vi.fn() };
+    const app = createOpenclawChatRoutes(makeChatService(litellm, persona, onUsage));
+    await app.request('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '密码', instanceId: 'inst_1' }),
+    });
+    expect(onUsage).not.toHaveBeenCalled();
   });
 });

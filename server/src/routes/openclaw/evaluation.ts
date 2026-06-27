@@ -1,20 +1,21 @@
 import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse, pagedResponse } from './pagination.js';
 
 export function createOpenclawEvaluationRoutes(repo: OpenclawRepository) {
   const app = new Hono();
 
   app.get('/evaluation/metrics', async (c) => {
     const dimension = c.req.query('dimension');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!dimension && (limit || offset)) {
-      return c.json(await repo.listPaged('evaluation_metric', { limit, offset }));
-    }
-    let items = await repo.list('evaluation_metric');
-    if (dimension) items = items.filter((m) => m.dimension === dimension);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'evaluation_metric',
+        (k) => c.req.query(k),
+        (items) => (dimension ? items.filter((m) => m.dimension === dimension) : items)
+      )
+    );
   });
 
   app.post('/evaluation/metrics', async (c) => {
@@ -30,13 +31,7 @@ export function createOpenclawEvaluationRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/evaluation/scorecards', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('scorecard', { limit, offset }));
-    }
-    const items = await repo.list('scorecard');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'scorecard', (k) => c.req.query(k)));
   });
 
   app.post('/evaluation/scorecards', async (c) => {

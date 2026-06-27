@@ -2,21 +2,21 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse } from './pagination.js';
 
 export function createOpenclawDecisionRoutes(repo: OpenclawRepository) {
   const app = new Hono();
 
   app.get('/decisions', async (c) => {
     const status = c.req.query('status');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!status && (limit || offset)) {
-      const result = await repo.listPaged('decision', { limit, offset });
-      return c.json(result);
-    }
-    let items = await repo.list('decision');
-    if (status) items = items.filter((d) => d.responseStatus === status);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'decision',
+        (k) => c.req.query(k),
+        (items) => (status ? items.filter((d) => d.responseStatus === status) : items)
+      )
+    );
   });
 
   app.post('/decisions/:id/respond', async (c) => {
@@ -53,14 +53,14 @@ export function createOpenclawDecisionRoutes(repo: OpenclawRepository) {
 
   app.get('/judgment-records', async (c) => {
     const decisionId = c.req.query('decisionId');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!decisionId && (limit || offset)) {
-      return c.json(await repo.listPaged('judgment_record', { limit, offset }));
-    }
-    let items = await repo.list('judgment_record');
-    if (decisionId) items = items.filter((r) => r.decisionId === decisionId);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'judgment_record',
+        (k) => c.req.query(k),
+        (items) => (decisionId ? items.filter((r) => r.decisionId === decisionId) : items)
+      )
+    );
   });
 
   app.post('/judgment-records', async (c) => {

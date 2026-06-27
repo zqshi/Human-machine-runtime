@@ -258,15 +258,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   openclaw.route('/', createOpenclawOrchestrationRoutes(ctx.openclawRepo));
   openclaw.route('/', createOpenclawEvaluationRoutes(ctx.openclawRepo));
   openclaw.route('/studio', createStudioRoutes(ctx.studioService));
-  openclaw.route(
-    '/',
-    createOpenclawChatRoutes(
-      ctx.litellmClient,
-      ctx.aiGatewayRepo,
-      ctx.modelGrantChecker,
-      ctx.personaProvider
-    )
-  );
+  openclaw.route('/', createOpenclawChatRoutes(ctx.chatService));
   app.route('/api/openclaw', openclaw);
 
   /* ──── Proxy (Gateway → upstream services) ──── */

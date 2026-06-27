@@ -2,30 +2,25 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { OpenclawRepository } from '../../db/repositories/openclaw-repository.js';
+import { filteredResponse, pagedResponse } from './pagination.js';
 
 export function createOpenclawSignalRoutes(repo: OpenclawRepository) {
   const app = new Hono();
 
   app.get('/signals', async (c) => {
     const urgency = c.req.query('urgency');
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (!urgency && (limit || offset)) {
-      return c.json(await repo.listPaged('signal', { limit, offset }));
-    }
-    let items = await repo.list('signal');
-    if (urgency) items = items.filter((s) => s.urgency === urgency);
-    return c.json({ items });
+    return c.json(
+      await filteredResponse(
+        repo,
+        'signal',
+        (k) => c.req.query(k),
+        (items) => (urgency ? items.filter((s) => s.urgency === urgency) : items)
+      )
+    );
   });
 
   app.get('/signals/emergent', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('emergent_signal', { limit, offset }));
-    }
-    const items = await repo.list('emergent_signal');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'emergent_signal', (k) => c.req.query(k)));
   });
 
   app.post('/signals/emergent', async (c) => {
@@ -57,13 +52,7 @@ export function createOpenclawSignalRoutes(repo: OpenclawRepository) {
   });
 
   app.get('/patterns', async (c) => {
-    const limit = Number(c.req.query('limit')) || undefined;
-    const offset = Number(c.req.query('offset')) || undefined;
-    if (limit || offset) {
-      return c.json(await repo.listPaged('pattern', { limit, offset }));
-    }
-    const items = await repo.list('pattern');
-    return c.json({ items });
+    return c.json(await pagedResponse(repo, 'pattern', (k) => c.req.query(k)));
   });
 
   app.post('/patterns', async (c) => {

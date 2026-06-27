@@ -10,28 +10,20 @@
  */
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
-import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
-import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
-import type { ModelGrantChecker } from '../../contexts/gateway/model-grant-checker.js';
-import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
+import type { Principal } from '../../middleware/auth.js';
 import { ChatService } from '../../contexts/agent-core/application/chat-service.js';
 
 /* ─── 路由 ─── */
 
-export function createOpenclawChatRoutes(
-  litellmClient: LiteLLMClient | null,
-  aiGatewayRepo: AiGatewayRepository | null,
-  grantChecker?: ModelGrantChecker | null,
-  personaProvider?: IPersonaProvider | null
-) {
-  const app = new Hono();
-  const chatService = new ChatService(litellmClient, personaProvider, aiGatewayRepo, grantChecker);
+export function createOpenclawChatRoutes(chatService: ChatService) {
+  const app = new Hono<{ Variables: { user: Principal | undefined } }>();
 
   /** 非流式 chat completion — LiteLLM 真实调用,未配置/失败返 503/502 */
   app.post('/chat', async (c) => {
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);
 
+    const tenantId = c.get('user')?.tenantId ?? 'unknown';
     const result = await chatService.chat(body.instanceId, body.message, {
       model: body.model,
       temperature: body.temperature,
@@ -41,6 +33,7 @@ export function createOpenclawChatRoutes(
       systemPrompt: body.systemPrompt,
       history: body.history,
       traceSource: 'openclaw-chat',
+      tenantId,
     });
 
     if (result.blocked) {
@@ -61,6 +54,7 @@ export function createOpenclawChatRoutes(
     const body = await c.req.json().catch(() => null);
     if (!body?.message) return c.json({ error: 'message required' }, 400);
 
+    const tenantId = c.get('user')?.tenantId ?? 'unknown';
     const result = await chatService.chat(body.instanceId, body.message, {
       model: body.model,
       temperature: body.temperature,
@@ -70,6 +64,7 @@ export function createOpenclawChatRoutes(
       systemPrompt: body.systemPrompt,
       history: body.history,
       traceSource: 'openclaw-chat-stream',
+      tenantId,
     });
 
     // guardrail 命中 → 流式返拒答话术

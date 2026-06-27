@@ -4,6 +4,7 @@ import { createOpenclawSignalRoutes } from './signals.js';
 function mockRepo() {
   return {
     list: vi.fn().mockResolvedValue([]),
+    listPaged: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 }),
     get: vi.fn().mockResolvedValue(null),
     upsert: vi.fn().mockResolvedValue(undefined),
   };
@@ -32,12 +33,12 @@ describe('openclaw signal routes', () => {
     expect(body.items).toHaveLength(1);
   });
 
-  it('GET /signals/emergent returns emergent signals', async () => {
+  it('GET /signals/emergent returns emergent signals (paged)', async () => {
     const repo = mockRepo();
     const app = createOpenclawSignalRoutes(repo as never);
     const res = await app.request('/signals/emergent');
     expect(res.status).toBe(200);
-    expect(repo.list).toHaveBeenCalledWith('emergent_signal');
+    expect(repo.listPaged).toHaveBeenCalledWith('emergent_signal', { limit: 50, offset: 0 });
   });
 
   it('POST /signals/emergent creates signal', async () => {
@@ -49,7 +50,11 @@ describe('openclaw signal routes', () => {
       body: JSON.stringify({ type: 'anomaly', description: 'spike' }),
     });
     expect(res.status).toBe(201);
-    expect(repo.upsert).toHaveBeenCalledWith('emergent_signal', expect.any(String), expect.any(Object));
+    expect(repo.upsert).toHaveBeenCalledWith(
+      'emergent_signal',
+      expect.any(String),
+      expect.any(Object)
+    );
   });
 
   it('PATCH /signals/emergent/:id returns 404 when not found', async () => {
@@ -76,11 +81,11 @@ describe('openclaw signal routes', () => {
     expect(body.applied).toBe(1);
   });
 
-  it('GET /patterns returns patterns', async () => {
+  it('GET /patterns returns patterns (paged)', async () => {
     const repo = mockRepo();
     const app = createOpenclawSignalRoutes(repo as never);
     const res = await app.request('/patterns');
     expect(res.status).toBe(200);
-    expect(repo.list).toHaveBeenCalledWith('pattern');
+    expect(repo.listPaged).toHaveBeenCalledWith('pattern', { limit: 50, offset: 0 });
   });
 });
