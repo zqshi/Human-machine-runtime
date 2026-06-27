@@ -13,7 +13,10 @@
  */
 import { createAssetBinding } from '../../contexts/shared-assets/domain/shared-skill.js';
 import type { ISkillRepository } from '../../contexts/shared-assets/skill-service.js';
-import type { SharedAsset, AssetBinding } from '../../contexts/shared-assets/domain/shared-skill.js';
+import type {
+  SharedAsset,
+  AssetBinding,
+} from '../../contexts/shared-assets/domain/shared-skill.js';
 import type {
   ISkillPort,
   SkillAssetView,

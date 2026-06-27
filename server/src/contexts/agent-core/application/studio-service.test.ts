@@ -23,9 +23,9 @@ function mockRepos() {
       getSharedAssetsByIds: vi.fn().mockResolvedValue([]),
       listBindingsByTenant: vi.fn().mockResolvedValue([]),
       getSharedAsset: vi.fn().mockResolvedValue(null),
-      installAssetBinding: vi.fn(
-        async (_t: string, assetId: string) => ({ id: `asset_binding_${assetId}` })
-      ),
+      installAssetBinding: vi.fn(async (_t: string, assetId: string) => ({
+        id: `asset_binding_${assetId}`,
+      })),
       uninstallAssetBinding: vi.fn(async () => true),
     },
   };
@@ -214,7 +214,12 @@ describe('StudioService', () => {
     const result = await svc.installAsset('tn_1', 'sa_1', 'tenant', 'studio');
     expect(result?.id).toMatch(/^asset_binding/);
     expect(mocks.skillPort.installAssetBinding).toHaveBeenCalledOnce();
-    expect(mocks.skillPort.installAssetBinding).toHaveBeenCalledWith('tn_1', 'sa_1', 'skill', 'studio');
+    expect(mocks.skillPort.installAssetBinding).toHaveBeenCalledWith(
+      'tn_1',
+      'sa_1',
+      'skill',
+      'studio'
+    );
   });
 
   it('uninstallAsset 调 port.uninstallAssetBinding', async () => {
