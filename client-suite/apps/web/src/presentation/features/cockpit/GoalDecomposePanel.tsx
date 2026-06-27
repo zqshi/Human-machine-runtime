@@ -145,7 +145,10 @@ export function GoalDecomposePanel({
         <input
           value={newTaskName}
           onChange={(e) => setNewTaskName(e.target.value)}
-          onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') handleAddTask(); }}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            if (e.key === 'Enter') handleAddTask();
+          }}
           placeholder="添加子任务..."
           className="flex-1 h-8 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
         />

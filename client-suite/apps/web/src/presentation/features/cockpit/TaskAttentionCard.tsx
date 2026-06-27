@@ -37,10 +37,16 @@ export function TaskAttentionCard({ item, isSelected, onClick }: TaskAttentionCa
           className={`shrink-0 ${isResolved ? 'text-slate-600' : ''}`}
           style={!isResolved ? { color } : undefined}
         />
-        <span className={`text-xs truncate flex-1 ${isResolved ? 'text-slate-400' : 'font-medium text-slate-200'}`}>
+        <span
+          className={`text-xs truncate flex-1 ${isResolved ? 'text-slate-400' : 'font-medium text-slate-200'}`}
+        >
           {item.title}
         </span>
-        <span className={`text-[10px] shrink-0 ${isResolved ? 'text-slate-600' : 'font-medium text-slate-400'}`}>{progress}%</span>
+        <span
+          className={`text-[10px] shrink-0 ${isResolved ? 'text-slate-600' : 'font-medium text-slate-400'}`}
+        >
+          {progress}%
+        </span>
       </div>
 
       {/* Progress bar — completed tasks use muted style */}
@@ -72,13 +78,15 @@ export function TaskAttentionCard({ item, isSelected, onClick }: TaskAttentionCa
       {/* Status label */}
       {item.taskStatusLabel && (
         <div className="mt-1.5 pl-4">
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${
-            isResolved
-              ? item.taskStatusLabel === '已完成'
-                ? 'bg-green-500/10 text-green-500/60'
-                : 'bg-red-500/10 text-red-500/60'
-              : 'bg-white/[0.04] text-slate-500'
-          }`}>
+          <span
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${
+              isResolved
+                ? item.taskStatusLabel === '已完成'
+                  ? 'bg-green-500/10 text-green-500/60'
+                  : 'bg-red-500/10 text-red-500/60'
+                : 'bg-white/[0.04] text-slate-500'
+            }`}
+          >
             {item.taskStatusLabel}
           </span>
         </div>

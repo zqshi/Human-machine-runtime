@@ -26,10 +26,16 @@ interface GoalAttentionCardProps {
   onClick: () => void;
 }
 
-export function GoalAttentionCard({ title, progress, priority, milestones, isSelected, onClick }: GoalAttentionCardProps) {
-  const milestoneSummary = milestones && milestones.length > 0
-    ? milestones.map((m) => m.name).join(' → ')
-    : '';
+export function GoalAttentionCard({
+  title,
+  progress,
+  priority,
+  milestones,
+  isSelected,
+  onClick,
+}: GoalAttentionCardProps) {
+  const milestoneSummary =
+    milestones && milestones.length > 0 ? milestones.map((m) => m.name).join(' → ') : '';
 
   return (
     <button
@@ -43,7 +49,9 @@ export function GoalAttentionCard({ title, progress, priority, milestones, isSel
     >
       {/* Title row */}
       <div className="flex items-center gap-2 mb-1.5">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${priority ? PRIORITY_DOT[priority] : 'bg-blue-400'}`} />
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${priority ? PRIORITY_DOT[priority] : 'bg-blue-400'}`}
+        />
         <span className="text-xs font-medium text-slate-200 truncate flex-1">{title}</span>
         <span className="text-[10px] text-slate-500 shrink-0">{progress}%</span>
         {priority && priority !== 'normal' && (

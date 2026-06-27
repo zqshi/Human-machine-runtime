@@ -7,7 +7,9 @@ function mockConfigSvc() {
     setSedimentationPolicy: vi.fn().mockResolvedValue(undefined),
     getCockpitConfig: vi.fn().mockResolvedValue({ enabled: true }),
     setCockpitConfig: vi.fn().mockResolvedValue(undefined),
-    listCockpitConfigSnapshots: vi.fn().mockResolvedValue([{ id: 'snap-1', createdAt: '2026-05-01' }]),
+    listCockpitConfigSnapshots: vi
+      .fn()
+      .mockResolvedValue([{ id: 'snap-1', createdAt: '2026-05-01' }]),
     restoreCockpitConfigSnapshot: vi.fn().mockResolvedValue(true),
   };
 }

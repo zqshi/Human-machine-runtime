@@ -12,7 +12,10 @@ interface ContentProps {
 
 const STAGES = ['designing', 'building', 'preview', 'done'] as const;
 const STAGE_LABELS: Record<string, string> = {
-  designing: '设计中', building: '构建中', preview: '预览', done: '完成',
+  designing: '设计中',
+  building: '构建中',
+  preview: '预览',
+  done: '完成',
 };
 
 export function AppPreviewContent({ data }: ContentProps) {
@@ -37,12 +40,13 @@ export function AppPreviewContent({ data }: ContentProps) {
   if (!app) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
-        <Icon name="error_outline" size={20} className="mr-2" />应用未找到
+        <Icon name="error_outline" size={20} className="mr-2" />
+        应用未找到
       </div>
     );
   }
 
-  const stageIndex = STAGES.indexOf(app.stage as typeof STAGES[number]);
+  const stageIndex = STAGES.indexOf(app.stage as (typeof STAGES)[number]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -73,7 +77,12 @@ export function AppPreviewContent({ data }: ContentProps) {
                   </span>
                 </div>
                 {i < STAGES.length - 1 && (
-                  <div className="w-full h-px mx-1" style={{ backgroundColor: stageIndex > i ? '#007AFF' : 'rgba(255,255,255,0.06)' }} />
+                  <div
+                    className="w-full h-px mx-1"
+                    style={{
+                      backgroundColor: stageIndex > i ? '#007AFF' : 'rgba(255,255,255,0.06)',
+                    }}
+                  />
                 )}
               </div>
             );
@@ -143,20 +152,26 @@ export function AppPreviewContent({ data }: ContentProps) {
           onClick={() => setRefreshBump((k) => k + 1)}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] text-slate-400 hover:bg-white/[0.04] transition-colors"
         >
-          <Icon name="refresh" size={12} />刷新
+          <Icon name="refresh" size={12} />
+          刷新
         </button>
         <button
           type="button"
           onClick={() => setShowCode(!showCode)}
           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] transition-colors ${
-            showCode ? 'border-primary/30 text-primary bg-primary/5' : 'border-white/10 text-slate-400 hover:bg-white/[0.04]'
+            showCode
+              ? 'border-primary/30 text-primary bg-primary/5'
+              : 'border-white/10 text-slate-400 hover:bg-white/[0.04]'
           }`}
         >
-          <Icon name="code" size={12} />{showCode ? '预览' : '源码'}
+          <Icon name="code" size={12} />
+          {showCode ? '预览' : '源码'}
         </button>
         <div className="flex-1" />
         <span className="text-[9px] text-slate-600">
-          {latestSnapshot ? `最后更新 ${new Date(latestSnapshot.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
+          {latestSnapshot
+            ? `最后更新 ${new Date(latestSnapshot.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+            : ''}
         </span>
       </div>
     </div>

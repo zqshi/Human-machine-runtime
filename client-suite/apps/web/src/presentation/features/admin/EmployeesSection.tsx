@@ -118,7 +118,7 @@ export function EmployeesSection() {
       clusterType,
       nodeFilter,
       podFilter,
-    ],
+    ]
   );
 
   const availableNodes = useMemo(() => selectAvailableNodes(employees), [employees]);
@@ -204,9 +204,10 @@ export function EmployeesSection() {
     'px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF]';
   const inputCls = selectCls;
 
-  const activeColumns = viewMode === 'ops' && clusterType === 'cubesandbox'
-    ? VIEW_MODE_COLUMNS.cubesandbox
-    : VIEW_MODE_COLUMNS[viewMode];
+  const activeColumns =
+    viewMode === 'ops' && clusterType === 'cubesandbox'
+      ? VIEW_MODE_COLUMNS.cubesandbox
+      : VIEW_MODE_COLUMNS[viewMode];
 
   const isCubeSandboxView = viewMode === 'ops' && clusterType === 'cubesandbox';
 
@@ -472,19 +473,23 @@ export function EmployeesSection() {
                     >
                       {isCubeSandboxView ? (
                         <>
-                          <td className="px-3 py-2 font-mono text-xs text-gray-700">
-                            {emp.id}
-                          </td>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-700">{emp.id}</td>
                           <td className="px-3 py-2 font-mono text-xs text-gray-600">
                             {String(emp.employeeId ?? emp.id)}
                           </td>
                           <td className="px-3 py-2">
-                            <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${
-                              remote?.runMode === 'persistent'
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {remote?.runMode === 'persistent' ? '常驻' : remote?.runMode === 'single' ? '单次' : '-'}
+                            <span
+                              className={`inline-flex px-2 py-0.5 text-xs rounded-full ${
+                                remote?.runMode === 'persistent'
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {remote?.runMode === 'persistent'
+                                ? '常驻'
+                                : remote?.runMode === 'single'
+                                  ? '单次'
+                                  : '-'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-600">
@@ -495,13 +500,18 @@ export function EmployeesSection() {
                               <Icon
                                 name={NODE_STATUS_ICON[remote?.healthStatus || ''] || 'help'}
                                 size={13}
-                                className={NODE_STATUS_BADGE[remote?.healthStatus || ''] || 'text-gray-400'}
+                                className={
+                                  NODE_STATUS_BADGE[remote?.healthStatus || ''] || 'text-gray-400'
+                                }
                               />
                               <span className="text-xs text-gray-600">
-                                {remote?.healthStatus === 'healthy' ? '健康'
-                                  : remote?.healthStatus === 'warning' ? '告警'
-                                  : remote?.healthStatus === 'unhealthy' ? '异常'
-                                  : '-'}
+                                {remote?.healthStatus === 'healthy'
+                                  ? '健康'
+                                  : remote?.healthStatus === 'warning'
+                                    ? '告警'
+                                    : remote?.healthStatus === 'unhealthy'
+                                      ? '异常'
+                                      : '-'}
                               </span>
                             </span>
                           </td>
@@ -584,55 +594,55 @@ export function EmployeesSection() {
                         </>
                       )}
                       {!isCubeSandboxView && (
-                      <td className="px-3 py-2 text-right" onClick={(ev) => ev.stopPropagation()}>
-                        {viewMode === 'biz' && (
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => openDetail(emp.id)}
-                              className="px-2 py-0.5 text-xs border border-gray-200 rounded hover:bg-gray-100"
-                            >
-                              查看
-                            </button>
-                            <button
-                              onClick={() => openEdit(emp.id)}
-                              className="px-2 py-0.5 text-xs bg-[#007AFF] text-white rounded hover:bg-[#0066DD]"
-                            >
-                              编辑
-                            </button>
-                            <button
-                              onClick={() => setActionConfirm({ id: emp.id, action: 'delete' })}
-                              className="px-2 py-0.5 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50"
-                            >
-                              删除
-                            </button>
-                          </div>
-                        )}
-                        {viewMode === 'ops' && (
-                          <div className="flex items-center justify-end gap-0.5">
-                            {(['start', 'stop', 'rebuild'] as const).map((act) => (
+                        <td className="px-3 py-2 text-right" onClick={(ev) => ev.stopPropagation()}>
+                          {viewMode === 'biz' && (
+                            <div className="flex items-center justify-end gap-1">
                               <button
-                                key={act}
-                                onClick={() => setActionConfirm({ id: emp.id, action: act })}
-                                className="px-1.5 py-0.5 text-[11px] border border-gray-200 text-gray-500 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() => openDetail(emp.id)}
+                                className="px-2 py-0.5 text-xs border border-gray-200 rounded hover:bg-gray-100"
                               >
-                                {ACTION_LABELS[act]}
+                                查看
                               </button>
-                            ))}
-                            <button
-                              onClick={() =>
-                                setMigrateTarget({
-                                  id: emp.id,
-                                  name: emp.displayName || emp.name,
-                                  currentNode: remote?.nodeName || '',
-                                })
-                              }
-                              className="px-1.5 py-0.5 text-[11px] border border-purple-200 text-purple-600 rounded hover:bg-purple-50 transition-colors"
-                            >
-                              漂移
-                            </button>
-                          </div>
-                        )}
-                      </td>
+                              <button
+                                onClick={() => openEdit(emp.id)}
+                                className="px-2 py-0.5 text-xs bg-[#007AFF] text-white rounded hover:bg-[#0066DD]"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                onClick={() => setActionConfirm({ id: emp.id, action: 'delete' })}
+                                className="px-2 py-0.5 text-xs border border-red-200 text-red-600 rounded hover:bg-red-50"
+                              >
+                                删除
+                              </button>
+                            </div>
+                          )}
+                          {viewMode === 'ops' && (
+                            <div className="flex items-center justify-end gap-0.5">
+                              {(['start', 'stop', 'rebuild'] as const).map((act) => (
+                                <button
+                                  key={act}
+                                  onClick={() => setActionConfirm({ id: emp.id, action: act })}
+                                  className="px-1.5 py-0.5 text-[11px] border border-gray-200 text-gray-500 rounded hover:bg-gray-100 transition-colors"
+                                >
+                                  {ACTION_LABELS[act]}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() =>
+                                  setMigrateTarget({
+                                    id: emp.id,
+                                    name: emp.displayName || emp.name,
+                                    currentNode: remote?.nodeName || '',
+                                  })
+                                }
+                                className="px-1.5 py-0.5 text-[11px] border border-purple-200 text-purple-600 rounded hover:bg-purple-50 transition-colors"
+                              >
+                                漂移
+                              </button>
+                            </div>
+                          )}
+                        </td>
                       )}
                     </tr>
                   );

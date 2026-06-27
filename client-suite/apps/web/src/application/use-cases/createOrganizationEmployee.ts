@@ -95,41 +95,38 @@ export async function createOrganizationEmployee(
   const warnings: string[] = [];
   const employeeId = employee.id;
 
-  await collectWarning(
-    warnings,
-    '基础运行配置保存失败，请创建后在编辑页补齐。',
-    () =>
-      deps.employeeDetailApi.updateProfile(employeeId, {
-        name,
-        department: draft.basic.department.trim(),
-        departmentId: draft.basic.departmentId.trim() || undefined,
-        jobTitle: draft.basic.agentRuntime,
-        knowMe: draft.basic.description.trim(),
-        channelBinding: {
-          channelId,
-          appId: channelAppId,
-          name: draft.basic.channelName.trim(),
+  await collectWarning(warnings, '基础运行配置保存失败，请创建后在编辑页补齐。', () =>
+    deps.employeeDetailApi.updateProfile(employeeId, {
+      name,
+      department: draft.basic.department.trim(),
+      departmentId: draft.basic.departmentId.trim() || undefined,
+      jobTitle: draft.basic.agentRuntime,
+      knowMe: draft.basic.description.trim(),
+      channelBinding: {
+        channelId,
+        appId: channelAppId,
+        name: draft.basic.channelName.trim(),
+      },
+      runtimeProfile: {
+        modelId: draft.basic.modelId,
+        systemPrompt: draft.basic.systemPrompt.trim(),
+      },
+      capabilities: draft.capabilities.toolDefinitionIds,
+      linkedSkillIds: draft.capabilities.skillIds,
+      evaluationConfig: draft.evaluation.suiteId
+        ? {
+            suiteId: draft.evaluation.suiteId,
+            runBaselineAfterCreate: draft.evaluation.runBaselineAfterCreate,
+          }
+        : null,
+      versions: [
+        {
+          version: draft.version.versionName.trim() || 'v0.1.0',
+          releaseNote: draft.version.releaseNote.trim(),
+          status: draft.version.publishAfterCreate ? 'published' : 'draft',
         },
-        runtimeProfile: {
-          modelId: draft.basic.modelId,
-          systemPrompt: draft.basic.systemPrompt.trim(),
-        },
-        capabilities: draft.capabilities.toolDefinitionIds,
-        linkedSkillIds: draft.capabilities.skillIds,
-        evaluationConfig: draft.evaluation.suiteId
-          ? {
-              suiteId: draft.evaluation.suiteId,
-              runBaselineAfterCreate: draft.evaluation.runBaselineAfterCreate,
-            }
-          : null,
-        versions: [
-          {
-            version: draft.version.versionName.trim() || 'v0.1.0',
-            releaseNote: draft.version.releaseNote.trim(),
-            status: draft.version.publishAfterCreate ? 'published' : 'draft',
-          },
-        ],
-      })
+      ],
+    })
   );
 
   for (const definitionId of draft.capabilities.toolDefinitionIds) {

@@ -423,16 +423,12 @@ export class CockpitApiAdapter implements ICockpitDataSource {
 
   async fetchWorkOrders(filter?: { status?: string }): Promise<WorkOrder[]> {
     const qs = filter?.status ? `?status=${encodeURIComponent(filter.status)}` : '';
-    const res = await request<{ items: Record<string, unknown>[] }>(
-      `/api/cockpit/workorders${qs}`
-    );
+    const res = await request<{ items: Record<string, unknown>[] }>(`/api/cockpit/workorders${qs}`);
     return res.items.map(toWorkOrder);
   }
 
   async fetchSentWorkOrders(): Promise<WorkOrder[]> {
-    const res = await request<{ items: Record<string, unknown>[] }>(
-      '/api/cockpit/workorders/sent'
-    );
+    const res = await request<{ items: Record<string, unknown>[] }>('/api/cockpit/workorders/sent');
     return res.items.map(toWorkOrder);
   }
 

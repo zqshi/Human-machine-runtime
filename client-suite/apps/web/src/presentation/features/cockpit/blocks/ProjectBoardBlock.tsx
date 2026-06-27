@@ -15,7 +15,13 @@ interface Props {
 
 const COL_COLORS = ['#64748b', '#007AFF', '#FF9500', '#34C759'];
 
-export function ProjectBoardBlockComponent({ boardId, boardName, totalCards: initTotal, activeAgents: initAgents, onOpen }: Props) {
+export function ProjectBoardBlockComponent({
+  boardId,
+  boardName,
+  totalCards: initTotal,
+  activeAgents: initAgents,
+  onOpen,
+}: Props) {
   const board = useCockpitStore((s) => s.boards.find((b) => b.id === boardId));
   const total = board?.cards.length ?? initTotal;
   const active = board?.activeAgentCount ?? initAgents;
@@ -31,21 +37,29 @@ export function ProjectBoardBlockComponent({ boardId, boardName, totalCards: ini
     <button
       type="button"
       className="w-full text-left p-3 rounded-xl border border-white/10 bg-white/[0.03] cursor-pointer hover:bg-white/[0.06] transition-colors"
-      onClick={() => onOpen({ type: 'project-board', title: board?.name ?? boardName, data: { boardId } })}
+      onClick={() =>
+        onOpen({ type: 'project-board', title: board?.name ?? boardName, data: { boardId } })
+      }
     >
       <div className="flex items-center gap-2 mb-2">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-500/10">
           <Icon name="view_kanban" size={16} className="text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold text-slate-200 truncate">{board?.name ?? boardName}</div>
+          <div className="text-xs font-semibold text-slate-200 truncate">
+            {board?.name ?? boardName}
+          </div>
           <div className="text-[10px] text-slate-500">
             {total} 个卡片 · {active} 个 Agent 协作中
           </div>
         </div>
-        <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${
-          doneCount === total ? 'text-emerald-400 bg-emerald-400/10' : 'text-primary bg-primary/10'
-        }`}>
+        <span
+          className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${
+            doneCount === total
+              ? 'text-emerald-400 bg-emerald-400/10'
+              : 'text-primary bg-primary/10'
+          }`}
+        >
           {doneCount === total ? '已完成' : `${doneCount}/${total}`}
         </span>
       </div>

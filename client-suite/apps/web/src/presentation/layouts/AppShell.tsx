@@ -75,9 +75,7 @@ export function AppShell({ sidebar, children, onLogout }: AppShellProps) {
       {sidebar && sidebar}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
         {isOC && <CockpitHeader />}
-        <main className={`flex-1 min-w-0 min-h-0 flex flex-col bg-bg-white-var`}>
-          {children}
-        </main>
+        <main className={`flex-1 min-w-0 min-h-0 flex flex-col bg-bg-white-var`}>{children}</main>
       </div>
     </div>
   );

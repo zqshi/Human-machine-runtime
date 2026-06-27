@@ -16,10 +16,7 @@
 import type { CoTMessage } from '../../domain/agent/CoTMessage';
 import type { SystemHealthSnapshot } from '../../domain/agent/AgentOrchestrationService';
 import { useNotificationStore } from './notificationStore';
-import {
-  persistConversations,
-  restoreConversations,
-} from './cockpitPersistence';
+import { persistConversations, restoreConversations } from './cockpitPersistence';
 import type { ConversationSession, StoreSet, StoreGet } from './cockpitTypes';
 
 export function conversationActions(set: StoreSet, get: StoreGet) {

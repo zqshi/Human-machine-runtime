@@ -619,10 +619,7 @@ function NotificationDetailContent({ data }: ContentProps) {
 
 /* ─── Content router ─── */
 
-const CONTENT_RENDERERS: Record<
-  CockpitDrawerContent['type'],
-  React.ComponentType<ContentProps>
-> = {
+const CONTENT_RENDERERS: Record<CockpitDrawerContent['type'], React.ComponentType<ContentProps>> = {
   'task-detail': TaskDetailContent,
   'activity-detail': ActivityDetailContent,
   'source-detail': SourceDetailContent,

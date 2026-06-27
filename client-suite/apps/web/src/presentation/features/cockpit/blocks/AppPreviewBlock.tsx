@@ -28,17 +28,31 @@ export function AppPreviewBlockComponent({ appId, appName, stage: initialStage, 
     <button
       type="button"
       className="w-full text-left p-3 rounded-xl border border-white/10 bg-white/[0.03] cursor-pointer hover:bg-white/[0.06] transition-colors"
-      onClick={() => onOpen({ type: 'app-preview', title: `${app?.name ?? appName} - 构建预览`, data: { appId } })}
+      onClick={() =>
+        onOpen({
+          type: 'app-preview',
+          title: `${app?.name ?? appName} - 构建预览`,
+          data: { appId },
+        })
+      }
     >
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${cfg.color}15` }}>
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: `${cfg.color}15` }}
+        >
           <Icon name={cfg.icon} size={16} style={{ color: cfg.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold text-slate-200 truncate">{app?.name ?? appName}</div>
+          <div className="text-xs font-semibold text-slate-200 truncate">
+            {app?.name ?? appName}
+          </div>
           <div className="text-[10px] text-slate-500">{app?.description ?? '应用构建中'}</div>
         </div>
-        <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}>
+        <span
+          className="text-[9px] px-2 py-0.5 rounded-full font-medium"
+          style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}
+        >
           {cfg.label}
         </span>
       </div>
@@ -49,8 +63,16 @@ export function AppPreviewBlockComponent({ appId, appName, stage: initialStage, 
           const reached = ['designing', 'building', 'preview', 'done'].indexOf(currentStage) >= i;
           return (
             <div key={s} className="flex items-center">
-              <div className="w-1.5 h-1.5 rounded-full transition-colors" style={{ backgroundColor: reached ? cfg.color : 'rgba(255,255,255,0.1)' }} />
-              {i < 3 && <div className="w-6 h-px mx-0.5" style={{ backgroundColor: reached ? `${cfg.color}40` : 'rgba(255,255,255,0.06)' }} />}
+              <div
+                className="w-1.5 h-1.5 rounded-full transition-colors"
+                style={{ backgroundColor: reached ? cfg.color : 'rgba(255,255,255,0.1)' }}
+              />
+              {i < 3 && (
+                <div
+                  className="w-6 h-px mx-0.5"
+                  style={{ backgroundColor: reached ? `${cfg.color}40` : 'rgba(255,255,255,0.06)' }}
+                />
+              )}
             </div>
           );
         })}

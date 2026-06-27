@@ -37,7 +37,14 @@ interface DecisionAttentionCardProps {
   onClick: () => void;
 }
 
-export function DecisionAttentionCard({ title, urgency, deadline, summary, isSelected, onClick }: DecisionAttentionCardProps) {
+export function DecisionAttentionCard({
+  title,
+  urgency,
+  deadline,
+  summary,
+  isSelected,
+  onClick,
+}: DecisionAttentionCardProps) {
   const [countdown, setCountdown] = useState(() => (deadline ? formatCountdown(deadline) : ''));
   const [now] = useState(Date.now);
   useEffect(() => {
@@ -57,7 +64,9 @@ export function DecisionAttentionCard({ title, urgency, deadline, summary, isSel
       }`}
     >
       <div className="flex items-center gap-2 mb-1">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${urgency ? URGENCY_COLORS[urgency] : 'bg-yellow-400'}`} />
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${urgency ? URGENCY_COLORS[urgency] : 'bg-yellow-400'}`}
+        />
         <span className="text-xs font-medium text-slate-200 truncate flex-1">{title}</span>
         {urgency && urgency !== 'normal' && (
           <span className="text-[9px] px-1 py-0.5 rounded shrink-0 bg-white/[0.06] text-slate-400">
@@ -67,15 +76,15 @@ export function DecisionAttentionCard({ title, urgency, deadline, summary, isSel
       </div>
 
       {/* Summary */}
-      {summary && (
-        <p className="text-[10px] text-slate-400 line-clamp-1 pl-4">{summary}</p>
-      )}
+      {summary && <p className="text-[10px] text-slate-400 line-clamp-1 pl-4">{summary}</p>}
 
       {/* Countdown */}
       {countdown && (
         <div className="flex items-center gap-1 pl-4 mt-0.5">
           <Icon name="schedule" size={10} className="text-slate-500" />
-          <span className={`text-[10px] ${deadline && deadline - now < 600_000 ? 'text-red-400' : 'text-slate-500'}`}>
+          <span
+            className={`text-[10px] ${deadline && deadline - now < 600_000 ? 'text-red-400' : 'text-slate-500'}`}
+          >
             {countdown}
           </span>
         </div>

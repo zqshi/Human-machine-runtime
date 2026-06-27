@@ -1,6 +1,11 @@
 export type TrendData = { days: string[]; values: number[] };
 export type LatencyData = { days: string[]; p50: number[]; p95: number[]; avg: number[] };
-export type SpendUser = { userId: string; count: number; totalTokens: number; estimatedCost: number };
+export type SpendUser = {
+  userId: string;
+  count: number;
+  totalTokens: number;
+  estimatedCost: number;
+};
 
 export type ModalPanel =
   | 'dau'

@@ -1,7 +1,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Drawer } from '../../components/ui/Drawer';
 import { Icon } from '../../components/ui/Icon';
-import { employeeDetailApi, evalApi, type Employee, type AgentRuntime, type EvalSuite } from '../../../application/services/adminApi';
+import {
+  employeeDetailApi,
+  evalApi,
+  type Employee,
+  type AgentRuntime,
+  type EvalSuite,
+} from '../../../application/services/adminApi';
 import type { InstanceScope } from '../../../domain/shared/types';
 
 interface VersionRecord {
@@ -151,8 +157,15 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
     scope: 'organization' as InstanceScope,
     systemPrompt: '',
   });
-  const [capabilities, setCapabilities] = useState({ tools: [] as string[], skills: [] as string[] });
-  const [evaluation, setEvaluation] = useState({ suiteId: '', suiteName: '', runBaselineAfterCreate: false });
+  const [capabilities, setCapabilities] = useState({
+    tools: [] as string[],
+    skills: [] as string[],
+  });
+  const [evaluation, setEvaluation] = useState({
+    suiteId: '',
+    suiteName: '',
+    runBaselineAfterCreate: false,
+  });
   const [version, setVersion] = useState({
     versionName: '',
     releaseNote: '',
@@ -181,7 +194,10 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
 
   useEffect(() => {
     if (open) {
-      evalApi.listSuites().then((res) => setSuites(res.suites)).catch(() => {});
+      evalApi
+        .listSuites()
+        .then((res) => setSuites(res.suites))
+        .catch(() => {});
     }
   }, [open]);
 
@@ -194,7 +210,10 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
         const d = detail as Record<string, unknown>;
         const profile = (d.profile || {}) as Record<string, unknown>;
         const settings = (profile.settings || {}) as Record<string, unknown>;
-        const runtimeProfile = (settings.runtimeProfile || d.runtimeProfile || d.runtime || {}) as Record<string, unknown>;
+        const runtimeProfile = (settings.runtimeProfile ||
+          d.runtimeProfile ||
+          d.runtime ||
+          {}) as Record<string, unknown>;
 
         // versions 嵌套在 profile.settings.versions
         const rawVersions = Array.isArray(settings.versions)
@@ -202,12 +221,14 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
           : Array.isArray(d.versions)
             ? d.versions
             : [];
-        const parsedVersions: VersionRecord[] = (rawVersions as Record<string, unknown>[]).map((v) => ({
-          version: valueToString(v.version),
-          status: valueToString(v.status || 'draft'),
-          date: valueToString(v.date || v.createdAt),
-          changes: valueToString(v.changes || v.releaseNote),
-        }));
+        const parsedVersions: VersionRecord[] = (rawVersions as Record<string, unknown>[]).map(
+          (v) => ({
+            version: valueToString(v.version),
+            status: valueToString(v.status || 'draft'),
+            date: valueToString(v.date || v.createdAt),
+            changes: valueToString(v.changes || v.releaseNote),
+          })
+        );
 
         const evalConfig = (settings.evaluationConfig || {}) as Record<string, unknown>;
         const channelBinding = (settings.channelBinding || {}) as Record<string, unknown>;
@@ -216,7 +237,9 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
           id: valueToString(d.id),
           tenantId: valueToString(d.tenantId),
           matrixRoomId: valueToString(d.matrixRoomId),
-          channelName: valueToString(channelBinding.name || d.channelName || d.channelAppId || d.channelId),
+          channelName: valueToString(
+            channelBinding.name || d.channelName || d.channelAppId || d.channelId
+          ),
         });
         setBasic((prev) => ({
           ...prev,
@@ -224,23 +247,37 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
           department: valueToString(d.department || prev.department),
           ownerId: valueToString(d.ownerId || d.enterpriseUserId || prev.ownerId),
           description: valueToString(profile.knowMe || d.description || prev.description),
-          agentRuntime: (d.jobTitle === 'harness' || runtimeProfile.agentRuntime === 'harness') ? 'harness' : 'cockpit',
+          agentRuntime:
+            d.jobTitle === 'harness' || runtimeProfile.agentRuntime === 'harness'
+              ? 'harness'
+              : 'cockpit',
           modelId: valueToString(runtimeProfile.modelId || d.model || prev.modelId),
           status: valueToString(d.state || d.status || prev.status),
           scope: (settings.scope === 'personal' ? 'personal' : 'organization') as InstanceScope,
           systemPrompt: valueToString(runtimeProfile.systemPrompt || prev.systemPrompt),
         }));
         setCapabilities({
-          tools: toTagItems(Array.isArray(settings.capabilities) ? settings.capabilities : (runtimeProfile.toolScope || d.linkedToolIds)),
+          tools: toTagItems(
+            Array.isArray(settings.capabilities)
+              ? settings.capabilities
+              : runtimeProfile.toolScope || d.linkedToolIds
+          ),
           skills: toTagItems(settings.linkedSkillIds || d.linkedSkillIds || d.skills),
         });
         setEvaluation({
           suiteId: valueToString(evalConfig.suiteId || d.evalSuiteId),
           suiteName: valueToString(d.evalSuiteName || evalConfig.suiteId || d.evalSuiteId),
-          runBaselineAfterCreate: Boolean(evalConfig.runBaselineAfterCreate || d.runBaselineAfterCreate),
+          runBaselineAfterCreate: Boolean(
+            evalConfig.runBaselineAfterCreate || d.runBaselineAfterCreate
+          ),
         });
         setVersion({
-          versionName: valueToString(d.versionName || d.currentVersion || d.version || (parsedVersions.length > 0 ? parsedVersions[parsedVersions.length - 1].version : '')),
+          versionName: valueToString(
+            d.versionName ||
+              d.currentVersion ||
+              d.version ||
+              (parsedVersions.length > 0 ? parsedVersions[parsedVersions.length - 1].version : '')
+          ),
           releaseNote: valueToString(d.releaseNote),
           publishAfterCreate: parsedVersions.some((v) => v.status === 'published'),
           versions: parsedVersions,
@@ -391,7 +428,9 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
               label="Agent Runtime"
               value={basic.agentRuntime}
               options={RUNTIME_OPTIONS}
-              onChange={(value) => setBasic((prev) => ({ ...prev, agentRuntime: value as AgentRuntime }))}
+              onChange={(value) =>
+                setBasic((prev) => ({ ...prev, agentRuntime: value as AgentRuntime }))
+              }
             />
             <LabelSelect
               label="默认模型"
@@ -461,7 +500,11 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
                 value={evaluation.suiteId}
                 onChange={(e) => {
                   const s = suites.find((x) => x.id === e.target.value);
-                  setEvaluation((prev) => ({ ...prev, suiteId: e.target.value, suiteName: s?.name ?? '' }));
+                  setEvaluation((prev) => ({
+                    ...prev,
+                    suiteId: e.target.value,
+                    suiteName: s?.name ?? '',
+                  }));
                 }}
                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF]"
               >
@@ -502,13 +545,19 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
             <div className="text-xs text-gray-400 mb-1">当前版本</div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-800">{version.versionName || '未记录'}</span>
+              <span className="text-sm font-semibold text-gray-800">
+                {version.versionName || '未记录'}
+              </span>
               {version.publishAfterCreate && (
-                <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-50 text-green-700">已发布</span>
+                <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-50 text-green-700">
+                  已发布
+                </span>
               )}
             </div>
             {version.releaseNote && (
-              <div className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">{version.releaseNote}</div>
+              <div className="text-xs text-gray-500 mt-1 whitespace-pre-wrap">
+                {version.releaseNote}
+              </div>
             )}
           </div>
 
@@ -518,7 +567,10 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
               <div className="text-xs text-gray-500 mb-2">版本历史</div>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {version.versions.map((v, i) => (
-                  <div key={i} className="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-lg text-xs">
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-lg text-xs"
+                  >
                     <span className="font-mono font-semibold text-gray-700">{v.version}</span>
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
@@ -529,9 +581,15 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
                             : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {v.status === 'published' ? '已发布' : v.status === 'review' ? '审核中' : '草稿'}
+                      {v.status === 'published'
+                        ? '已发布'
+                        : v.status === 'review'
+                          ? '审核中'
+                          : '草稿'}
                     </span>
-                    <span className="text-gray-400 ml-auto">{v.date ? new Date(v.date).toLocaleDateString('zh-CN') : '-'}</span>
+                    <span className="text-gray-400 ml-auto">
+                      {v.date ? new Date(v.date).toLocaleDateString('zh-CN') : '-'}
+                    </span>
                     {v.status !== 'published' && (
                       <button
                         onClick={() => publishVersion(i)}
@@ -583,7 +641,15 @@ export function EmployeeEditDrawer({ open, employeeId, employees, onClose, onSav
   );
 }
 
-function ReadonlyMeta({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function ReadonlyMeta({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <div>
       <span className="text-gray-400">{label}</span>
@@ -593,10 +659,6 @@ function ReadonlyMeta({ label, value, mono = false }: { label: string; value: st
     </div>
   );
 }
-
-
-
-
 
 function TagSection({ title, items, empty }: { title: string; items: string[]; empty: string }) {
   return (
@@ -609,7 +671,10 @@ function TagSection({ title, items, empty }: { title: string; items: string[]; e
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {items.map((item) => (
-            <span key={item} className="inline-flex px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">
+            <span
+              key={item}
+              className="inline-flex px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700"
+            >
               {item}
             </span>
           ))}

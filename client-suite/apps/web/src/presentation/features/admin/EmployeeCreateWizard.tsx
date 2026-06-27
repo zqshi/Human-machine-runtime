@@ -23,12 +23,7 @@ import {
   STEPS,
   type Step,
 } from './EmployeeCreateWizard.helpers';
-import {
-  CapabilityRow,
-  EmptyBlock,
-  LoadingBlock,
-  Summary,
-} from './EmployeeCreateWizard.parts';
+import { CapabilityRow, EmptyBlock, LoadingBlock, Summary } from './EmployeeCreateWizard.parts';
 
 interface EmployeeCreateWizardProps {
   open: boolean;
@@ -100,7 +95,8 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
   const currentStepIndex = STEPS.findIndex((s) => s.key === step);
 
   const selectedToolNames = useMemo(
-    () => tools.filter((t) => draft.capabilities.toolDefinitionIds.includes(t.id)).map((t) => t.name),
+    () =>
+      tools.filter((t) => draft.capabilities.toolDefinitionIds.includes(t.id)).map((t) => t.name),
     [draft.capabilities.toolDefinitionIds, tools]
   );
   const selectedSkillNames = useMemo(
@@ -142,13 +138,15 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
     try {
       const result = await skillApi.list({ status: 'active' });
       setSkills(
-        result.skills.map((item) => ({
-          id: String(item.id || ''),
-          name: String(item.name || item.title || item.id || '未命名 Skill'),
-          description: item.description ? String(item.description) : undefined,
-          category: item.category ? String(item.category) : undefined,
-          status: item.status ? String(item.status) : undefined,
-        })).filter((item) => item.id)
+        result.skills
+          .map((item) => ({
+            id: String(item.id || ''),
+            name: String(item.name || item.title || item.id || '未命名 Skill'),
+            description: item.description ? String(item.description) : undefined,
+            category: item.category ? String(item.category) : undefined,
+            status: item.status ? String(item.status) : undefined,
+          }))
+          .filter((item) => item.id)
       );
     } catch (e) {
       setSkills([]);
@@ -223,7 +221,11 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
 
   const canProceed = (): boolean => {
     if (step === 'basic') {
-      return draft.basic.name.trim().length > 0 && draft.basic.channelId.trim().length > 0 && draft.basic.systemPrompt.trim().length > 0;
+      return (
+        draft.basic.name.trim().length > 0 &&
+        draft.basic.channelId.trim().length > 0 &&
+        draft.basic.systemPrompt.trim().length > 0
+      );
     }
     if (step === 'version') return draft.version.versionName.trim().length > 0;
     return true;
@@ -282,17 +284,18 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
       reset();
       onSuccess();
       if (result.warnings.length > 0) {
-        useToastStore.getState().addToast(
-          `创建成功，但有 ${result.warnings.length} 项后续配置未完成`,
-          'info'
-        );
+        useToastStore
+          .getState()
+          .addToast(`创建成功，但有 ${result.warnings.length} 项后续配置未完成`, 'info');
       } else {
-        useToastStore.getState().addToast(
-          draft.evaluation.suiteId && draft.evaluation.runBaselineAfterCreate
-            ? '组织数字员工创建成功，基线评测已启动，可在评测看板查看运行记录'
-            : '组织数字员工创建成功',
-          'success'
-        );
+        useToastStore
+          .getState()
+          .addToast(
+            draft.evaluation.suiteId && draft.evaluation.runBaselineAfterCreate
+              ? '组织数字员工创建成功，基线评测已启动，可在评测看板查看运行记录'
+              : '组织数字员工创建成功',
+            'success'
+          );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建失败');
@@ -369,7 +372,11 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-1">
             <label className={labelCls}>绑定 Channel 应用 *</label>
-            <button type="button" onClick={loadChannels} className="text-xs text-[#007AFF] hover:underline">
+            <button
+              type="button"
+              onClick={loadChannels}
+              className="text-xs text-[#007AFF] hover:underline"
+            >
               刷新应用
             </button>
           </div>
@@ -378,7 +385,11 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
           ) : channelsError ? (
             renderLoadError(channelsError, loadChannels)
           ) : channels.length === 0 ? (
-            <EmptyBlock icon="radio" title="暂无 Channel 应用" desc="请先在 Channel 管理中新增应用配置" />
+            <EmptyBlock
+              icon="radio"
+              title="暂无 Channel 应用"
+              desc="请先在 Channel 管理中新增应用配置"
+            />
           ) : (
             <select
               value={draft.basic.channelId}
@@ -410,7 +421,9 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
             className={inputCls}
           >
             {RUNTIME_OPTIONS.map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
             ))}
           </select>
         </div>
@@ -422,7 +435,9 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
             className={inputCls}
           >
             {MODEL_OPTIONS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
             ))}
           </select>
         </div>
@@ -460,7 +475,9 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
           <label className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white text-sm">
             <span>
               <span className="block font-medium text-gray-700">启用记忆库</span>
-              <span className="block text-xs text-gray-400 mt-0.5">为每个用户独立存储记忆，实现千人千面</span>
+              <span className="block text-xs text-gray-400 mt-0.5">
+                为每个用户独立存储记忆，实现千人千面
+              </span>
             </span>
             <input
               type="checkbox"
@@ -473,11 +490,21 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
             <div className="mt-2">
               <label className={labelCls}>检索模式</label>
               <div className="grid grid-cols-3 gap-2">
-                {([
-                  { value: 'keyword', label: '关键词检索', desc: '模糊匹配，无需外部服务' },
-                  { value: 'vector', label: '向量语义检索', desc: 'WeKnora 语义搜索，需配置向量服务' },
-                  { value: 'hybrid', label: '混合检索', desc: '关键词 + 向量语义搜索，双通道加权' },
-                ] as const).map((opt) => (
+                {(
+                  [
+                    { value: 'keyword', label: '关键词检索', desc: '模糊匹配，无需外部服务' },
+                    {
+                      value: 'vector',
+                      label: '向量语义检索',
+                      desc: 'WeKnora 语义搜索，需配置向量服务',
+                    },
+                    {
+                      value: 'hybrid',
+                      label: '混合检索',
+                      desc: '关键词 + 向量语义搜索，双通道加权',
+                    },
+                  ] as const
+                ).map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -516,13 +543,22 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
     <div className="space-y-5">
       <div className="flex items-center justify-between text-xs text-gray-500">
         <span>选择真实工具和 Skill。加载失败时不使用本地假数据。</span>
-        <span>已选 {draft.capabilities.toolDefinitionIds.length} 工具 / {draft.capabilities.skillIds.length} Skill</span>
+        <span>
+          已选 {draft.capabilities.toolDefinitionIds.length} 工具 /{' '}
+          {draft.capabilities.skillIds.length} Skill
+        </span>
       </div>
 
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium text-gray-800">工具 Tools</h4>
-          <button type="button" onClick={loadTools} className="text-xs text-[#007AFF] hover:underline">刷新</button>
+          <button
+            type="button"
+            onClick={loadTools}
+            className="text-xs text-[#007AFF] hover:underline"
+          >
+            刷新
+          </button>
         </div>
         {toolsLoading ? (
           <LoadingBlock />
@@ -549,14 +585,24 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium text-gray-800">Skill</h4>
-          <button type="button" onClick={loadSkills} className="text-xs text-[#007AFF] hover:underline">刷新</button>
+          <button
+            type="button"
+            onClick={loadSkills}
+            className="text-xs text-[#007AFF] hover:underline"
+          >
+            刷新
+          </button>
         </div>
         {skillsLoading ? (
           <LoadingBlock />
         ) : skillsError ? (
           renderLoadError(skillsError, loadSkills)
         ) : skills.length === 0 ? (
-          <EmptyBlock icon="extension" title="暂无可用 Skill" desc="请先在技能管理中创建或导入 Skill" />
+          <EmptyBlock
+            icon="extension"
+            title="暂无可用 Skill"
+            desc="请先在技能管理中创建或导入 Skill"
+          />
         ) : (
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {skills.map((skill) => (
@@ -662,8 +708,19 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
         </div>
       </div>
       <div className="space-y-3">
-        <Summary title="基础信息" items={[draft.basic.name || '-', draft.basic.department || '未指定部门', draft.basic.channelName || '未绑定应用', draft.basic.modelId]} />
-        <Summary title="能力配置" items={[`${selectedToolNames.length} 个工具`, `${selectedSkillNames.length} 个 Skill`]} />
+        <Summary
+          title="基础信息"
+          items={[
+            draft.basic.name || '-',
+            draft.basic.department || '未指定部门',
+            draft.basic.channelName || '未绑定应用',
+            draft.basic.modelId,
+          ]}
+        />
+        <Summary
+          title="能力配置"
+          items={[`${selectedToolNames.length} 个工具`, `${selectedSkillNames.length} 个 Skill`]}
+        />
         <Summary
           title="评测与版本"
           items={[
@@ -688,7 +745,9 @@ export function EmployeeCreateWizard({ open, onClose, onSuccess }: EmployeeCreat
       <div className="flex flex-col h-full max-h-[80vh]">
         {renderStepIndicator()}
         <div className="flex-1 overflow-y-auto pr-1 min-h-0">{renderStepContent()}</div>
-        {error && <div className="mt-3 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
+        {error && (
+          <div className="mt-3 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>
+        )}
         <div className="flex justify-between items-center pt-4 mt-2 border-t border-gray-100">
           <button
             type="button"

@@ -64,10 +64,7 @@ export type {
   AppCatalogItem,
 } from '../../infrastructure/api/hmrApiClient';
 
-export type {
-  CockpitConfig,
-  ConfigSnapshot,
-} from '../../infrastructure/api/cockpitAdminApiClient';
+export type { CockpitConfig, ConfigSnapshot } from '../../infrastructure/api/cockpitAdminApiClient';
 
 export type { WorkspaceDTO } from '../../infrastructure/api/cockpitWorkspaceApiClient';
 

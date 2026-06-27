@@ -10,7 +10,11 @@ import type { GoalStatus, GoalPriority } from '../../../domain/agent/UserGoal';
 
 const STATUS_STYLES: Record<GoalStatus, { label: string; color: string; bg: string }> = {
   active: { label: '进行中', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
-  paused: { label: '已暂停', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+  paused: {
+    label: '已暂停',
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-500/10 border-yellow-500/20',
+  },
   completed: { label: '已完成', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
   archived: { label: '已归档', color: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/20' },
   cancelled: { label: '已取消', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
@@ -54,7 +58,9 @@ export function GoalTrackerContent() {
   const setActiveGoalId = useCockpitStore((s) => s.setActiveGoal);
 
   const activeGoals = goals.filter((g) => g.status === 'active' || g.status === 'paused');
-  const completedGoals = goals.filter((g) => g.status === 'completed' || g.status === 'archived' || g.status === 'cancelled');
+  const completedGoals = goals.filter(
+    (g) => g.status === 'completed' || g.status === 'archived' || g.status === 'cancelled'
+  );
 
   return (
     <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 pb-4 space-y-4">
@@ -127,7 +133,10 @@ function GoalCard({
       {/* Header */}
       <button
         type="button"
-        onClick={() => { onSelect(); setExpanded(!expanded); }}
+        onClick={() => {
+          onSelect();
+          setExpanded(!expanded);
+        }}
         className="w-full px-3 py-2.5 text-left"
       >
         <div className="flex items-start gap-2">
@@ -135,16 +144,21 @@ function GoalCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-medium text-slate-200 truncate">{goal.title}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${style.bg} ${style.color}`}>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${style.bg} ${style.color}`}
+              >
                 {style.label}
               </span>
             </div>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] text-slate-500">
-                {goal.milestones.filter((m) => m.status === 'completed').length}/{goal.milestones.length} 里程碑
+                {goal.milestones.filter((m) => m.status === 'completed').length}/
+                {goal.milestones.length} 里程碑
               </span>
               {goal.deadline && (
-                <span className={`text-[10px] ${goal.isOverdue ? 'text-red-400' : 'text-slate-500'}`}>
+                <span
+                  className={`text-[10px] ${goal.isOverdue ? 'text-red-400' : 'text-slate-500'}`}
+                >
                   {formatDeadline(goal.deadline)}
                 </span>
               )}
@@ -172,11 +186,15 @@ function GoalCard({
                 return (
                   <div key={ms.id} className="flex items-center gap-2">
                     <Icon name={msStyle.icon} size={14} className={msStyle.color} />
-                    <span className={`text-[11px] flex-1 ${ms.status === 'completed' ? 'text-slate-400 line-through' : ms.status === 'active' ? 'text-slate-200 font-medium' : 'text-slate-500'}`}>
+                    <span
+                      className={`text-[11px] flex-1 ${ms.status === 'completed' ? 'text-slate-400 line-through' : ms.status === 'active' ? 'text-slate-200 font-medium' : 'text-slate-500'}`}
+                    >
                       {ms.name}
                     </span>
                     {ms.completedAt && (
-                      <span className="text-[10px] text-slate-600">{formatTimeAgo(ms.completedAt)}</span>
+                      <span className="text-[10px] text-slate-600">
+                        {formatTimeAgo(ms.completedAt)}
+                      </span>
                     )}
                   </div>
                 );
@@ -189,15 +207,22 @@ function GoalCard({
             <div>
               <span className="text-[10px] font-medium text-slate-400 block mb-1.5">进展</span>
               <div className="space-y-2">
-                {goal.progressUpdates.slice(-5).reverse().map((update, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-1.5 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] text-slate-300 leading-relaxed">{update.message}</p>
-                      <p className="text-[10px] text-slate-600 mt-0.5">{formatTimeAgo(update.timestamp)}</p>
+                {goal.progressUpdates
+                  .slice(-5)
+                  .reverse()
+                  .map((update, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-1.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {update.message}
+                        </p>
+                        <p className="text-[10px] text-slate-600 mt-0.5">
+                          {formatTimeAgo(update.timestamp)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}

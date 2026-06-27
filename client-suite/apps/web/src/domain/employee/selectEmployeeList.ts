@@ -64,7 +64,7 @@ export const EMPTY_EMPLOYEE_FILTERS: EmployeeListFilters = {
  */
 export function selectFilteredEmployees(
   employees: Employee[],
-  filters: EmployeeListFilters,
+  filters: EmployeeListFilters
 ): Employee[] {
   return employees
     .filter((e) => {

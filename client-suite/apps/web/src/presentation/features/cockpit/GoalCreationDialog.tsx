@@ -297,7 +297,10 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                   <input
                     value={newConstraintDesc}
                     onChange={(e) => setNewConstraintDesc(e.target.value)}
-                    onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') addConstraint(); }}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') addConstraint();
+                    }}
                     placeholder="输入约束描述"
                     className="w-full h-9 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
                   />
@@ -354,7 +357,10 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                   <input
                     value={newAutoExec}
                     onChange={(e) => setNewAutoExec(e.target.value)}
-                    onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') addAutoExec(); }}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') addAutoExec();
+                    }}
                     placeholder="例：缓存刷新、日志清理"
                     className="flex-1 h-8 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
                   />
@@ -394,7 +400,10 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                   <input
                     value={newRequireOwner}
                     onChange={(e) => setNewRequireOwner(e.target.value)}
-                    onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') addRequireOwner(); }}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') addRequireOwner();
+                    }}
                     placeholder="例：预算超支、人员变更"
                     className="flex-1 h-8 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
                   />
@@ -454,7 +463,10 @@ export function GoalCreationDialog({ open, onClose }: Props) {
                   <input
                     value={newMeasure}
                     onChange={(e) => setNewMeasure(e.target.value)}
-                    onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') addCriteria(); }}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                      if (e.key === 'Enter') addCriteria();
+                    }}
                     placeholder="度量方式（可选）"
                     className="flex-1 h-8 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary/50"
                   />

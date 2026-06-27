@@ -130,9 +130,7 @@ export const cockpitStatisticsApi = {
   topUserSpend(limit?: number): Promise<{
     users: { userId: string; count: number; totalTokens: number; estimatedCost: number }[];
   }> {
-    return request(
-      `/api/admin/cockpit/statistics/top-user-spend${limit ? `?limit=${limit}` : ''}`
-    );
+    return request(`/api/admin/cockpit/statistics/top-user-spend${limit ? `?limit=${limit}` : ''}`);
   },
   latency(days?: number): Promise<{ days: string[]; p50: number[]; p95: number[]; avg: number[] }> {
     return request(`/api/admin/cockpit/statistics/latency${days ? `?days=${days}` : ''}`);

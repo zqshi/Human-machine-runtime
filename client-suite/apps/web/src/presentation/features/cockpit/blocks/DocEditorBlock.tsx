@@ -13,7 +13,13 @@ interface Props {
   onOpen: (content: CockpitDrawerContent) => void;
 }
 
-export function DocEditorBlockComponent({ docId, docTitle, sectionsReady: initReady, totalSections: initTotal, onOpen }: Props) {
+export function DocEditorBlockComponent({
+  docId,
+  docTitle,
+  sectionsReady: initReady,
+  totalSections: initTotal,
+  onOpen,
+}: Props) {
   const doc = useCockpitStore((s) => s.documents.find((d) => d.id === docId));
   const sections = doc?.sections ?? [];
   const doneCount = sections.filter((s) => s.status === 'done').length;
@@ -33,12 +39,20 @@ export function DocEditorBlockComponent({ docId, docTitle, sectionsReady: initRe
           <Icon name="description" size={16} className="text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold text-slate-200 truncate">{doc?.title ?? docTitle}</div>
+          <div className="text-xs font-semibold text-slate-200 truncate">
+            {doc?.title ?? docTitle}
+          </div>
           <div className="text-[10px] text-slate-500">
-            {isComplete ? '文档已生成，可编辑' : writingSection ? `正在撰写: ${writingSection.title}` : '准备中...'}
+            {isComplete
+              ? '文档已生成，可编辑'
+              : writingSection
+                ? `正在撰写: ${writingSection.title}`
+                : '准备中...'}
           </div>
         </div>
-        <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${isComplete ? 'text-emerald-400 bg-emerald-400/10' : 'text-amber-400 bg-amber-400/10'}`}>
+        <span
+          className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${isComplete ? 'text-emerald-400 bg-emerald-400/10' : 'text-amber-400 bg-amber-400/10'}`}
+        >
           {isComplete ? '已完成' : `${ready}/${total}`}
         </span>
       </div>
@@ -50,7 +64,12 @@ export function DocEditorBlockComponent({ docId, docTitle, sectionsReady: initRe
             key={i}
             className="flex-1 h-1 rounded-full transition-all"
             style={{
-              backgroundColor: s.status === 'done' ? '#34C759' : s.status === 'writing' ? '#FF9500' : 'rgba(255,255,255,0.08)',
+              backgroundColor:
+                s.status === 'done'
+                  ? '#34C759'
+                  : s.status === 'writing'
+                    ? '#FF9500'
+                    : 'rgba(255,255,255,0.08)',
             }}
           />
         ))}
@@ -59,11 +78,20 @@ export function DocEditorBlockComponent({ docId, docTitle, sectionsReady: initRe
       <div className="flex items-center justify-between px-1">
         <div className="flex gap-2">
           {sections.slice(0, 4).map((s, i) => (
-            <span key={i} className="text-[9px]" style={{ color: s.status === 'done' ? '#34C759' : s.status === 'writing' ? '#FF9500' : '#475569' }}>
+            <span
+              key={i}
+              className="text-[9px]"
+              style={{
+                color:
+                  s.status === 'done' ? '#34C759' : s.status === 'writing' ? '#FF9500' : '#475569',
+              }}
+            >
               {s.status === 'done' ? '✓' : s.status === 'writing' ? '✎' : '○'} {s.title}
             </span>
           ))}
-          {sections.length > 4 && <span className="text-[9px] text-slate-500">+{sections.length - 4}</span>}
+          {sections.length > 4 && (
+            <span className="text-[9px] text-slate-500">+{sections.length - 4}</span>
+          )}
         </div>
         <span className="text-[10px] text-primary">打开文档 →</span>
       </div>

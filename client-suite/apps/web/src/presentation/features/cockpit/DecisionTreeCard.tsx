@@ -42,9 +42,15 @@ export function DecisionTreeCard({ tree, onFollowUp }: DecisionTreeCardProps) {
         <span className="text-[10px] text-slate-500">决策链路</span>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-slate-500">置信度</span>
-          <span className={`text-xs font-semibold ${
-            tree.confidence >= 90 ? 'text-green-400' : tree.confidence >= 70 ? 'text-blue-400' : 'text-yellow-400'
-          }`}>
+          <span
+            className={`text-xs font-semibold ${
+              tree.confidence >= 90
+                ? 'text-green-400'
+                : tree.confidence >= 70
+                  ? 'text-blue-400'
+                  : 'text-yellow-400'
+            }`}
+          >
             {tree.confidence}%
           </span>
         </div>
@@ -65,7 +71,9 @@ export function DecisionTreeCard({ tree, onFollowUp }: DecisionTreeCardProps) {
               )}
 
               {/* Node icon */}
-              <div className={`w-[30px] h-[30px] rounded-lg border ${statusStyle.ring} flex items-center justify-center shrink-0 relative z-10`}>
+              <div
+                className={`w-[30px] h-[30px] rounded-lg border ${statusStyle.ring} flex items-center justify-center shrink-0 relative z-10`}
+              >
                 <Icon name={typeConfig.icon} size={16} className={statusStyle.color} />
               </div>
 
@@ -73,7 +81,9 @@ export function DecisionTreeCard({ tree, onFollowUp }: DecisionTreeCardProps) {
               <div className="min-w-0 flex-1 pb-4">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-medium ${statusStyle.color}`}>{node.label}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-500">{typeConfig.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-500">
+                    {typeConfig.label}
+                  </span>
                   {node.status === 'active' && (
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                   )}
@@ -84,7 +94,10 @@ export function DecisionTreeCard({ tree, onFollowUp }: DecisionTreeCardProps) {
                 {node.metadata && Object.keys(node.metadata).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {Object.entries(node.metadata).map(([key, value]) => (
-                      <span key={key} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500">
+                      <span
+                        key={key}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500"
+                      >
                         {key}: {value}
                       </span>
                     ))}

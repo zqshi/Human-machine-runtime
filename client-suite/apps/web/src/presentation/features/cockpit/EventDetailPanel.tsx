@@ -14,11 +14,19 @@ import { useCockpitStore } from '../../../application/stores/cockpitStore';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { Icon } from '../../components/ui/Icon';
 import { CoTMessage } from '../../../domain/agent/CoTMessage';
-import type { Confidence, ReasoningStep, ContextMessage } from '../../../domain/notification/Notification';
+import type {
+  Confidence,
+  ReasoningStep,
+  ContextMessage,
+} from '../../../domain/notification/Notification';
 
 const CHANNEL_COLORS: Record<string, string> = {
-  lark: '#34C759', email: '#007AFF', slack: '#FF3B30',
-  matrix: '#AF52DE', wechat: '#07C160', teams: '#6264A7',
+  lark: '#34C759',
+  email: '#007AFF',
+  slack: '#FF3B30',
+  matrix: '#AF52DE',
+  wechat: '#07C160',
+  teams: '#6264A7',
 };
 
 const CONFIDENCE_CONFIG: Record<Confidence, { label: string; color: string; bgColor: string }> = {
@@ -28,8 +36,12 @@ const CONFIDENCE_CONFIG: Record<Confidence, { label: string; color: string; bgCo
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
-  lark: '飞书', email: '邮件', slack: 'Slack',
-  matrix: 'Matrix', wechat: '微信', teams: 'Teams',
+  lark: '飞书',
+  email: '邮件',
+  slack: 'Slack',
+  matrix: 'Matrix',
+  wechat: '微信',
+  teams: 'Teams',
 };
 
 function formatTime(ts: number): string {
@@ -75,23 +87,37 @@ function formatEmailDate(ts: string): string {
 }
 
 /** 单封邮件渲染（主邮件 + 邮件线程中的历史邮件） */
-function EmailMessage({ msg, isMain }: { msg: { senderName: string; body: string; timestamp: number }; isMain?: boolean }) {
+function EmailMessage({
+  msg,
+  isMain,
+}: {
+  msg: { senderName: string; body: string; timestamp: number };
+  isMain?: boolean;
+}) {
   return (
-    <div className={`rounded-lg border px-3 py-2.5 ${isMain ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.04]'}`}>
+    <div
+      className={`rounded-lg border px-3 py-2.5 ${isMain ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.04]'}`}
+    >
       {/* 邮件头：发件人 + 时间 */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center shrink-0">
             <span className="text-[9px] font-bold text-slate-300">{msg.senderName[0]}</span>
           </div>
-          <span className={`text-[11px] font-medium ${isMain ? 'text-slate-200' : 'text-slate-400'}`}>{msg.senderName}</span>
+          <span
+            className={`text-[11px] font-medium ${isMain ? 'text-slate-200' : 'text-slate-400'}`}
+          >
+            {msg.senderName}
+          </span>
         </div>
-        <span className="text-[9px] text-slate-600 shrink-0">
-          {formatTime(msg.timestamp)}
-        </span>
+        <span className="text-[9px] text-slate-600 shrink-0">{formatTime(msg.timestamp)}</span>
       </div>
       {/* 邮件正文 */}
-      <p className={`text-[11px] leading-relaxed whitespace-pre-line ${isMain ? 'text-slate-100' : 'text-slate-400'}`}>{msg.body}</p>
+      <p
+        className={`text-[11px] leading-relaxed whitespace-pre-line ${isMain ? 'text-slate-100' : 'text-slate-400'}`}
+      >
+        {msg.body}
+      </p>
     </div>
   );
 }
@@ -221,12 +247,14 @@ export function EventDetailPanel() {
         role: 'agent',
         text: `已通过 ${channelLabel} 渠道发送回复给 ${notification.sender.name}。`,
         timestamp: Date.now(),
-        cotSteps: [{
-          id: `s-${Date.now()}`,
-          label: '回复发送完成',
-          status: 'done',
-          detail: `已将回复通过 ${channelLabel} 渠道送达 ${notification.sender.name}`,
-        }],
+        cotSteps: [
+          {
+            id: `s-${Date.now()}`,
+            label: '回复发送完成',
+            status: 'done',
+            detail: `已将回复通过 ${channelLabel} 渠道送达 ${notification.sender.name}`,
+          },
+        ],
       });
       store.appendMessage(botMsg);
 
@@ -273,7 +301,9 @@ export function EventDetailPanel() {
           className="w-2.5 h-2.5 rounded-sm shrink-0"
           style={{ backgroundColor: channelColor }}
         />
-        <span className="text-xs font-medium text-slate-200 truncate flex-1">{notification.sender.name}</span>
+        <span className="text-xs font-medium text-slate-200 truncate flex-1">
+          {notification.sender.name}
+        </span>
         <span className="text-[9px] text-slate-500 shrink-0">{channelLabel}</span>
         <button
           type="button"
@@ -310,9 +340,13 @@ export function EventDetailPanel() {
             <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                  <span className="text-[9px] font-bold text-slate-300">{notification.sender.name[0]}</span>
+                  <span className="text-[9px] font-bold text-slate-300">
+                    {notification.sender.name[0]}
+                  </span>
                 </div>
-                <span className="text-[11px] font-medium text-slate-300">{notification.sender.name}</span>
+                <span className="text-[11px] font-medium text-slate-300">
+                  {notification.sender.name}
+                </span>
               </div>
               <p className="text-sm text-slate-100 leading-relaxed">{notification.body}</p>
             </div>
@@ -323,17 +357,30 @@ export function EventDetailPanel() {
                 <div className="flex items-center gap-2 mb-2">
                   <Icon name="chat" size={12} className="text-slate-500" />
                   <span className="text-[10px] font-medium text-slate-400">对话上下文</span>
-                  <span className="text-[10px] text-slate-600">({notification.contextMessages.length})</span>
+                  <span className="text-[10px] text-slate-600">
+                    ({notification.contextMessages.length})
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {notification.contextMessages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed ${
-                        msg.isOwn ? 'bg-primary/10 text-slate-200' : 'bg-white/[0.04] text-slate-300'
-                      }`}>
-                        <p className="text-[9px] font-medium mb-0.5 text-slate-400">{msg.senderName}</p>
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed ${
+                          msg.isOwn
+                            ? 'bg-primary/10 text-slate-200'
+                            : 'bg-white/[0.04] text-slate-300'
+                        }`}
+                      >
+                        <p className="text-[9px] font-medium mb-0.5 text-slate-400">
+                          {msg.senderName}
+                        </p>
                         <p>{msg.body}</p>
-                        <p className="text-[9px] text-slate-600 mt-0.5">{formatTime(msg.timestamp)}</p>
+                        <p className="text-[9px] text-slate-600 mt-0.5">
+                          {formatTime(msg.timestamp)}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -348,15 +395,21 @@ export function EventDetailPanel() {
       <div className="border-t border-white/10 shrink-0">
         {/* Escalation banner — when Agent needs human intervention */}
         {needsHuman && (
-          <div className="px-4 py-2.5 border-b border-white/[0.06]" style={{ backgroundColor: 'rgba(255,149,0,0.06)' }}>
+          <div
+            className="px-4 py-2.5 border-b border-white/[0.06]"
+            style={{ backgroundColor: 'rgba(255,149,0,0.06)' }}
+          >
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
               <span className="text-[11px] font-semibold text-orange-400">需要人工介入</span>
               {confidence && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{
-                  color: CONFIDENCE_CONFIG[confidence].color,
-                  backgroundColor: CONFIDENCE_CONFIG[confidence].bgColor,
-                }}>
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{
+                    color: CONFIDENCE_CONFIG[confidence].color,
+                    backgroundColor: CONFIDENCE_CONFIG[confidence].bgColor,
+                  }}
+                >
                   Agent 置信度: {CONFIDENCE_CONFIG[confidence].label}
                 </span>
               )}
@@ -366,36 +419,58 @@ export function EventDetailPanel() {
             </p>
             {reasoningSteps.length > 0 && (
               <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] p-2 mb-2">
-                <div className="text-[9px] font-semibold text-orange-400 mb-1.5">Agent 执行过程</div>
+                <div className="text-[9px] font-semibold text-orange-400 mb-1.5">
+                  Agent 执行过程
+                </div>
                 {reasoningSteps.map((step, i) => (
                   <div key={i} className="flex items-start gap-2 mb-1 last:mb-0">
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 mt-0.5" style={{
-                      backgroundColor: 'rgba(52,199,89,0.15)',
-                      color: '#34C759',
-                    }}>{i + 1}</div>
+                    <div
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 mt-0.5"
+                      style={{
+                        backgroundColor: 'rgba(52,199,89,0.15)',
+                        color: '#34C759',
+                      }}
+                    >
+                      {i + 1}
+                    </div>
                     <div>
                       <div className="text-[10px] text-slate-300">{step.label}</div>
-                      {step.detail && <div className="text-[9px] text-slate-500">{step.detail}</div>}
+                      {step.detail && (
+                        <div className="text-[9px] text-slate-500">{step.detail}</div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             )}
             <div className="flex gap-1.5">
-              <button type="button" onClick={handleAccept} disabled={!draft || isAccepting}
-                className="flex-1 h-6 rounded-md bg-primary text-[10px] text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-1">
-                <Icon name={isAccepting ? 'hourglass_top' : 'check'} size={12} />{isAccepting ? '发送中' : '采纳 Agent 建议'}
+              <button
+                type="button"
+                onClick={handleAccept}
+                disabled={!draft || isAccepting}
+                className="flex-1 h-6 rounded-md bg-primary text-[10px] text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-1"
+              >
+                <Icon name={isAccepting ? 'hourglass_top' : 'check'} size={12} />
+                {isAccepting ? '发送中' : '采纳 Agent 建议'}
               </button>
               {draft && (
-                <button type="button" onClick={handleEdit}
-                  className="flex-1 h-6 rounded-md border border-primary/30 text-[10px] text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1">
-                  <Icon name="edit" size={12} />修改后回复
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="flex-1 h-6 rounded-md border border-primary/30 text-[10px] text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Icon name="edit" size={12} />
+                  修改后回复
                 </button>
               )}
-              <button type="button" onClick={handleDelegate}
+              <button
+                type="button"
+                onClick={handleDelegate}
                 className="h-6 px-2 rounded-md border border-white/10 text-[10px] text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
-                title="委托 Agent 自动处理">
-                <Icon name="smart_toy" size={12} />委托
+                title="委托 Agent 自动处理"
+              >
+                <Icon name="smart_toy" size={12} />
+                委托
               </button>
             </div>
           </div>
@@ -403,112 +478,117 @@ export function EventDetailPanel() {
 
         {/* Agent suggestion block (仅非邮件 & 非 needs-human 类型，needs-human 已在上方 banner 显示) */}
         {!isEmail && !needsHuman && notification.agentReaction && (
-            <div className="px-4 py-2.5 border-b border-white/[0.06]">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Icon name="smart_toy" size={12} className="text-primary" />
-                  <span className="text-[10px] font-semibold text-primary">Agent 建议</span>
-                </div>
-                {confidence && (
-                  <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{
-                      color: CONFIDENCE_CONFIG[confidence].color,
-                      backgroundColor: CONFIDENCE_CONFIG[confidence].bgColor,
-                    }}
-                  >
-                    {CONFIDENCE_CONFIG[confidence].label}
-                  </span>
-                )}
+          <div className="px-4 py-2.5 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Icon name="smart_toy" size={12} className="text-primary" />
+                <span className="text-[10px] font-semibold text-primary">Agent 建议</span>
               </div>
+              {confidence && (
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{
+                    color: CONFIDENCE_CONFIG[confidence].color,
+                    backgroundColor: CONFIDENCE_CONFIG[confidence].bgColor,
+                  }}
+                >
+                  {CONFIDENCE_CONFIG[confidence].label}
+                </span>
+              )}
+            </div>
 
-              <p className="text-[10px] text-slate-400">{notification.agentReaction.summary}</p>
+            <p className="text-[10px] text-slate-400">{notification.agentReaction.summary}</p>
 
-              <ReasoningChain steps={reasoningSteps} />
+            <ReasoningChain steps={reasoningSteps} />
 
+            {draft && (
+              <div className="mt-1.5">
+                <div className="rounded-lg border border-dashed border-primary/20 bg-primary/[0.03] px-2.5 py-1.5">
+                  <p className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line">
+                    {draft}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Suggested actions — data-driven chips */}
+            {suggestedActions.length > 0 && (
+              <div className="mt-2">
+                <div className="flex flex-wrap gap-1">
+                  {suggestedActions.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => useCockpitStore.getState().setComposerPrefill(action.command)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] hover:border-primary/20 transition-colors"
+                    >
+                      <Icon name={action.icon} size={11} />
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-1.5 mt-1.5">
+              <button
+                type="button"
+                onClick={handleAccept}
+                disabled={!draft || isAccepting}
+                className="flex-1 h-6 rounded-md bg-primary text-[10px] text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-1"
+              >
+                <Icon name={isAccepting ? 'hourglass_top' : 'check'} size={12} />
+                {isAccepting ? '发送中' : '采纳'}
+              </button>
               {draft && (
-                <div className="mt-1.5">
-                  <div className="rounded-lg border border-dashed border-primary/20 bg-primary/[0.03] px-2.5 py-1.5">
-                    <p className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line">{draft}</p>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="flex-1 h-6 rounded-md border border-primary/30 text-[10px] text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Icon name="edit" size={12} />
+                  修改
+                </button>
               )}
-
-              {/* Suggested actions — data-driven chips */}
-              {suggestedActions.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex flex-wrap gap-1">
-                    {suggestedActions.map((action) => (
-                      <button
-                        key={action.id}
-                        type="button"
-                        onClick={() => useCockpitStore.getState().setComposerPrefill(action.command)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] hover:border-primary/20 transition-colors"
-                      >
-                        <Icon name={action.icon} size={11} />
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-1.5 mt-1.5">
-                <button
-                  type="button"
-                  onClick={handleAccept}
-                  disabled={!draft || isAccepting}
-                  className="flex-1 h-6 rounded-md bg-primary text-[10px] text-white font-medium hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-1"
-                >
-                  <Icon name={isAccepting ? 'hourglass_top' : 'check'} size={12} />
-                  {isAccepting ? '发送中' : '采纳'}
-                </button>
-                {draft && (
-                  <button
-                    type="button"
-                    onClick={handleEdit}
-                    className="flex-1 h-6 rounded-md border border-primary/30 text-[10px] text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Icon name="edit" size={12} />
-                    修改
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="h-6 px-2 rounded-md border border-white/10 text-[10px] text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Icon name="close" size={12} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="h-6 px-2 rounded-md border border-white/10 text-[10px] text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-1"
+              >
+                <Icon name="close" size={12} />
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Quick reply (仅非邮件类型) */}
-          {!isEmail && (
-            <div className="px-4 py-2.5 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="快速回复…"
-                  value={quickReply}
-                  onChange={(e) => setQuickReply(e.target.value)}
-                  onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter' && !e.shiftKey) handleQuickSend(); }}
-                  disabled={isQuickSending}
-                  className="flex-1 bg-white/[0.04] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-40"
-                />
-                <button
-                  type="button"
-                  onClick={handleQuickSend}
-                  disabled={!quickReply.trim() || isQuickSending}
-                  className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-white hover:bg-primary-dark transition-colors disabled:opacity-40 shrink-0"
-                >
-                  <Icon name="send" size={14} />
-                </button>
-              </div>
+        {/* Quick reply (仅非邮件类型) */}
+        {!isEmail && (
+          <div className="px-4 py-2.5 space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="快速回复…"
+                value={quickReply}
+                onChange={(e) => setQuickReply(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                  if (e.key === 'Enter' && !e.shiftKey) handleQuickSend();
+                }}
+                disabled={isQuickSending}
+                className="flex-1 bg-white/[0.04] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-40"
+              />
+              <button
+                type="button"
+                onClick={handleQuickSend}
+                disabled={!quickReply.trim() || isQuickSending}
+                className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-white hover:bg-primary-dark transition-colors disabled:opacity-40 shrink-0"
+              >
+                <Icon name="send" size={14} />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

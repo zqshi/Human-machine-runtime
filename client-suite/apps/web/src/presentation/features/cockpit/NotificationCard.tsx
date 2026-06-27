@@ -40,17 +40,12 @@ export function NotificationCard({ notification: n, selected, onClick }: Notific
     >
       <div className="flex items-center justify-between mb-0.5">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className="w-2 h-2 rounded-sm shrink-0"
-            style={{ backgroundColor: channelColor }}
-          />
+          <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: channelColor }} />
           <span className="text-xs font-medium text-slate-200 truncate">{n.title}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           <span className="text-[10px] text-slate-500">{relativeTime(n.timestamp)}</span>
-          {n.isUnread && (
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-          )}
+          {n.isUnread && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
         </div>
       </div>
       <p className="text-xs text-slate-400 line-clamp-1 pl-3.5">{n.body}</p>

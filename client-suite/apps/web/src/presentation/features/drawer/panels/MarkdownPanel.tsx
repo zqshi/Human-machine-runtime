@@ -47,7 +47,9 @@ export default function MarkdownPanel({ data, onChange }: PanelProps) {
             type="button"
             onClick={() => setViewMode(opt.mode)}
             className={`px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors ${
-              viewMode === opt.mode ? 'text-primary bg-primary/10 font-medium' : 'text-text-secondary hover:bg-bg-hover'
+              viewMode === opt.mode
+                ? 'text-primary bg-primary/10 font-medium'
+                : 'text-text-secondary hover:bg-bg-hover'
             }`}
             title={opt.title}
           >

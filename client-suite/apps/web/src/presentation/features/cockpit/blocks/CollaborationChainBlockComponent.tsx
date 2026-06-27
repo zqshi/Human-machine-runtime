@@ -14,7 +14,13 @@ interface Props {
   onOpen: (content: CockpitDrawerContent) => void;
 }
 
-export function CollaborationChainBlockComponent({ chainId, chainName, nodeCount, activeNodeName, onOpen }: Props) {
+export function CollaborationChainBlockComponent({
+  chainId,
+  chainName,
+  nodeCount,
+  activeNodeName,
+  onOpen,
+}: Props) {
   const chains = useCockpitStore((s) => s.collaborationChains);
   const chain = chains.find((c) => c.id === chainId);
   const progress = chain?.progress ?? 0;

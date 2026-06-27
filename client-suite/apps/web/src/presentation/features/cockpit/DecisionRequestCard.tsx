@@ -29,7 +29,12 @@ interface DecisionRequestCardProps {
   onDefer: () => void;
 }
 
-export function DecisionRequestCard({ decision, onAccept, onViewDetail, onDefer }: DecisionRequestCardProps) {
+export function DecisionRequestCard({
+  decision,
+  onAccept,
+  onViewDetail,
+  onDefer,
+}: DecisionRequestCardProps) {
   const urgency = URGENCY_STYLES[decision.urgency] ?? URGENCY_STYLES.normal;
 
   if (decision.responseStatus !== 'pending') {
@@ -45,7 +50,9 @@ export function DecisionRequestCard({ decision, onAccept, onViewDetail, onDefer 
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Icon name="check_circle" size={14} className="text-slate-500" />
           <span>{decision.title}</span>
-          <span className="text-[10px] text-slate-500">— {statusLabels[decision.responseStatus]}</span>
+          <span className="text-[10px] text-slate-500">
+            — {statusLabels[decision.responseStatus]}
+          </span>
         </div>
       </div>
     );

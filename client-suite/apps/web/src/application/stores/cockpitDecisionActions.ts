@@ -30,9 +30,7 @@ export function decisionActions(set: StoreSet, get: StoreGet) {
 
     respondToDecision(decisionId: string, updater: (d: DecisionRequest) => DecisionRequest) {
       set({
-        decisionRequests: get().decisionRequests.map((d) =>
-          d.id === decisionId ? updater(d) : d
-        ),
+        decisionRequests: get().decisionRequests.map((d) => (d.id === decisionId ? updater(d) : d)),
       });
       const updated = get().decisionRequests.find((d) => d.id === decisionId);
       if (updated) {

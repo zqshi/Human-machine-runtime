@@ -10,13 +10,7 @@ interface Props {
 
 const MAX_VISIBLE_ROWS = 5;
 
-export function DataTableBlockComponent({
-  title,
-  columns,
-  rows,
-  truncated,
-  onOpen,
-}: Props) {
+export function DataTableBlockComponent({ title, columns, rows, truncated, onOpen }: Props) {
   const visibleRows = rows.slice(0, MAX_VISIBLE_ROWS);
 
   return (
@@ -45,10 +39,7 @@ export function DataTableBlockComponent({
             {visibleRows.map((row, ri) => (
               <tr key={ri} className="border-b border-white/5 last:border-b-0">
                 {row.map((cell, ci) => (
-                  <td
-                    key={ci}
-                    className="px-3 py-1.5 text-slate-200 whitespace-nowrap"
-                  >
+                  <td key={ci} className="px-3 py-1.5 text-slate-200 whitespace-nowrap">
                     {cell}
                   </td>
                 ))}
@@ -63,9 +54,7 @@ export function DataTableBlockComponent({
         <button
           type="button"
           className="w-full px-3 py-2 text-[11px] text-primary hover:bg-white/[0.04] transition-colors text-center"
-          onClick={() =>
-            onOpen({ type: 'data-explorer', title, data: { columns, rows } })
-          }
+          onClick={() => onOpen({ type: 'data-explorer', title, data: { columns, rows } })}
         >
           查看完整数据 →
         </button>

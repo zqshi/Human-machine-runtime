@@ -67,27 +67,27 @@ describe('selectFilteredEmployees', () => {
   it('keyword 命中 id / name / displayName / matrixRoomId 任一', () => {
     expect(
       selectFilteredEmployees(baseEmployees, { ...EMPTY_EMPLOYEE_FILTERS, keyword: 'alpha' }).map(
-        (e) => e.id,
-      ),
+        (e) => e.id
+      )
     ).toEqual(['a']);
     expect(
       selectFilteredEmployees(baseEmployees, { ...EMPTY_EMPLOYEE_FILTERS, keyword: '甲' }).map(
-        (e) => e.id,
-      ),
+        (e) => e.id
+      )
     ).toEqual(['a']);
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         keyword: '!room-b',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['b']);
   });
 
   it('keyword 不区分大小写', () => {
     expect(
       selectFilteredEmployees(baseEmployees, { ...EMPTY_EMPLOYEE_FILTERS, keyword: 'BETA' }).map(
-        (e) => e.id,
-      ),
+        (e) => e.id
+      )
     ).toEqual(['b']);
   });
 
@@ -96,7 +96,7 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         agentType: 'cockpit',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['c', 'a']); // b 是 harness
   });
 
@@ -105,7 +105,7 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         clusterType: 'k8s',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['a']);
   });
 
@@ -114,25 +114,25 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         stateFilter: 'paused',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['c']);
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         deptFilter: 'ops',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['c', 'a']);
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         roleFilter: 'analyst',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['b']);
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         scopeFilter: 'personal',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['b']);
   });
 
@@ -142,7 +142,7 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         scopeFilter: 'organization',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['c', 'a']);
   });
 
@@ -151,7 +151,7 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         channelFilter: 'room-a',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['a']);
   });
 
@@ -160,22 +160,19 @@ describe('selectFilteredEmployees', () => {
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         nodeFilter: 'node-2',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['b']);
     expect(
       selectFilteredEmployees(baseEmployees, {
         ...EMPTY_EMPLOYEE_FILTERS,
         podFilter: 'pod-a',
-      }).map((e) => e.id),
+      }).map((e) => e.id)
     ).toEqual(['a']);
   });
 
   it('createdAt 缺失视为 0，排在最后', () => {
     const noDate = makeEmp({ id: 'z', name: 'z', createdAt: undefined });
-    const r = selectFilteredEmployees(
-      [...baseEmployees, noDate],
-      EMPTY_EMPLOYEE_FILTERS,
-    );
+    const r = selectFilteredEmployees([...baseEmployees, noDate], EMPTY_EMPLOYEE_FILTERS);
     expect(r[r.length - 1].id).toBe('z');
   });
 

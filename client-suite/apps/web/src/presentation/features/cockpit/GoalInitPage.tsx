@@ -442,7 +442,10 @@ export function GoalInitPage({ onOpenDrawer }: GoalInitPageProps) {
                       {(decomposeResult?.riskAnalysis ?? []).some((r) => r.level === 'high') && (
                         <span className="text-red-400 ml-1">
                           (含{' '}
-                          {(decomposeResult?.riskAnalysis ?? []).filter((r) => r.level === 'high').length}{' '}
+                          {
+                            (decomposeResult?.riskAnalysis ?? []).filter((r) => r.level === 'high')
+                              .length
+                          }{' '}
                           个高风险)
                         </span>
                       )}

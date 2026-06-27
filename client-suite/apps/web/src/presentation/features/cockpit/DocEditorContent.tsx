@@ -70,7 +70,8 @@ export function DocEditorContent({ data }: ContentProps) {
   if (!doc) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
-        <Icon name="error_outline" size={20} className="mr-2" />文档未找到
+        <Icon name="error_outline" size={20} className="mr-2" />
+        文档未找到
       </div>
     );
   }
@@ -81,12 +82,28 @@ export function DocEditorContent({ data }: ContentProps) {
       <div className="px-3 py-2 border-b border-white/[0.06] flex items-center gap-1 flex-wrap">
         <ToolBtn icon="format_bold" title="粗体" onClick={() => execCommand('bold')} />
         <ToolBtn icon="format_italic" title="斜体" onClick={() => execCommand('italic')} />
-        <ToolBtn icon="strikethrough_s" title="删除线" onClick={() => execCommand('strikeThrough')} />
+        <ToolBtn
+          icon="strikethrough_s"
+          title="删除线"
+          onClick={() => execCommand('strikeThrough')}
+        />
         <div className="w-px h-4 bg-white/10 mx-1" />
         <ToolBtn icon="title" title="标题" onClick={() => execCommand('formatBlock', 'h2')} />
-        <ToolBtn icon="format_list_bulleted" title="无序列表" onClick={() => execCommand('insertUnorderedList')} />
-        <ToolBtn icon="format_list_numbered" title="有序列表" onClick={() => execCommand('insertOrderedList')} />
-        <ToolBtn icon="format_quote" title="引用" onClick={() => execCommand('formatBlock', 'blockquote')} />
+        <ToolBtn
+          icon="format_list_bulleted"
+          title="无序列表"
+          onClick={() => execCommand('insertUnorderedList')}
+        />
+        <ToolBtn
+          icon="format_list_numbered"
+          title="有序列表"
+          onClick={() => execCommand('insertOrderedList')}
+        />
+        <ToolBtn
+          icon="format_quote"
+          title="引用"
+          onClick={() => execCommand('formatBlock', 'blockquote')}
+        />
         <ToolBtn icon="code" title="代码" onClick={() => execCommand('formatBlock', 'pre')} />
         <div className="flex-1" />
         {!isComplete && (
@@ -110,12 +127,22 @@ export function DocEditorContent({ data }: ContentProps) {
                 headings?.[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
               className={`w-full text-left px-3 py-1.5 text-[10px] transition-colors ${
-                activeSection === i ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/[0.03]'
+                activeSection === i
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-slate-400 hover:bg-white/[0.03]'
               }`}
             >
-              <span className="mr-1.5" style={{
-                color: s.status === 'done' ? '#34C759' : s.status === 'writing' ? '#FF9500' : '#475569',
-              }}>
+              <span
+                className="mr-1.5"
+                style={{
+                  color:
+                    s.status === 'done'
+                      ? '#34C759'
+                      : s.status === 'writing'
+                        ? '#FF9500'
+                        : '#475569',
+                }}
+              >
                 {s.status === 'done' ? '✓' : s.status === 'writing' ? '✎' : '○'}
               </span>
               {s.title}
@@ -140,22 +167,32 @@ export function DocEditorContent({ data }: ContentProps) {
 
       {/* Footer */}
       <div className="border-t border-white/[0.06] px-4 py-2 flex items-center gap-2">
-        <button type="button" onClick={handleExport}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] text-slate-400 hover:bg-white/[0.04] transition-colors">
-          <Icon name="download" size={12} />导出
+        <button
+          type="button"
+          onClick={handleExport}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] text-slate-400 hover:bg-white/[0.04] transition-colors"
+        >
+          <Icon name="download" size={12} />
+          导出
         </button>
-        <button type="button" onClick={() => {
-          if (editorRef.current && doc) {
-            navigator.clipboard.writeText(editorRef.current.innerText);
-            useToastStore.getState().addToast('已复制文本', 'success');
-          }
-        }}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] text-slate-400 hover:bg-white/[0.04] transition-colors">
-          <Icon name="content_copy" size={12} />复制
+        <button
+          type="button"
+          onClick={() => {
+            if (editorRef.current && doc) {
+              navigator.clipboard.writeText(editorRef.current.innerText);
+              useToastStore.getState().addToast('已复制文本', 'success');
+            }
+          }}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] text-slate-400 hover:bg-white/[0.04] transition-colors"
+        >
+          <Icon name="content_copy" size={12} />
+          复制
         </button>
         <div className="flex-1" />
         <span className="text-[9px] text-slate-600">
-          {doc.updatedAt ? `最后编辑 ${new Date(doc.updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : ''}
+          {doc.updatedAt
+            ? `最后编辑 ${new Date(doc.updatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+            : ''}
         </span>
       </div>
 

@@ -13,23 +13,43 @@ import type { PanelProps } from '../panelRegistry';
 import type { Extension } from '@codemirror/state';
 
 const LANG_LABELS: Record<string, string> = {
-  ts: 'TypeScript', tsx: 'TypeScript React', js: 'JavaScript', jsx: 'JavaScript React',
-  css: 'CSS', html: 'HTML', json: 'JSON', py: 'Python', go: 'Go', rs: 'Rust',
-  sql: 'SQL', sh: 'Shell', md: 'Markdown',
+  ts: 'TypeScript',
+  tsx: 'TypeScript React',
+  js: 'JavaScript',
+  jsx: 'JavaScript React',
+  css: 'CSS',
+  html: 'HTML',
+  json: 'JSON',
+  py: 'Python',
+  go: 'Go',
+  rs: 'Rust',
+  sql: 'SQL',
+  sh: 'Shell',
+  md: 'Markdown',
 };
 
 function detectLangExtension(fileName?: string): Extension[] {
   if (!fileName) return [javascript()];
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
   switch (ext) {
-    case 'ts': case 'tsx': return [javascript({ typescript: true, jsx: ext.includes('x') })];
-    case 'js': case 'jsx': return [javascript({ jsx: ext.includes('x') })];
-    case 'py': return [python()];
-    case 'html': return [html()];
-    case 'css': return [css()];
-    case 'json': return [json()];
-    case 'md': return [markdown()];
-    default: return [javascript()];
+    case 'ts':
+    case 'tsx':
+      return [javascript({ typescript: true, jsx: ext.includes('x') })];
+    case 'js':
+    case 'jsx':
+      return [javascript({ jsx: ext.includes('x') })];
+    case 'py':
+      return [python()];
+    case 'html':
+      return [html()];
+    case 'css':
+      return [css()];
+    case 'json':
+      return [json()];
+    case 'md':
+      return [markdown()];
+    default:
+      return [javascript()];
   }
 }
 
@@ -136,7 +156,12 @@ export default function CodePanel({ data, onChange }: PanelProps) {
               {langLabel}
             </span>
           )}
-          <button type="button" onClick={handleCopy} className="p-1 rounded hover:bg-bg-hover text-text-muted" title="复制代码">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="p-1 rounded hover:bg-bg-hover text-text-muted"
+            title="复制代码"
+          >
             <Icon name="content_copy" size={14} />
           </button>
         </div>

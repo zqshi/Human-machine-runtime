@@ -71,7 +71,7 @@ export function TaskDetailView() {
         role: 'user',
         text,
         timestamp: Date.now(),
-      }),
+      })
     );
     setInput('');
   };
@@ -91,7 +91,11 @@ export function TaskDetailView() {
           </button>
           <span className="text-xs font-medium text-slate-300">思维链分析：{task.name}</span>
           <div className="flex-1" />
-          <button type="button" onClick={() => toast('日志导出中...')} className="text-xs text-primary hover:underline flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => toast('日志导出中...')}
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
             <Icon name="download" size={14} />
             导出日志
           </button>
@@ -100,7 +104,10 @@ export function TaskDetailView() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto hmr-scrollbar px-6 py-4 space-y-3">
           {cotMessages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                   msg.role === 'user'
@@ -110,7 +117,9 @@ export function TaskDetailView() {
               >
                 {msg.text}
                 {msg.timestamp > 0 && (
-                  <span className="block text-[10px] text-slate-500 mt-1">{formatTimestamp(msg.timestamp)}</span>
+                  <span className="block text-[10px] text-slate-500 mt-1">
+                    {formatTimestamp(msg.timestamp)}
+                  </span>
                 )}
               </div>
             </div>
@@ -125,7 +134,10 @@ export function TaskDetailView() {
               placeholder="输入指令或提问..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.nativeEvent.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') handleSend(); }}
+              onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                if (e.key === 'Enter') handleSend();
+              }}
               className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 outline-none"
             />
             <button
@@ -150,14 +162,19 @@ export function TaskDetailView() {
           >
             <Icon name="arrow_back" size={18} />
           </button>
-          <span className="text-sm font-medium text-slate-100">{task.name} #{task.id}</span>
+          <span className="text-sm font-medium text-slate-100">
+            {task.name} #{task.id}
+          </span>
         </div>
 
         {/* Scrollable */}
         <div className="flex-1 overflow-y-auto hmr-scrollbar px-4 py-4 space-y-5">
           {/* Circular progress */}
           <div className="flex justify-center py-2">
-            <CircularProgress percent={task.progress} label={task.status === 'completed' ? '已完成' : '扫描中'} />
+            <CircularProgress
+              percent={task.progress}
+              label={task.status === 'completed' ? '已完成' : '扫描中'}
+            />
           </div>
 
           {/* Sub-tasks */}
@@ -175,11 +192,19 @@ export function TaskDetailView() {
 
         {/* Bottom actions */}
         <div className="border-t border-white/10 px-4 py-3 flex gap-2">
-          <button type="button" onClick={() => toast('任务已停止')} className="flex-1 h-9 rounded-lg border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => toast('任务已停止')}
+            className="flex-1 h-9 rounded-lg border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-1"
+          >
             <Icon name="stop" size={14} />
             停止任务
           </button>
-          <button type="button" onClick={() => toast('正在生成报告...')} className="flex-1 h-9 rounded-lg bg-primary text-xs text-white font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => toast('正在生成报告...')}
+            className="flex-1 h-9 rounded-lg bg-primary text-xs text-white font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-1"
+          >
             <Icon name="summarize" size={14} />
             生成完整报告
           </button>
