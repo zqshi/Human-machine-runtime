@@ -290,14 +290,16 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 
 HMR 的所有外部对接均通过 `server/src/contexts/gateway/clients/` 下的标准 HTTP 客户端隔离，企业可按需将下列组件替换为自有同类系统，无需改动 HMR 核心代码。各组件均通过环境变量配置接入地址。
 
-| 组件代号 | 业务职责 | 接入方式（环境变量） | 企业可替换为 |
+| 组件 | 业务职责 | 接入方式（环境变量） | 企业可替换为 |
 |---------|---------|---------------------|-------------|
-| **技能市场（clawhub）** | Skill/Agent 市场生态：技能列表、安装、Agent 目录 | REST API `CLAWHUB_URL` | 企业内部技能/Agent 市场、Dify 市场、自建插件仓库 |
-| **配置中心（portal）** | Agent Profile/Journey、画像与成长档案 | REST API `PORTAL_BE_URL` | 企业配置中心、CMDB、自建 Agent 档案系统 |
-| **AI 工作区（xspace）** | Workspace/App/Agent 创建与编排 | REST API `XSPACE_AGENT_URL` | Coze、Dify、自建 AI 应用生成平台 |
-| **实例编排（claw-farm）** | K8s 实例编排、消息网关、Channel Bridge | REST API + K8s API | 企业自有编排平台、消息网关 |
-| **平台后端（platform-be）** | 企业 OAuth + 凭证托管 | REST API `PLATFORM_BE_URL` | 企业统一身份/凭证服务 |
-| **实例管理（claw-manager）** | 数字员工实例数据源 | REST API | 企业实例管理服务 |
+| **技能市场** | Skill/Agent 市场生态：技能列表、安装、Agent 目录 | REST API `MARKETPLACE_API_URL` | 企业内部技能/Agent 市场、Dify 市场、自建插件仓库 |
+| **配置中心** | Agent Profile/Journey、画像与成长档案 | REST API `PROFILE_SERVICE_API_URL` | 企业配置中心、CMDB、自建 Agent 档案系统 |
+| **AI 工作区** | Workspace/App/Agent 创建与编排 | REST API `WORKSPACE_BACKEND_API_URL` | Coze、Dify、自建 AI 应用生成平台 |
+| **实例编排** | K8s 实例编排、消息网关、Channel Bridge | REST API `CONTAINER_ORCHESTRATOR_API_URL` + K8s API | 企业自有编排平台、消息网关 |
+| **平台后端** | 企业 OAuth + 凭证托管 | REST API `PLATFORM_BE_API_URL` | 企业统一身份/凭证服务 |
+| **实例管理** | 数字员工实例数据源 | REST API `CLUSTER_INSTANCE_API_URL` | 企业实例管理服务 |
+
+> 组件代号为业务语义中性命名（不再绑定上游品牌）；未配置时各客户端降级兜底，不阻断 HMR 核心运行。完整环境变量见 `server/.env.example`。
 
 **LLM 供应商隔离**：所有大模型调用统一经 **LiteLLM** 中转，数字员工与上层业务不直接耦合具体供应商（Anthropic/OpenAI/通义/智谱等）。企业更换或新增模型供应商时，仅需在 LiteLLM 侧配置，HMR 调用链路无感切换。
 
@@ -317,9 +319,9 @@ HMR 通过标准化 `IChannelAdapter` 接口接入通信渠道，`ChannelService
 
 | 渠道 | 适配器 | 能力 |
 |------|--------|------|
-| **Matrix** | `MatrixChannelAdapter` | 发送/接收/房间列表/健康检测 |
-| **WPS** | `WpsChannelAdapter` | 双向消息/入站消息流/渠道列表 |
+| **Matrix** | `MatrixChannelAdapter` | 发送/接收/房间列表/健康检测（默认实现，含后端 bot 对话闭环 T57） |
 | **WebSocket** | `WebSocketChannelAdapter` | 实时推送/客户端连接管理 |
+| **WPS** | `WpsChannelAdapter` | 投产默认禁用：7 方法（editMessage/redactMessage/createDmRoom/invite/createGroup/join/leave）仍为 `NotImplementedError`，需设 `VITE_WPS_IM_ENABLED=true` 显式启用（构造 fail-fast 守卫，T21） |
 
 ### 规划中
 
@@ -353,7 +355,7 @@ interface IChannelAdapter {
 
 ```typescript
 interface IAgentRuntimeAdapter {
-  readonly framework: AgentFramework; // 'cockpit' | 'dify' | 'coze' | 'langchain' | 'claude-agent-sdk' | 'custom'
+  readonly framework: AgentFramework; // 'tool-loop' | 'cockpit' | 'dify' | 'coze' | 'langchain' | 'claude-agent-sdk' | 'custom'
   submitTask(task: AgentTaskInput): Promise<{ taskId: string; accepted: boolean }>;
   getTaskStatus(taskId: string): Promise<AgentTaskStatus>;
   cancelTask(taskId: string): Promise<{ cancelled: boolean }>;
@@ -367,8 +369,10 @@ interface IAgentRuntimeAdapter {
 
 | 框架 | 适配器 | 说明 |
 |------|--------|------|
-| **Claude Agent SDK** | `ClaudeAgentSdkAdapter` | 主执行引擎。在 Docker 沙箱(`claude-worker`)内通过 Claude Agent SDK 执行真实 Agent 任务,支持预算熔断/会话续接/Token 用量入账 |
-| **Cockpit** | `CockpitAdapter` | 降级方案。对接实例管理服务管理实例,在 `ANTHROPIC_API_KEY` 未配置时自动启用 |
+| **Tool-Loop** | `ToolLoopAdapter` | 主执行引擎。国产模型（经 LiteLLM）多轮工具循环执行，不被 Anthropic 协议绑定；驱动实例任务真实执行（业务工具）与沙箱内真实创建应用（coding 工具 + OpenSandbox 容器隔离）。`selectBestAdapter` 优先路由 |
+| **Claude Agent SDK** | `ClaudeAgentSdkAdapter` | 真实 coding agent。在 Docker 沙箱(`claude-worker`)内通过 Claude Agent SDK 执行，支持预算熔断/会话续接/Token 用量入账。需强模型（glm-4-flash 在 SDK 19 内置工具噪声下失焦，T43 实测），未配置时降级 tool-loop |
+
+> 早期 `OpenClawAdapter`（假桩 `simulateProgress`）已删除（T36），由 `ToolLoopAdapter` 真实执行替代。`'cockpit'` framework 枚举值保留为声明态运行时类型标识，无对应 adapter 实现。
 
 ---
 
@@ -454,15 +458,37 @@ API:`/api/admin/agent-definitions`(CRUD + 分页,admin 聚合层挂 auth + requi
 | `/api/cockpit/evaluation/*` | 指标/记分卡/双轨/趋势 |
 | `/api/cockpit/channels` | 渠道管理 |
 | `/api/cockpit/workspace` | 工作空间 |
+| `/api/cockpit/studio` | Studio 资产聚合（T13，替代假数据桩） |
+| `/api/cockpit/chat` | 对话能力（persona/guardrail/history + LiteLLM，openclaw chat 与 Matrix bot 共用，T57/T59） |
+| `/api/cockpit/bootstrap` | 前端初始化数据 |
+
+### 管理控制面（/api/control）
+
+L2 控制面，需 `platform_admin` 或 `tenant_admin` 角色。
+
+| 路径 | 说明 |
+|------|------|
+| `/api/control/instances` | 数字员工实例管理 |
+| `/api/control/agent-definitions` | Agent 定义 CRUD + 实例化（T27） |
+| `/api/control/marketplace` | 技能/Agent 安装（T20b） |
+| `/api/control/quotas` | 配额管理 |
+| `/api/control/departments` `/skills` `/documents` `/knowledge` | 组织/技能/文档/知识 |
+| `/api/control/audits` `/knowledge-audits` | 审计 |
+| `/api/control/storage` `/uploads` | 存储/上传 |
+| `/api/control/app-catalog` | 应用目录 |
+
+### MCP 服务（/api/mcp）
+
+MCP（Model Context Protocol）服务端，对外暴露工具/资源供 Agent 调用。
 
 ### Gateway 代理（/api/proxy）
 
 | 路径 | 上游服务 |
 |------|----------|
-| `/api/proxy/marketplace` | 技能市场（clawhub） |
-| `/api/proxy/profile` | 配置中心（portal） |
-| `/api/proxy/workspace` | AI 工作区（xspace） |
-| `/api/proxy/channel` | 实例编排（claw-farm） |
+| `/api/proxy/marketplace` | 技能市场 |
+| `/api/proxy/profile` | 配置中心 |
+| `/api/proxy/workspace` | AI 工作区 |
+| `/api/proxy/channel` | 实例编排 |
 | `/api/proxy/mcp` | MCP 服务 |
 
 ---
