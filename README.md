@@ -26,39 +26,7 @@ HMR（Human-Machine Runtime，人机运行时）是面向**央国企及中大型
 | 又一个项目管理工具 | 不管任务拆解，只管决策→执行→回执的闭环 |
 | 某个 IM 的插件 | 跨所有 IM 的上层运行时，不依附任何单一平台 |
 
-### 三层解耦架构
-
-```mermaid
-graph TB
-  subgraph Upper["上层 · Agent 框架（可插拔）"]
-    OC["Cockpit"] ~~~ Dify ~~~ Coze ~~~ Custom["自研框架"]
-  end
-
-  ARA{{"AgentRuntimeAdapter 标准接口"}}
-
-  subgraph Core["中层 · HMR Enterprise Runtime（核心）"]
-    MsgNorm["消息归一化"]
-    Priority["优先级评估"]
-    Dedup["跨渠道去重"]
-    Decision["决策引擎"]
-    Orchestrate["编排引擎"]
-    Receipt["回执路由"]
-  end
-
-  CA{{"ChannelAdapter 标准接口"}}
-
-  subgraph Lower["下层 · 渠道适配器（可插拔）"]
-    Matrix ~~~ WPS["WPS"] ~~~ DingTalk["钉钉"] ~~~ Feishu["飞书"] ~~~ WeCom["企微"]
-  end
-
-  Upper --> ARA --> Core --> CA --> Lower
-
-  style Core fill:#e8f0fe,stroke:#007AFF,stroke-width:2px
-  style ARA fill:#fff3cd,stroke:#ffc107
-  style CA fill:#fff3cd,stroke:#ffc107
-```
-
-> 产品战略详见 [产品战略白皮书](docs/product-strategy-command-center.md)
+> 完整架构（接入解耦四面体 / Agent 执行流水线 / DDD 限界上下文）见下文 [系统架构](#系统架构)。产品战略详见 [产品战略白皮书](docs/product-strategy-command-center.md)。
 
 ---
 
@@ -117,7 +85,13 @@ cd client-suite/apps/web && npx vite
 
 ## 系统架构
 
-### 运行时四面体
+HMR 架构从三个视角描述，互补不重复：
+
+- **接入解耦四面体**：Agent 框架 / 渠道可插拔，HMR Runtime 核心不可替代（产品定位视角）。
+- **Agent 执行流水线（v2.0）**：Agent 从声明态定义 → 发布编译固化 → 运行时读取固化产物执行（执行侧视角）。
+- **DDD 限界上下文**：29 个限界上下文的代码组织（实现视角）。
+
+### 接入解耦四面体
 
 ```mermaid
 graph TB
@@ -162,20 +136,20 @@ graph TB
   style ChannelPlane fill:#f3e8fe,stroke:#af52de,stroke-width:2px
 ```
 
-### 声明 → 编译固化 → 运行时三层执行架构（v2.0）
+### Agent 执行流水线（v2.0）
 
-上层"运行时四面体"描述的是**接入解耦**（Agent 框架/渠道可插拔）。本节描述 **Agent 执行侧**的三层分离——声明态定义、发布时编译固化、运行时读取固化产物执行，使线上 Agent 行为可锁定/审计/回滚。
+Agent 从声明态定义到运行时执行的三段流水线，使线上 Agent 行为可锁定 / 审计 / 回滚（区别于"接入解耦四面体"的可插拔视角，本节是**执行侧**视角）。
 
 ```mermaid
 graph LR
-  subgraph L1["Layer 1 声明层"]
+  subgraph L1["声明层"]
     Spec["AgentDefinitionSpec<br/>(CRD: persona/guardrails/<br/>boundTools/boundKnowledge/<br/>runtime/ragRecallPolicy)"]
   end
-  subgraph L2["Layer 2 编译固化层"]
+  subgraph L2["编译固化层"]
     Bake["BakingService.bake"]
     Manifest["RuntimeManifest<br/>(不可变: compiledSystemPrompt<br/>/tools/skills/quota)"]
   end
-  subgraph L3["Layer 3 运行时层"]
+  subgraph L3["运行时层"]
     Harness["harness.dispatchTask"]
     Asm["(降级) assemble + getPersona"]
   end
@@ -745,3 +719,10 @@ helm upgrade --install hmr-server deploy/helm/human-machine-runtime \
 | [控制面](docs/control-plane/) | 架构/API 契约 |
 | [用户端](docs/cockpit-client/) | 架构/PRD |
 | [监控配置](docs/shared/monitoring/) | Prometheus + Grafana |
+
+---
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)（见根目录 `LICENSE` 文件，与 `package.json` 的 `license` 字段一致）。
+
