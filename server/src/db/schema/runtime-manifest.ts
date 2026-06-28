@@ -1,4 +1,13 @@
-import { pgTable, varchar, integer, jsonb, timestamp, text, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  integer,
+  jsonb,
+  timestamp,
+  text,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core';
 
 /**
  * agent_runtime_manifests 表(v2.0 Layer 2 编译固化层)。

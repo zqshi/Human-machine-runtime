@@ -1,5 +1,9 @@
 import { newId } from '../../../shared/utils.js';
-import type { IAgentDefinitionPort, IBoundToolsPort, IContentStorePort } from '../domain/assembly-provider.js';
+import type {
+  IAgentDefinitionPort,
+  IBoundToolsPort,
+  IContentStorePort,
+} from '../domain/assembly-provider.js';
 import { assembleTools, assembleSkills } from '../domain/assembly-provider.js';
 import { RuntimeRegistry } from '../domain/runtime-registry.js';
 import type { AgentFramework } from '../sandbox/agent-runtime-adapter.js';
@@ -25,7 +29,8 @@ import type { RuntimeManifestRepository } from '../../../db/repositories/runtime
  * 复用而非重发明(§9.7):assembleTools/assembleSkills 与运行时 AssemblyProvider 共用同一份解析逻辑。
  * runtimeRoute 复用 RuntimeRegistry.mapRuntimeType。persona 经 IPersonaProvider 复用既有召回。
  *
- * 异步:首版 in-process(bake 不阻塞调用方),返回 manifest id,调用方轮询状态。
+ * 同步:首版 in-process 同步固化,返回终态(baked|failed),调用方无需轮询。
+ * 规模大时再迁 scheduler 异步队列(远期方向不变)。
  */
 
 /** bake 输入 */
@@ -61,8 +66,8 @@ export class BakingService {
   ) {}
 
   /**
-   * bake 一个 manifest(同步返回 manifestId,固化异步进行)。调用方轮询 status。
-   * 失败不抛(落 status=failed),除非 manifest 已 baked(占位冲突)。
+   * bake 一个 manifest(同步固化,返回终态 baked|failed)。失败不抛(落 status=failed),
+   * 除非 manifest 已 baked(占位冲突)。
    */
   async bake(req: BakeRequest): Promise<BakeResult> {
     const manifestId = newId('rman');
@@ -131,7 +136,9 @@ export class BakingService {
       };
 
       // runtimeRoute:复用 RuntimeRegistry.mapRuntimeType(声明态 runtimeType → adapter framework)
-      const runtimeRoute: AgentFramework = this.runtimeRegistry.mapRuntimeType(spec.runtime.runtimeType);
+      const runtimeRoute: AgentFramework = this.runtimeRegistry.mapRuntimeType(
+        spec.runtime.runtimeType
+      );
       // sandboxStrategy:从 sandboxTemplate 映射
       const sandboxStrategy = mapSandboxStrategy(spec.sandboxTemplate);
 
@@ -167,7 +174,9 @@ export class BakingService {
       try {
         await this.manifestRepo.saveFailed(manifestId, errorMsg);
       } catch (saveErr) {
-        this.logger.error(`saveFailed also failed: ${manifestId} ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`);
+        this.logger.error(
+          `saveFailed also failed: ${manifestId} ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`
+        );
       }
       return { manifestId, status: 'failed', errorMsg };
     }

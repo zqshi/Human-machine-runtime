@@ -189,7 +189,12 @@ export async function assembleSkills(
   boundSkills: string[],
   contentStorePort: IContentStorePort | null,
   logger: { warn: (msg: string) => void }
-): Promise<{ skillsContext: string | undefined; bound: number; resolved: number; skipped: number }> {
+): Promise<{
+  skillsContext: string | undefined;
+  bound: number;
+  resolved: number;
+  skipped: number;
+}> {
   if (boundSkills.length === 0 || !contentStorePort) {
     return { skillsContext: undefined, bound: boundSkills.length, resolved: 0, skipped: 0 };
   }

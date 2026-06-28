@@ -87,7 +87,10 @@ describe('AgentHarness - 编译固化路径(v2.0 C6)', () => {
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     const assembleSpy = vi.fn().mockResolvedValue({
       allowedTools: ['Bash'],
-      sources: { tools: { bound: 1, resolved: 1, skipped: 0 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+      sources: {
+        tools: { bound: 1, resolved: 1, skipped: 0 },
+        skills: { bound: 0, resolved: 0, skipped: 0 },
+      },
       skipped: false,
       degraded: false,
     });
@@ -109,7 +112,10 @@ describe('AgentHarness - 编译固化路径(v2.0 C6)', () => {
     const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub(captured));
     const assembleSpy = vi.fn().mockResolvedValue({
       allowedTools: ['Read'],
-      sources: { tools: { bound: 1, resolved: 1, skipped: 0 }, skills: { bound: 0, resolved: 0, skipped: 0 } },
+      sources: {
+        tools: { bound: 1, resolved: 1, skipped: 0 },
+        skills: { bound: 0, resolved: 0, skipped: 0 },
+      },
       skipped: false,
       degraded: false,
     });
@@ -122,7 +128,11 @@ describe('AgentHarness - 编译固化路径(v2.0 C6)', () => {
   });
 
   it('manifest 命中 + guardrails 命中 block → 抛 GUARDRAIL_BLOCKED', async () => {
-    const harness = new AgentHarness(null, makeSessionStub() as never, makeSandboxStub({ task: null }));
+    const harness = new AgentHarness(
+      null,
+      makeSessionStub() as never,
+      makeSandboxStub({ task: null })
+    );
     const blockRule: GuardrailRule = {
       id: 'gr1',
       type: 'keyword' as never,
@@ -131,9 +141,11 @@ describe('AgentHarness - 编译固化路径(v2.0 C6)', () => {
       reason: '敏感词',
     };
     const manifestPort: IRuntimeManifestPort = {
-      getManifest: vi.fn().mockResolvedValue(
-        makeManifest({ compiledGuardrails: [blockRule], refusalResponse: '不能回答机密' })
-      ),
+      getManifest: vi
+        .fn()
+        .mockResolvedValue(
+          makeManifest({ compiledGuardrails: [blockRule], refusalResponse: '不能回答机密' })
+        ),
     };
     harness.setRuntimeManifestPort(manifestPort);
 
@@ -150,7 +162,9 @@ describe('AgentHarness - 编译固化路径(v2.0 C6)', () => {
     };
     harness.setRuntimeManifestPort(manifestPort);
 
-    await harness.dispatchTask(makeTask({ input: { instanceId: 'inst-1', allowedTools: ['Custom'] } }));
+    await harness.dispatchTask(
+      makeTask({ input: { instanceId: 'inst-1', allowedTools: ['Custom'] } })
+    );
 
     // 显式传的不被覆盖
     expect(captured.task!.input.allowedTools).toEqual(['Custom']);

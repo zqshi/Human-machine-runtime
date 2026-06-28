@@ -112,6 +112,12 @@ export { toolApprovalsApi } from '../../infrastructure/api/v19AdminApi';
 export type { ToolApproval, ToolApprovalStatus } from '../../infrastructure/api/v19AdminApi';
 export { runtimeTemplatesApi } from '../../infrastructure/api/v19AdminApi';
 export type { SandboxTemplateDef, RuntimeTypeEntry } from '../../infrastructure/api/v19AdminApi';
+export { runtimeManifestApi } from '../../infrastructure/api/v19AdminApi';
+export type {
+  RuntimeManifestView,
+  CompiledTool,
+  BakeResult,
+} from '../../infrastructure/api/v19AdminApi';
 export { marketplaceApi } from '../../infrastructure/api/marketplaceApiClient';
 export type {
   MarketplaceAgentDTO,

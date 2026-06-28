@@ -32,6 +32,7 @@ import { MemorySection } from '../features/admin/memory';
 import { CredentialSection } from '../features/admin/CredentialSection';
 import { FeatureFlagSection } from '../features/admin/FeatureFlagSection';
 import { RuntimeTemplatesSection } from '../features/admin/RuntimeTemplatesSection';
+import { ManifestSection } from '../features/admin/ManifestSection';
 import { ToolApprovalsSection } from '../features/admin/ToolApprovalsSection';
 import { LoginPage } from '../pages/LoginPage';
 import { SSOCallback } from '../pages/auth/SSOCallback';
@@ -95,6 +96,7 @@ const NAV_GROUPS: NavGroup[] = [
       { key: 'tool-approvals', icon: 'task_alt', label: '工具审批' },
       { key: 'feature-flags', icon: 'flag', label: 'Feature Flag' },
       { key: 'runtime-templates', icon: 'memory', label: '运行时模板' },
+      { key: 'runtime-manifests', icon: 'lock', label: '编译固化' },
     ],
   },
   {
@@ -189,6 +191,8 @@ function SwitchedSection({ section }: { section: AdminSection }) {
       return <FeatureFlagSection />;
     case 'runtime-templates':
       return <RuntimeTemplatesSection />;
+    case 'runtime-manifests':
+      return <ManifestSection />;
     default:
       return null;
   }

@@ -75,7 +75,15 @@ describe('BakingService — bake 成功', () => {
     const svc = new BakingService(
       { getById: vi.fn().mockResolvedValue(def) },
       makeBoundToolsPort([
-        { id: 't1', name: 'get_weather', enabled: true, status: 'active', tenantId: 'tn_demo', description: '查天气', inputSchema: { type: 'object' } },
+        {
+          id: 't1',
+          name: 'get_weather',
+          enabled: true,
+          status: 'active',
+          tenantId: 'tn_demo',
+          description: '查天气',
+          inputSchema: { type: 'object' },
+        },
       ]),
       { getByIds: vi.fn().mockResolvedValue([]) },
       manifestRepo,
@@ -83,12 +91,20 @@ describe('BakingService — bake 成功', () => {
       makeLogger()
     );
 
-    const result = await svc.bake({ agentDefinitionId: 'adef_1', generation: 1, tenantId: 'tn_demo' });
+    const result = await svc.bake({
+      agentDefinitionId: 'adef_1',
+      generation: 1,
+      tenantId: 'tn_demo',
+    });
 
     // B1 守护:bake 同步返回终态 baked(非 pending 强转),防回退为异步 as 欺骗类型
     expect(result.status).toBe('baked');
     expect(result.manifestId).toMatch(/^rman_/);
-    expect(manifestRepo.upsertPending).toHaveBeenCalledWith(expect.stringMatching(/^rman_/), 'adef_1', 1);
+    expect(manifestRepo.upsertPending).toHaveBeenCalledWith(
+      expect.stringMatching(/^rman_/),
+      'adef_1',
+      1
+    );
     expect(manifestRepo.saveBaked).toHaveBeenCalledTimes(1);
     const [id, sealed] = manifestRepo.saveBaked.mock.calls[0];
     expect(id).toMatch(/^rman_/);
@@ -102,7 +118,9 @@ describe('BakingService — bake 成功', () => {
   });
 
   it('sandboxTemplate=kvm-microvm → sandboxStrategy=cubesandbox', async () => {
-    const def = makeDef({ spec: { ...makeDef().spec, sandboxTemplate: 'kvm-microvm' } } as AgentDefinition);
+    const def = makeDef({
+      spec: { ...makeDef().spec, sandboxTemplate: 'kvm-microvm' },
+    } as AgentDefinition);
     const manifestRepo = makeManifestRepoMock();
     const svc = new BakingService(
       { getById: vi.fn().mockResolvedValue(def) },
@@ -154,7 +172,10 @@ describe('BakingService — bake 失败', () => {
 
     await svc.bake({ agentDefinitionId: 'missing', generation: 1, tenantId: 'tn_demo' });
 
-    expect(manifestRepo.saveFailed).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('not found'));
+    expect(manifestRepo.saveFailed).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('not found')
+    );
     expect(manifestRepo.saveBaked).not.toHaveBeenCalled();
   });
 
@@ -171,7 +192,10 @@ describe('BakingService — bake 失败', () => {
 
     await svc.bake({ agentDefinitionId: 'adef_1', generation: 1, tenantId: 'tn_demo' });
 
-    expect(manifestRepo.saveFailed).toHaveBeenCalledWith(expect.any(String), 'agentDefinitionPort not configured');
+    expect(manifestRepo.saveFailed).toHaveBeenCalledWith(
+      expect.any(String),
+      'agentDefinitionPort not configured'
+    );
   });
 
   it('manifest 已 baked → upsertPending 抛错 → 返回 failed 不重建', async () => {
@@ -187,7 +211,11 @@ describe('BakingService — bake 失败', () => {
       makeLogger()
     );
 
-    const result = await svc.bake({ agentDefinitionId: 'adef_1', generation: 1, tenantId: 'tn_demo' });
+    const result = await svc.bake({
+      agentDefinitionId: 'adef_1',
+      generation: 1,
+      tenantId: 'tn_demo',
+    });
 
     expect(result.status).toBe('failed');
     expect(result.errorMsg).toContain('already baked');

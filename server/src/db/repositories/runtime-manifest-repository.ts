@@ -1,7 +1,10 @@
 import { eq, and, desc } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { agentRuntimeManifests } from '../schema/runtime-manifest.js';
-import type { RuntimeManifest, ManifestStatus } from '../../contexts/agent-core/domain/runtime-manifest.js';
+import type {
+  RuntimeManifest,
+  ManifestStatus,
+} from '../../contexts/agent-core/domain/runtime-manifest.js';
 import { canTransition } from '../../contexts/agent-core/domain/runtime-manifest.js';
 
 /**
@@ -19,7 +22,10 @@ export class RuntimeManifestRepository {
   constructor(private db: Database) {}
 
   /** 查 manifest(defId + generation)。返回 RuntimeManifest 反序列化对象,非 baked 返 null(harness 只认 baked)。 */
-  async findManifest(agentDefinitionId: string, generation: number): Promise<RuntimeManifest | null> {
+  async findManifest(
+    agentDefinitionId: string,
+    generation: number
+  ): Promise<RuntimeManifest | null> {
     const rows = await this.db
       .select()
       .from(agentRuntimeManifests)
@@ -36,7 +42,10 @@ export class RuntimeManifestRepository {
   }
 
   /** 查 baked manifest(运行时 harness 读,只认 status=baked)。 */
-  async findBakedManifest(agentDefinitionId: string, generation: number): Promise<RuntimeManifest | null> {
+  async findBakedManifest(
+    agentDefinitionId: string,
+    generation: number
+  ): Promise<RuntimeManifest | null> {
     const rows = await this.db
       .select()
       .from(agentRuntimeManifests)
@@ -57,7 +66,10 @@ export class RuntimeManifestRepository {
    * 查某定义全部 manifest(generation 倒序,版本对比/回滚)。
    * limit 下推 DB 层(§7.2.1 第2条:禁止全量读后内存切片)。默认 50。
    */
-  async listByDefinition(agentDefinitionId: string, limit: number = 50): Promise<RuntimeManifest[]> {
+  async listByDefinition(
+    agentDefinitionId: string,
+    limit: number = 50
+  ): Promise<RuntimeManifest[]> {
     const rows = await this.db
       .select()
       .from(agentRuntimeManifests)
@@ -68,11 +80,7 @@ export class RuntimeManifestRepository {
   }
 
   /** 落 pending 占位(bake 开始时,防并发重复 bake)。已存在 baked 则抛错,pending/failed 复用占位。 */
-  async upsertPending(
-    id: string,
-    agentDefinitionId: string,
-    generation: number
-  ): Promise<void> {
+  async upsertPending(id: string, agentDefinitionId: string, generation: number): Promise<void> {
     // 查原始 row(含 status,不经 mapRow 过滤——mapRow 只认 baked,会漏检 pending/failed)
     const existing = await this.findRaw(agentDefinitionId, generation);
     if (existing?.status === 'baked') {

@@ -220,7 +220,11 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   admin.route('/feature-flags', createAdminFeatureFlagRoutes(ctx.systemConfigService));
   admin.route(
     '/runtime-manifests',
-    createAdminRuntimeManifestRoutes(ctx.bakingService, ctx.agentDefinitionService, ctx.runtimeManifestRepo)
+    createAdminRuntimeManifestRoutes(
+      ctx.bakingService,
+      ctx.agentDefinitionService,
+      ctx.runtimeManifestRepo
+    )
   );
   app.route('/api/admin', admin);
 

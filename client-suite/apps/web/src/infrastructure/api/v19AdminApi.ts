@@ -92,3 +92,56 @@ export const featureFlagApi = {
     });
   },
 };
+
+/* ---------- Runtime Manifests(v2.0 编译固化,C12) ---------- */
+
+export interface CompiledTool {
+  toolId: string;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export interface RuntimeManifestView {
+  id: string;
+  agentDefinitionId: string;
+  generation: number;
+  bakedAt: number;
+  status: string;
+  compiledSystemPrompt: string;
+  compiledGuardrails: unknown[];
+  compiledTools: CompiledTool[];
+  compiledSkillsContext: string;
+  runtimeRoute: string;
+  sandboxStrategy: string;
+  errorMsg: string | null;
+}
+
+export interface BakeResult {
+  manifestId: string;
+  status: 'baked' | 'failed';
+  errorMsg: string | null;
+}
+
+export const runtimeManifestApi = {
+  /** 触发 bake(同步固化,返回终态 baked|failed + manifestId) */
+  bake(agentDefinitionId: string): Promise<BakeResult> {
+    return request(`/api/admin/runtime-manifests/${encodeURIComponent(agentDefinitionId)}/bake`, {
+      method: 'POST',
+    });
+  },
+  /** 某定义全部 manifest(generation 倒序) */
+  listByDefinition(
+    agentDefinitionId: string,
+    limit?: number
+  ): Promise<{ items: RuntimeManifestView[]; total: number; limit: number }> {
+    const qs = limit ? `?limit=${limit}` : '';
+    return request(`/api/admin/runtime-manifests/${encodeURIComponent(agentDefinitionId)}${qs}`);
+  },
+  /** 精确查某版本 manifest */
+  get(agentDefinitionId: string, generation: number): Promise<RuntimeManifestView> {
+    return request(
+      `/api/admin/runtime-manifests/${encodeURIComponent(agentDefinitionId)}/${generation}`
+    );
+  },
+};

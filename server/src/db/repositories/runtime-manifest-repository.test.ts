@@ -156,7 +156,9 @@ describe('RuntimeManifestRepository — updateStatus', () => {
       selectReturn: [{ status: 'baked' }],
     });
     const repo = new RuntimeManifestRepository(db as never);
-    await expect(repo.updateStatus('rman_1', 'pending')).rejects.toThrow('illegal status transition');
+    await expect(repo.updateStatus('rman_1', 'pending')).rejects.toThrow(
+      'illegal status transition'
+    );
     expect(db.update).not.toHaveBeenCalled();
   });
 

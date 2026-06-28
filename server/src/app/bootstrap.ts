@@ -467,7 +467,10 @@ export function createAppContext(db: Database): AppContext {
     adaptContentStore(skillRepo),
     runtimeManifestRepo,
     new RuntimeRegistry(),
-    { warn: (m) => logger.warn({ component: 'baking-service' }, m), error: (m) => logger.error({ component: 'baking-service' }, m) }
+    {
+      warn: (m) => logger.warn({ component: 'baking-service' }, m),
+      error: (m) => logger.error({ component: 'baking-service' }, m),
+    }
   );
   agentHarness.setRuntimeManifestPort(adaptRuntimeManifestPort(instanceRepo, runtimeManifestRepo));
 

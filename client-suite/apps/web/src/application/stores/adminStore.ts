@@ -28,6 +28,7 @@ export type AdminSection =
   | 'tool-approvals'
   | 'feature-flags'
   | 'runtime-templates'
+  | 'runtime-manifests'
   | 'credentials';
 
 export type PlatformSection =
@@ -68,6 +69,7 @@ const HASHABLE_ADMIN_SECTIONS: readonly AdminSection[] = [
   'tool-approvals',
   'feature-flags',
   'runtime-templates',
+  'runtime-manifests',
 ];
 
 /** 从 URL hash 读取 section（硬刷新后恢复当前页）；非法或缺失返回 'employees'。 */

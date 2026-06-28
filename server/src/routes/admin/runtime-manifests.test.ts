@@ -41,9 +41,11 @@ function makeManifest(): RuntimeManifest {
 
 function mockDeps(opts: { def?: AgentDefinition | null; bakeResult?: unknown } = {}) {
   const bakingService = {
-    bake: vi.fn().mockResolvedValue(
-      opts.bakeResult ?? { manifestId: 'rman_1', status: 'baked', errorMsg: null }
-    ),
+    bake: vi
+      .fn()
+      .mockResolvedValue(
+        opts.bakeResult ?? { manifestId: 'rman_1', status: 'baked', errorMsg: null }
+      ),
   } as unknown as BakingService;
   const agentDefinitionService = {
     get: vi.fn().mockResolvedValue(opts.def === undefined ? makeDef() : opts.def),
@@ -58,7 +60,11 @@ function mockDeps(opts: { def?: AgentDefinition | null; bakeResult?: unknown } =
 describe('createAdminRuntimeManifestRoutes', () => {
   it('POST /:defId/bake → 200 + manifestId(同步固化,tenantId/generation 取自 def)', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps();
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/adef_1/bake', { method: 'POST' });
     expect(res.status).toBe(200);
@@ -74,7 +80,11 @@ describe('createAdminRuntimeManifestRoutes', () => {
 
   it('POST /:defId/bake def 不存在 → 404', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps({ def: null });
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/missing/bake', { method: 'POST' });
     expect(res.status).toBe(404);
@@ -83,7 +93,11 @@ describe('createAdminRuntimeManifestRoutes', () => {
 
   it('GET /:defId 列出全部 manifest(generation 倒序)+ 分页结构', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps();
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/adef_1');
     expect(res.status).toBe(200);
@@ -96,7 +110,11 @@ describe('createAdminRuntimeManifestRoutes', () => {
 
   it('GET /:defId/:generation 精确查 manifest', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps();
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/adef_1/3');
     expect(res.status).toBe(200);
@@ -108,7 +126,11 @@ describe('createAdminRuntimeManifestRoutes', () => {
   it('GET /:defId/:generation 不存在 → 404', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps();
     (manifestRepo.findManifest as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/adef_1/99');
     expect(res.status).toBe(404);
@@ -116,7 +138,11 @@ describe('createAdminRuntimeManifestRoutes', () => {
 
   it('GET /:defId/:generation generation 非数字 → 400', async () => {
     const { bakingService, agentDefinitionService, manifestRepo } = mockDeps();
-    const app = createAdminRuntimeManifestRoutes(bakingService, agentDefinitionService, manifestRepo);
+    const app = createAdminRuntimeManifestRoutes(
+      bakingService,
+      agentDefinitionService,
+      manifestRepo
+    );
 
     const res = await app.request('/adef_1/abc');
     expect(res.status).toBe(400);

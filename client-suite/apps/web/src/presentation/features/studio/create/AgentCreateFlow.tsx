@@ -28,6 +28,7 @@ import {
   type GuardrailAction,
   type GuardrailRule,
   type GuardrailType,
+  runtimeManifestApi,
 } from '../../../../application/services/adminApi';
 import {
   buildAgentDefinitionSpec,
@@ -137,6 +138,22 @@ export function AgentCreateFlow({ onBack, definitionId, initial }: Props) {
         spec,
       });
       exitCreateFlow();
+
+      // v2.0 C14:发布即固化。创建/更新成功后自动触发 bake(同步固化 manifest),
+      // 运行时 harness 读 manifest 不再动态查 DB。固化失败不阻断创建(Agent 已落库,可在编译固化面板重试)。
+      runtimeManifestApi
+        .bake(def.id)
+        .then((r) => {
+          if (r.status === 'baked') {
+            toast(`「${def.name}」编译固化成功(gen ${def.generation} 已锁定)`, 'success');
+          } else {
+            toast(
+              `「${def.name}」编译固化失败: ${r.errorMsg ?? '未知错误'},可在「编译固化」面板重试`,
+              'error'
+            );
+          }
+        })
+        .catch((be) => toast(`编译固化未触发: ${(be as Error).message},可在「编译固化」面板重试`, 'error'));
 
       if (definitionId) {
         // 更新模式:已有 instance 关联,跳管理页(不重建 instance)

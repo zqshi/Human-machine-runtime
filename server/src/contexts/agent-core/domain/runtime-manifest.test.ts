@@ -16,7 +16,13 @@ function makeDraft(overrides: Partial<ManifestDraft> = {}): ManifestDraft {
     status: 'pending',
     compiledSystemPrompt: '你是助手',
     compiledGuardrails: [
-      { id: 'gr1', type: 'keyword' as never, pattern: '机密', action: 'block' as never, reason: '敏感词' },
+      {
+        id: 'gr1',
+        type: 'keyword' as never,
+        pattern: '机密',
+        action: 'block' as never,
+        reason: '敏感词',
+      },
     ] as GuardrailRule[],
     compiledTools: [
       {
