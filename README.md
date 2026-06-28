@@ -412,7 +412,7 @@ interface IAgentRuntimeAdapter {
 
 ### Agent 声明式创建向导
 
-Agent 创建走 7 步声明式向导（`AgentCreateFlow`),声明完整 `AgentDefinitionSpec` 落库 `agent_definitions` CRD,实例通过 `agentDefinitionId` 关联消费:
+Agent 创建走 7 步声明式向导（`AgentCreateFlow`),声明完整 `AgentDefinitionSpec` 落库 `agent_definitions` CRD,数字员工实例通过可空 `agentDefinitionId` 关联引用(声明不绑定实例,一个 AgentDefinition 可被 0~N 个实例引用):
 
 1. 基础信息（名称/头像/描述）
 2. 人设（systemPrompt + guardrails 拒答规则 + refusalResponse）
@@ -546,7 +546,7 @@ human-machine-runtime/
         runtime-engine/                  # 核心运行时引擎（消息归一化/优先级/去重/推荐/回执）
         agent-core/                      # Agent 执行 + AgentRuntimeAdapter 接口
         channel/                         # ChannelAdapter 接口 + 适配器 + 路由 + 决策控台
-        gateway/clients/                 # 13 个上游服务客户端
+        gateway/clients/                 # 12 个上游服务客户端
         identity-access/                 # JWT + SSO + RBAC
         tenant-management/               # 租户生命周期
         ...
@@ -557,10 +557,10 @@ human-machine-runtime/
       admin.html                         # 管理后台入口
       ops.html                           # 运营平台入口
       src/
-        domain/                          # 纯业务逻辑（13 子域）
+        domain/                          # 纯业务逻辑（15 子域）
         infrastructure/                  # API client + Matrix + channels
         application/                     # zustand stores + hooks + services
-        presentation/                    # React 组件（25 feature 模块）
+        presentation/                    # React 组件（24 feature 模块）
     packages/ui-tokens/                  # 设计 token
   deploy/helm/human-machine-runtime/     # 生产 Helm Chart
   deploy/                                # K8s manifests + Docker Compose + 可观测性
@@ -576,7 +576,7 @@ human-machine-runtime/
 npm run dev              # 启动后端（tsx watch 热重载，端口 3002）
 npm run build            # 构建后端
 npm start                # 启动构建产物
-npm test                 # 后端测试（vitest，102 文件）
+npm test                 # 后端测试（vitest，173 文件）
 npm run lint             # ESLint
 npm run type-check       # TypeScript 检查
 npm run db:setup         # 数据库迁移 + 种子数据
@@ -589,7 +589,7 @@ npm run verify           # 后端 + 前端全量验证
 npx vite                 # 启动 dev server（端口 5176）
 npx vite build           # 生产构建
 npx tsc --noEmit         # TypeScript 严格模式检查
-npx vitest run           # 测试（93 文件）
+npx vitest run           # 测试（103 文件）
 ```
 
 ### Docker Compose
@@ -627,7 +627,7 @@ bash scripts/ensure-matrix-bot.sh                    # 注册 bot + 创建 facto
 | 样式 | Tailwind CSS 3.4 | 通过 `@hmr/ui-tokens` preset |
 | 状态 | zustand | 一个 store 一个文件 |
 | 设计语言 | Apple HIG glass morphism | 主色 `#007AFF` |
-| 测试 | vitest | 93 文件 |
+| 测试 | vitest | 103 文件 |
 
 ### 后端
 
@@ -638,7 +638,7 @@ bash scripts/ensure-matrix-bot.sh                    # 注册 bot + 创建 facto
 | ORM | Drizzle | TypeScript-first，PostgreSQL |
 | 数据库 | PostgreSQL 16 | 本地 5435 端口 |
 | 认证 | JWT + SSO 预留 | bcrypt 密码 |
-| 测试 | vitest | 102 文件 |
+| 测试 | vitest | 173 文件 |
 
 ---
 
