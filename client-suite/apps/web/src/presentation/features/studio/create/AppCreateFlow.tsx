@@ -154,7 +154,7 @@ export function AppCreateFlow({ onBack }: Props) {
           name: 'studio-create-app',
           description: `创建应用: ${userMsg.slice(0, 60)}`,
           input: {
-            prompt: `创建一个应用。需求: ${userMsg}\n\n用 write_file 工具在 src/ 目录下创建必要的代码文件(如 App.tsx)。用合理的项目结构。创建后用 read_file 确认。`,
+            prompt: `创建一个 React 应用。需求: ${userMsg}\n\n项目脚手架(vite+react+typescript,含 package.json/index.html/vite.config/main.tsx)已由系统预置,你只需用 write_file 工具重写 src/App.tsx 实现需求(必要时新增 src 下组件文件)。注意:src/App.tsx 必须是合法的 React TSX 组件代码(以 import 或 export default function 开头),不要写 HTML。示例结构:\n\nimport { useState } from 'react';\nexport default function App() {\n  return (<div>...</div>);\n}\n\n不要创建 package.json/vite.config/index.html 等配置文件。完成后用 read_file 读取 src/App.tsx 确认。`,
             instanceId: STUDIO_INSTANCE,
           },
           framework: 'tool-loop',

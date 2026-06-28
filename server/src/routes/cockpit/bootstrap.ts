@@ -9,6 +9,7 @@ import type { CockpitRepository } from '../../db/repositories/cockpit-repository
 import { filteredResponse } from './pagination.js';
 import type { AgentCore } from '../../contexts/agent-core/agent-core.js';
 import type { Principal } from '../../middleware/auth.js';
+import { ensureViteSandbox } from '../../contexts/tool-management/executors/vite-scaffold.js';
 
 function getUser(c: Context): Principal {
   return c.get('user') as Principal;
@@ -187,36 +188,31 @@ export function createCockpitBootstrapRoutes(repo: CockpitRepository, agentCore?
         };
         getEndpointUrl: (port: number) => Promise<string> | string;
       };
-      // 1. 检查 package.json 是否存在(LLM 创建的应用)
-      const wsFiles = await sandbox.files.search({ path: '/workspace' });
-      const hasPkg = wsFiles.some(
-        (f) =>
-          (typeof f === 'string' ? f : (f as { path?: string }).path) === '/workspace/package.json'
-      );
-      if (!hasPkg) {
-        return c.json(
-          { error: 'no package.json in workspace, please create app files first' },
-          400
-        );
-      }
+      // 1. 确保 sandbox 有可运行的 vite 脚手架(轻应用兜底):
+      //    LLM 经 write_file 只建业务文件(如 src/App.tsx),常漏 package.json/index.html/vite.config
+      //    → 预览报 "no package.json" 或 vite dev 起不来。无 package.json 则注入最小可运行脚手架,
+      //    LLM 业务文件叠加其上(同名覆盖)。逻辑提纯在 vite-scaffold.ts(§12 信号6:route 不堆逻辑)。
+      const { injected } = await ensureViteSandbox(sandbox as never);
+      const scaffoldNote = injected ? '[scaffold] 注入 vite+React+TS 脚手架(工作区无 package.json)\n' : '';
       // 2. npm install(前台同步,超时 120s;复用缓存则秒过)
       const installRes = await sandbox.commands.run(
         'cd /workspace && npm install --no-audit --prefer-offline 2>&1 | tail -3',
         { timeoutSeconds: 120, workingDirectory: '/workspace' }
       );
-      const installLog = (installRes.logs?.stdout ?? []).map((l) => l.text).join('\n');
-      // 3. 启动 vite dev(background detached 模式,不随命令结束被杀;监听 5173)
-      //    用 background:true 让 dev server 长驻 sandbox,再 sleep 等它就绪。
+      const installLog = scaffoldNote + (installRes.logs?.stdout ?? []).map((l) => l.text).join('\n');
+      // 3. 启动 vite dev。先清残留进程(上次预览的 background vite 未杀会占 5173,
+      //    导致新 vite 退到 5174 而 probe 固定查 5173 → 误判未就绪)。
       try {
+        await sandbox.commands.run('pkill -f "vite" 2>/dev/null; sleep 1', { timeoutSeconds: 8 });
         await sandbox.commands.run('npm run dev', {
           background: true,
           workingDirectory: '/workspace',
         });
-        // 等 vite 就绪(首次启动需编译,给 8s)
-        await sandbox.commands.run('sleep 8', { timeoutSeconds: 15 });
-        // 验证 5173 真在监听(连一下),失败则报错
+        // 等 vite 就绪(首次启动需编译 + 依赖优化,给 12s)
+        await sandbox.commands.run('sleep 12', { timeoutSeconds: 18 });
+        // 验证 5173 真在监听(连一下),失败则捕获 vite 真实输出辅助定位
         const probe = await sandbox.commands.run(
-          'curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo fail',
+          'curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 2>/dev/null || echo fail',
           { timeoutSeconds: 10 }
         );
         const code = (probe.logs?.stdout ?? [])
@@ -224,10 +220,18 @@ export function createCockpitBootstrapRoutes(repo: CockpitRepository, agentCore?
           .join('')
           .trim();
         if (!code || code === 'fail' || code === '000') {
+          // 前台同步跑 vite 3s 捕获真实启动输出(stderr 通常含报错原因)
+          const diag = await sandbox.commands.run(
+            'cd /workspace && timeout 6 npm run dev 2>&1 | head -25 || true',
+            { timeoutSeconds: 12, workingDirectory: '/workspace' }
+          );
+          const devLog =
+            (diag.logs?.stdout ?? []).map((l) => l.text).join('\n') +
+            (diag.logs?.stderr ?? []).map((l) => l.text).join('\n');
           return c.json({
             success: false,
             installLog,
-            error: `dev server 未就绪(端口5173无响应,可能 package.json 无 vite dev 脚本或启动失败)`,
+            error: `dev server 未就绪(端口5173无响应)。vite 启动输出:\n${devLog.slice(0, 800)}`,
           });
         }
       } catch (e) {
