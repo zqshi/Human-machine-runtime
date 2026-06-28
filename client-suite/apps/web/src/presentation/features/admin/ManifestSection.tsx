@@ -9,7 +9,10 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import { useToastStore } from '../../../application/stores/toastStore';
-import { runtimeManifestApi, type RuntimeManifestView } from '../../../application/services/adminApi';
+import {
+  runtimeManifestApi,
+  type RuntimeManifestView,
+} from '../../../application/services/adminApi';
 
 export function ManifestSection() {
   const [defId, setDefId] = useState('');
@@ -97,8 +100,8 @@ export function ManifestSection() {
 
       <div className="text-xs text-black/50 dark:text-white/50">
         bake 把声明态产物(systemPrompt/guardrails/tools/skills/quota/route)固化为不可变
-        RuntimeManifest,运行时 harness 读 manifest 不再动态查 DB。改 spec → bumpGeneration →
-        re-bake 新 generation,旧 instance 引用旧 generation(灰度/回滚)。
+        RuntimeManifest,运行时 harness 读 manifest 不再动态查 DB。改 spec → bumpGeneration → re-bake
+        新 generation,旧 instance 引用旧 generation(灰度/回滚)。
       </div>
 
       {manifests.length > 0 && (
@@ -129,10 +132,7 @@ export function ManifestSection() {
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => viewDetail(m)}
-                className="text-xs text-[#007AFF] underline"
-              >
+              <button onClick={() => viewDetail(m)} className="text-xs text-[#007AFF] underline">
                 查看内容
               </button>
             </div>

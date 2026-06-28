@@ -153,7 +153,9 @@ export function AgentCreateFlow({ onBack, definitionId, initial }: Props) {
             );
           }
         })
-        .catch((be) => toast(`编译固化未触发: ${(be as Error).message},可在「编译固化」面板重试`, 'error'));
+        .catch((be) =>
+          toast(`编译固化未触发: ${(be as Error).message},可在「编译固化」面板重试`, 'error')
+        );
 
       if (definitionId) {
         // 更新模式:已有 instance 关联,跳管理页(不重建 instance)
