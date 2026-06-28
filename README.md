@@ -85,6 +85,12 @@ cd client-suite/apps/web && npm install && cd ../../..
 cd server && cp .env.example .env   # 按需编辑
 cd ..
 
+#    可选:轻应用预览依赖 OpenSandbox(容器隔离代码沙箱)。不配则轻应用创建可用、预览不可用。
+#    需启动 OpenSandbox 服务(uvx opensandbox-server,默认 localhost:8080)并在 .env 配:
+#      OPENSANDBOX_DOMAIN=localhost:8080
+#      OPENSANDBOX_API_KEY=<your-key>
+#      OPENSANDBOX_IMAGE=node:22-alpine
+
 # 4. 初始化数据库（建表 + 种子数据）
 npm run db:setup
 
@@ -271,7 +277,7 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 | 面板 | 路由 key | 说明 |
 |------|----------|------|
 | 消息 | messages | IM 收发 + 回复/编辑/撤回/通话 |
-| 轻应用 | apps | 应用网格 |
+| 轻应用 | apps | 对话式创建应用（LLM 经 tool-loop 真实写文件到 sandbox）+ 文件树/预览 |
 | 通讯录 | contacts | 联系人管理 |
 | 知识库 | knowledge | 文档/知识库管理 |
 | 待办 | tasks | 任务管理 |
@@ -488,7 +494,10 @@ API:`/api/admin/agent-definitions`(CRUD + 分页,admin 聚合层挂 auth + requi
 | `/api/cockpit/channels` | 渠道管理 |
 | `/api/cockpit/workspace` | 工作空间 |
 | `/api/cockpit/studio` | Studio 资产聚合（T13，替代假数据桩） |
-| `/api/cockpit/chat` | 对话能力（persona/guardrail/history + LiteLLM，openclaw chat 与 Matrix bot 共用，T57/T59） |
+| `/api/cockpit/agent/dispatch` | 轻应用对话式创建（tool-loop 真实写文件到 sandbox，T52） |
+| `/api/cockpit/agent/sandbox/:id/files` | sandbox 工作区文件读取（展示 LLM 创建的代码） |
+| `/api/cockpit/agent/sandbox/:id/preview` | 应用预览（sandbox 内 npm install + vite dev，返回可访问 URL） |
+| `/api/cockpit/chat` | 对话能力（persona/guardrail/history + LiteLLM，cockpit chat 与 Matrix bot 共用，T57/T59） |
 | `/api/cockpit/bootstrap` | 前端初始化数据 |
 
 ### 管理控制面（/api/control）
