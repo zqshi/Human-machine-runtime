@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { RagContextProvider } from './rag-context-provider.js';
 import type { KnowledgeSearchPort, MemorySearchPort } from './rag-context-provider.js';
 import type { ILLMClient, ChatMessage } from './agent-executor.js';
+import type { IInstanceLookupPort, IAgentDefinitionPort } from './assembly-provider.js';
+import type { AgentDefinition, RagRecallPolicy } from './agent-definition.js';
 
 function makeKnowledge(
   hits: Array<{ title: string; content: string; score: number }>
@@ -30,6 +32,22 @@ function makeLlm(answer: string | null, available = true): ILLMClient {
 
 function makeLogger() {
   return { warn: vi.fn() };
+}
+
+// v2.0·C16:召回策略 port mock
+function makeInstanceLookup(defId: string | null): IInstanceLookupPort {
+  return {
+    getAgentDefinitionId: vi.fn().mockResolvedValue(defId),
+  };
+}
+
+function makeAgentDef(policy: RagRecallPolicy): IAgentDefinitionPort {
+  return {
+    getById: vi.fn().mockResolvedValue({
+      id: 'adef-1',
+      spec: { ragRecallPolicy: policy },
+    } as unknown as AgentDefinition),
+  };
 }
 
 const REQ = { tenantId: 'tn_demo', instanceId: 'inst-1', prompt: '公司的报销流程是什么?' };
@@ -162,5 +180,77 @@ describe('RagContextProvider', () => {
     const rag = await svc.getRagContext(REQ);
 
     expect(rag.sources.knowledge).toBe(3);
+  });
+
+  // ── v2.0·C16:召回策略(ragRecallPolicy)三态 ──
+
+  it('policy=never → 直接 skipped(不查 knowledge/memory/llm)', async () => {
+    const knowledge = makeKnowledge([{ title: 't', content: 'c', score: 0.9 }]);
+    const memory = makeMemory([{ content: 'm', score: 0.8 }]);
+    const llm = makeLlm('yes');
+    const svc = new RagContextProvider(
+      knowledge,
+      memory,
+      llm,
+      makeLogger(),
+      makeInstanceLookup('adef-1'),
+      makeAgentDef('never')
+    );
+    const rag = await svc.getRagContext(REQ);
+
+    expect(rag.skipped).toBe(true);
+    expect(rag.context).toBe('');
+    expect(knowledge.search).not.toHaveBeenCalled();
+    expect(memory.search).not.toHaveBeenCalled();
+    expect(llm.chatCompletion).not.toHaveBeenCalled();
+  });
+
+  it('policy=always → 跳过 judgeRecall 直接召回(不调 LLM,即便判 no)', async () => {
+    const knowledge = makeKnowledge([{ title: '报销制度', content: '填表', score: 0.9 }]);
+    const memory = makeMemory([]);
+    const llm = makeLlm('no');
+    const svc = new RagContextProvider(
+      knowledge,
+      memory,
+      llm,
+      makeLogger(),
+      makeInstanceLookup('adef-1'),
+      makeAgentDef('always')
+    );
+    const rag = await svc.getRagContext(REQ);
+
+    expect(rag.skipped).toBe(false);
+    expect(rag.sources.knowledge).toBe(1);
+    expect(llm.chatCompletion).not.toHaveBeenCalled();
+  });
+
+  it('policy 查不到(instance 无关联定义) → 默认 intent 走判断', async () => {
+    const knowledge = makeKnowledge([{ title: 't', content: 'c', score: 0.9 }]);
+    const memory = makeMemory([]);
+    const llm = makeLlm('no');
+    const svc = new RagContextProvider(
+      knowledge,
+      memory,
+      llm,
+      makeLogger(),
+      makeInstanceLookup(null),
+      makeAgentDef('never')
+    );
+    const rag = await svc.getRagContext(REQ);
+
+    // 无 defId → 默认 intent → LLM 判 no → skipped
+    expect(rag.skipped).toBe(true);
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it('lookup/def port 未注入(4 参数构造) → 默认 intent(向后兼容)', async () => {
+    const knowledge = makeKnowledge([{ title: 't', content: 'c', score: 0.9 }]);
+    const memory = makeMemory([]);
+    const llm = makeLlm('yes');
+    const svc = new RagContextProvider(knowledge, memory, llm, makeLogger());
+    const rag = await svc.getRagContext(REQ);
+
+    expect(rag.skipped).toBe(false);
+    expect(rag.sources.knowledge).toBe(1);
   });
 });

@@ -1,4 +1,6 @@
 import type { ILLMClient, ChatMessage } from './agent-executor.js';
+import type { IInstanceLookupPort, IAgentDefinitionPort } from './assembly-provider.js';
+import type { RagRecallPolicy } from './agent-definition.js';
 
 /**
  * RAG 上下文召回接口 — agent 执行前自动召回知识库 + 员工记忆,注入 prompt。
@@ -84,7 +86,10 @@ export class RagContextProvider implements IRagContextProvider {
     private readonly knowledgePort: KnowledgeSearchPort | null,
     private readonly memoryPort: MemorySearchPort | null,
     private readonly llmClient: ILLMClient | null,
-    private readonly logger: { warn: (msg: string) => void }
+    private readonly logger: { warn: (msg: string) => void },
+    /** v2.0·C16:按 instanceId 查 agent 召回策略的 port(缺省→默认 intent,向后兼容) */
+    private readonly instanceLookup: IInstanceLookupPort | null = null,
+    private readonly agentDefinitionPort: IAgentDefinitionPort | null = null
   ) {}
 
   async getRagContext(req: RagRecallRequest): Promise<RagContext> {
@@ -93,8 +98,14 @@ export class RagContextProvider implements IRagContextProvider {
       return NO_RECALL;
     }
 
-    // LLM 判断是否召回(不可用则默认召回,保证有知识时尽量召回)
-    const shouldRecall = await this.judgeRecall(req.prompt);
+    // v2.0·C16:按 Agent 召回策略分流(查不到/未注入 port → 默认 intent)
+    const policy = await this.resolvePolicy(req);
+    if (policy === 'never') {
+      return NO_RECALL; // 执行型 Agent:不召回,避噪声/延迟
+    }
+
+    // always:跳过意图判断直接召回(知识型兜底);intent:LLM 判断(不可用则默认召回)
+    const shouldRecall = policy === 'always' ? true : await this.judgeRecall(req.prompt);
     if (!shouldRecall) {
       return NO_RECALL;
     }
@@ -115,6 +126,26 @@ export class RagContextProvider implements IRagContextProvider {
       sources: { knowledge: knowledgeHits.length, memory: memoryHits.length },
       skipped: false,
     };
+  }
+
+  /**
+   * v2.0·C16:按 instanceId 解析 Agent 的召回策略。
+   * instanceId→getAgentDefinitionId→getById→spec.ragRecallPolicy;全链路容错默认 intent。
+   * port 未注入/无 instanceId/查询失败 → intent(保持原行为,向后兼容)。
+   */
+  private async resolvePolicy(req: RagRecallRequest): Promise<RagRecallPolicy> {
+    if (!this.instanceLookup || !this.agentDefinitionPort || !req.instanceId) {
+      return 'intent';
+    }
+    try {
+      const defId = await this.instanceLookup.getAgentDefinitionId(req.instanceId);
+      if (!defId) return 'intent';
+      const def = await this.agentDefinitionPort.getById(defId);
+      if (!def) return 'intent';
+      return def.spec.ragRecallPolicy ?? 'intent';
+    } catch {
+      return 'intent';
+    }
   }
 
   private async judgeRecall(prompt: string): Promise<boolean> {

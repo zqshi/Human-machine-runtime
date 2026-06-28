@@ -214,4 +214,25 @@ describe('v1.9 persona/guardrails/runtime 声明态', () => {
     expect(def.spec.persona.guardrails).toHaveLength(2);
     expect(def.spec.runtime.runtimeType).toBe('claude');
   });
+
+  it('ragRecallPolicy 非法值报错', () => {
+    const spec = {
+      ...defaultAgentDefinitionSpec(),
+      ragRecallPolicy: 'invalid' as never,
+    };
+    expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'ragRecallPolicy')).toBe(true);
+  });
+
+  it('ragRecallPolicy 合法值(intent/always/never)通过', () => {
+    for (const p of ['intent', 'always', 'never'] as const) {
+      const spec = { ...defaultAgentDefinitionSpec(), ragRecallPolicy: p };
+      expect(validateAgentDefinitionSpec(spec).some((e) => e.field === 'ragRecallPolicy')).toBe(
+        false
+      );
+    }
+  });
+
+  it('默认 ragRecallPolicy 为 intent', () => {
+    expect(defaultAgentDefinitionSpec().ragRecallPolicy).toBe('intent');
+  });
 });

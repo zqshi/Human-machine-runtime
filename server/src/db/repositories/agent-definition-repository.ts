@@ -38,6 +38,7 @@ export class AgentDefinitionRepository {
         persona: input.spec.persona as unknown as Record<string, unknown>,
         boundKnowledge: input.spec.boundKnowledge,
         runtime: input.spec.runtime as unknown as Record<string, unknown>,
+        ragRecallPolicy: input.spec.ragRecallPolicy,
         description: input.description,
       })
       .returning();
@@ -84,6 +85,7 @@ export class AgentDefinitionRepository {
         persona: spec.persona as unknown as Record<string, unknown>,
         boundKnowledge: spec.boundKnowledge,
         runtime: spec.runtime as unknown as Record<string, unknown>,
+        ragRecallPolicy: spec.ragRecallPolicy,
         // spec 变更 generation 递增(世代)
         generation: sql`generation + 1`,
         updatedAt: new Date(),
@@ -121,6 +123,7 @@ function toDomain(row: typeof agentDefinitions.$inferSelect): AgentDefinition {
       persona: row.persona as unknown as AgentDefinition['spec']['persona'],
       boundKnowledge: row.boundKnowledge,
       runtime: row.runtime as unknown as AgentDefinition['spec']['runtime'],
+      ragRecallPolicy: row.ragRecallPolicy as AgentDefinition['spec']['ragRecallPolicy'],
     },
     description: row.description,
     status: row.status as 'active' | 'archived',

@@ -62,6 +62,11 @@ export async function migrateAgentDefinition(db: MigrateDb): Promise<void> {
     sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS runtime JSONB NOT NULL DEFAULT '{"runtimeType":"claude"}'::jsonb`
   );
 
+  // v2.0 计划外·C16:RAG 召回策略列(intent|always|never,默认 intent)。幂等加列。
+  await db.execute(
+    sql`ALTER TABLE agent_definitions ADD COLUMN IF NOT EXISTS rag_recall_policy VARCHAR(16) NOT NULL DEFAULT 'intent'`
+  );
+
   // T60: openclaw→cockpit 命名中性化(历史 runtime.runtimeType 值迁移,幂等)
   await db.execute(sql`
     UPDATE agent_definitions

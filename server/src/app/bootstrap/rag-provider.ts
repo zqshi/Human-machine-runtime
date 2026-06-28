@@ -17,6 +17,9 @@ import type {
 import type { ILLMClient } from '../../contexts/agent-core/domain/agent-executor.js';
 import type { KnowledgeService } from '../../contexts/knowledge/knowledge-service.js';
 import type { MemoryService } from '../../contexts/employee-memory/memory-service.js';
+import { adaptInstanceLookup, adaptAgentDefinition } from './assembly-provider.js';
+import type { InstanceRepository } from '../../db/repositories/instance-repository.js';
+import type { AgentDefinitionRepository } from '../../db/repositories/agent-definition-repository.js';
 
 /** 适配 KnowledgeService → KnowledgeSearchPort(只暴露 search,签名兼容) */
 function adaptKnowledge(svc: KnowledgeService): KnowledgeSearchPort {
@@ -57,14 +60,22 @@ function adaptMemory(svc: MemoryService): MemorySearchPort {
 export function buildRagProvider(
   knowledgeService: KnowledgeService | null,
   memoryService: MemoryService,
-  agentLlmClient: ILLMClient | null
+  agentLlmClient: ILLMClient | null,
+  // v2.0·C16:召回策略 port(按 instanceId 查 agent.spec.ragRecallPolicy);复用 assembly 同款适配
+  instanceRepo: InstanceRepository,
+  agentDefinitionRepo: AgentDefinitionRepository
 ): IRagContextProvider {
   const knowledgePort = knowledgeService ? adaptKnowledge(knowledgeService) : null;
   // mem0 未配置(API key 未设)时,memoryService.search 内部三通道里 mem0 层会跳过,
   // 仍有本地关键词 + WeKnora 向量层。故 memoryService 始终注入(不判 mem0)。
   const memoryPort = adaptMemory(memoryService);
 
-  return new RagContextProvider(knowledgePort, memoryPort, agentLlmClient, {
-    warn: (msg) => logger.warn({ component: 'rag-provider' }, msg),
-  });
+  return new RagContextProvider(
+    knowledgePort,
+    memoryPort,
+    agentLlmClient,
+    { warn: (msg) => logger.warn({ component: 'rag-provider' }, msg) },
+    adaptInstanceLookup(instanceRepo),
+    adaptAgentDefinition(agentDefinitionRepo)
+  );
 }

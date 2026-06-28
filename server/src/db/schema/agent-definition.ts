@@ -52,6 +52,8 @@ export const agentDefinitions = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({ runtimeType: 'claude' }),
+    /** v2.0:RAG 召回策略(intent|always|never,默认 intent;计划外·C16) */
+    ragRecallPolicy: varchar('rag_recall_policy', { length: 16 }).notNull().default('intent'),
     description: varchar('description', { length: 512 }),
     status: varchar('status', { length: 32 }).notNull().default('active'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

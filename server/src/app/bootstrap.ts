@@ -439,7 +439,16 @@ export function createAppContext(db: Database): AppContext {
   const { memoryService } = buildMemoryBundle(db, knowledgeService, instanceRepo);
 
   // D2:激活 RAG 上下文召回(knowledge + memory + LLM 判断)。knowledgeService null 时只召回 memory 侧。
-  agentHarness.setRagProvider(buildRagProvider(knowledgeService, memoryService, agentLlmClient));
+  // v2.0·C16:注入 instanceLookup/agentDefinition port,使召回按 agent.spec.ragRecallPolicy 分流(intent/always/never)。
+  agentHarness.setRagProvider(
+    buildRagProvider(
+      knowledgeService,
+      memoryService,
+      agentLlmClient,
+      instanceRepo,
+      agentDefinitionRepo
+    )
+  );
 
   // v1.4:激活组装层(按 Agent 定义自动组装 allowedTools + skillsContext)。
   // instanceRepo/skillRepo 早实例化;AgentDefinitionRepository/ToolDefinitionRepository 此处独立 new(assembly 专用)。

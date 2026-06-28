@@ -78,6 +78,14 @@ export interface RuntimeDeclaration {
   config?: Record<string, unknown>;
 }
 
+/**
+ * RagRecallPolicy — RAG 召回策略(v2.0 计划外·C16)。
+ * intent(默认):按 LLM 意图判断是否召回(闲聊/纯执行→不召回,LLM 不可用则兜底召回);
+ * always:无条件召回(知识型问答 Agent 兜底,跳过意图判断);
+ * never:不召回(执行型/工具型 Agent 避噪声/延迟)。
+ */
+export type RagRecallPolicy = 'intent' | 'always' | 'never';
+
 export interface AgentDefinitionSpec {
   sandboxTemplate: string;
   resourceLimits: ResourceConfig;
@@ -91,6 +99,8 @@ export interface AgentDefinitionSpec {
   boundKnowledge: string[];
   /** v1.9:运行时声明(治本 D8) */
   runtime: RuntimeDeclaration;
+  /** v2.0:RAG 召回策略(默认 intent;见 RagRecallPolicy) */
+  ragRecallPolicy: RagRecallPolicy;
 }
 
 export interface AgentDefinition {
@@ -183,6 +193,11 @@ export function validateAgentDefinitionSpec(
     errors.push({ field: 'boundKnowledge', message: 'must be string[]' });
   }
 
+  // v2.0:ragRecallPolicy 召回策略(计划外·C16)
+  if (!['intent', 'always', 'never'].includes(spec.ragRecallPolicy)) {
+    errors.push({ field: 'ragRecallPolicy', message: 'must be intent|always|never' });
+  }
+
   // v1.9:runtime 声明(治本 D8)
   if (!spec.runtime || typeof spec.runtime !== 'object') {
     errors.push({ field: 'runtime', message: 'required' });
@@ -209,6 +224,7 @@ export function defaultAgentDefinitionSpec(): AgentDefinitionSpec {
     },
     boundKnowledge: [],
     runtime: { runtimeType: 'claude' },
+    ragRecallPolicy: 'intent',
   };
 }
 

@@ -41,6 +41,9 @@ export interface RuntimeDeclaration {
   config?: Record<string, unknown>;
 }
 
+/** v2.0:RAG 召回策略(对齐后端 RagRecallPolicy;计划外·C16) */
+export type RagRecallPolicy = 'intent' | 'always' | 'never';
+
 export interface ResourceModelConfig {
   primaryModel: string;
   fallbackModels: string[];
@@ -94,6 +97,8 @@ export interface AgentDefinitionSpec {
   boundKnowledge: string[];
   /** v1.9:运行时声明(治本 D8) */
   runtime: RuntimeDeclaration;
+  /** v2.0:RAG 召回策略(默认 intent;见 RagRecallPolicy) */
+  ragRecallPolicy: RagRecallPolicy;
 }
 
 export interface AgentDefinition {
@@ -114,6 +119,13 @@ export const SANDBOX_TEMPLATES = ['basic', 'high-privilege', 'network-isolated']
 export const RUNTIME_TYPES: AgentRuntimeType[] = ['claude', 'cockpit', 'hermes'];
 export const GUARDRAIL_TYPES: GuardrailType[] = ['keyword', 'regex', 'intent'];
 export const GUARDRAIL_ACTIONS: GuardrailAction[] = ['block', 'review'];
+export const RAG_RECALL_POLICIES: RagRecallPolicy[] = ['intent', 'always', 'never'];
+
+export const RAG_RECALL_POLICY_LABELS: Record<RagRecallPolicy, string> = {
+  intent: '按意图判断(默认,闲聊/纯执行不召回)',
+  always: '总是召回(知识型问答兜底)',
+  never: '不召回(执行型/工具型避噪声)',
+};
 
 export const RUNTIME_TYPE_LABELS: Record<AgentRuntimeType, string> = {
   claude: 'Claude (claude-worker)',
@@ -151,6 +163,7 @@ export function defaultAgentDefinitionSpec(): AgentDefinitionSpec {
     persona: { systemPrompt: '', guardrails: [], refusalResponse: '' },
     boundKnowledge: [],
     runtime: { runtimeType: 'claude' },
+    ragRecallPolicy: 'intent',
   };
 }
 
