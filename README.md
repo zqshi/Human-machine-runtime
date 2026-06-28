@@ -152,18 +152,35 @@ graph LR
   subgraph L3["运行时层"]
     Harness["harness.dispatchTask"]
     Asm["(降级) assemble + getPersona"]
+    Loop["tool-loop 多轮<br/>LLM 调工具"]
+    Sbx["沙箱执行器<br/>(写文件/读文件)"]
   end
   Spec -->|发布| Bake --> Manifest
   Manifest -->|读 manifest 命中| Harness
   Harness -.未 bake/灰度.-> Asm
+  Harness --> Loop --> Sbx
   style L2 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+  style Sbx fill:#e8fae8,stroke:#34c759
 ```
 
-- **声明层**：`AgentDefinitionSpec` 是云原生 CRD 式声明态定义，包含人设/拒答规则/绑定工具技能知识库/运行时类型/RAG 召回策略等。
+- **声明层**：`AgentDefinitionSpec` 是云原生 CRD 式声明态定义，包含人设/拒答规则/绑定工具技能知识库/运行时类型/RAG 召回策略等。声明不绑定实例——一个 AgentDefinition 可被 0~N 个数字员工实例引用（`instance.agentDefinitionId` 可空）。
 - **编译固化层**：Agent 发布时 `bake` 成不可变 `RuntimeManifest`（落 `agent_runtime_manifests` 表），固化 systemPrompt/tools/skills/quota 快照。spec 变更 → bumpGeneration → re-bake 新 manifest，旧 instance 引用旧 generation（灰度/回滚）。
 - **运行时层**：`harness.dispatchTask` 优先读 baked manifest（命中则跳过动态查 DB 拼装，消除运行时漂移），未 bake 的存量 Agent降级走 assemble + getPersona 老路径（灰度兼容）。
+- **沙箱执行**：dispatchTask 经 `tool-loop` adapter 驱动 LLM 多轮调工具（write_file/read_file/list_files），工具调用经 `registry.invoke` → `executor-factory` 路由到**沙箱执行器**——LLM 写的文件落沙箱工作区，轻应用预览就在此沙箱内 npm install + vite dev。沙箱后端按配置选（见下）。
 
-> **实现状态**：baking 编译固化链路 `[已落地]`；CubeSandbox（KVM MicroVM）高安全执行层 `[待 KVM 宿主]`。详见 [v2.0 设计文档](docs/architecture/v2.0-declarative-baking-runtime.md)，进度见 [v2.0-current](docs/versions/v2.0-current.md)。
+#### 沙箱后端选型
+
+`executor-factory` 按 `OPENSANDBOX_DOMAIN` 是否配置选择沙箱后端：
+
+| 后端 | 隔离强度 | 触发条件 | 状态 |
+|------|----------|----------|------|
+| **OpenSandbox**（docker 容器） | 容器隔离（投产推荐） | `.env` 配 `OPENSANDBOX_DOMAIN` | `[已落地]` |
+| **node-fs**（`SandboxExecutor`） | 无隔离（仅开发，路径校验防护但不防逃逸） | 未配 `OPENSANDBOX_DOMAIN` 时降级 | `[已落地]` |
+| **CubeSandbox**（KVM MicroVM） | microVM 强隔离（高安全场景） | sandboxTemplate=`kvm-microvm`（SandboxRouter 路由） | `[待 KVM 宿主]` |
+
+OpenSandbox：每个 callerId（实例/任务）复用一个 docker 容器（缓存 + TTL 空闲清理），容器内 `/workspace` 为应用工作区。CubeSandbox 是规划的高安全后端，与 OpenSandbox 并存（SandboxRouter 按策略路由），代码接 E2B SDK，待 KVM 宿主可实测。
+
+> **实现状态**：baking 编译固化链路 `[已落地]`；OpenSandbox 沙箱执行 `[已落地]`；CubeSandbox（KVM MicroVM）高安全执行层 `[待 KVM 宿主]`。详见 [v2.0 设计文档](docs/architecture/v2.0-declarative-baking-runtime.md)，进度见 [v2.0-current](docs/versions/v2.0-current.md)。
 
 ### DDD 限界上下文（29 个）
 
@@ -274,9 +291,13 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 | 员工管理 | 数字员工 CRUD + 详情/编辑/资源/话题 |
 | 共享 Agent | 跨租户共享 Agent 注册/绑定 |
 | 技能管理 | 技能详情 + 策略配置 |
-| 工具管理 | 工具资产管理 |
+| 工具管理 | 工具资产管理 + 风险等级 |
 | AI Gateway | 模型路由/调用追踪/成本分析/风控规则 |
 | 配额管理 | 配额仪表盘/分配/告警 |
+| 编译固化 | bake 触发/manifest 查看/版本对比/回滚（v2.0） |
+| 投产管控 | 工具审批队列 + Feature Flag 灰度 + 运行时模板（v1.9） |
+| 凭证保险库 | 加密存储 + 租约（工具调用解密） |
+| 数字员工记忆 | mem0 记忆 store 管理 |
 | AI 助手 | 管理后台 AI 分析助手 |
 | 用户分析 | 用户行为分析 |
 | 通知/日志 | 系统通知 + 行为日志筛选 |
