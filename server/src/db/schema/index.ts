@@ -22,3 +22,4 @@ export * from './employee-memory.js';
 export * from './scheduled-tasks.js';
 export * from './billing.js';
 export * from './agent-definition.js';
+export * from './runtime-manifest.js';

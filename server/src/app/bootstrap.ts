@@ -8,7 +8,12 @@ import type { AppContext } from './bootstrap/types.js';
 import { buildGatewayClients } from './bootstrap/gateway-clients.js';
 import { buildCredentialBundle } from './bootstrap/credentials.js';
 import { buildRagProvider } from './bootstrap/rag-provider.js';
-import { buildAssemblyProvider } from './bootstrap/assembly-provider.js';
+import {
+  buildAssemblyProvider,
+  adaptAgentDefinition,
+  adaptBoundTools,
+  adaptContentStore,
+} from './bootstrap/assembly-provider.js';
 import { adaptSkillPort } from './bootstrap/studio-skill-port.js';
 import { buildPersonaProvider } from './bootstrap/persona-provider.js';
 import { ChatService } from '../contexts/agent-core/application/chat-service.js';
@@ -71,12 +76,16 @@ import { MarketplaceService } from '../contexts/marketplace/marketplace-service.
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
 import { AgentProfileService } from '../contexts/agent-profile/agent-profile-service.js';
 import { CockpitRepository } from '../db/repositories/cockpit-repository.js';
+import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
 import { AgentProfileRepository } from '../db/repositories/agent-profile-repository.js';
 import { TokenUsageRepository } from '../db/repositories/token-usage-repository.js';
 import { AgentCore } from '../contexts/agent-core/agent-core.js';
 import { AgentHarness } from '../contexts/agent-core/harness/harness.js';
+import { BakingService } from '../contexts/agent-core/application/baking-service.js';
+import { RuntimeRegistry } from '../contexts/agent-core/domain/runtime-registry.js';
+import { adaptRuntimeManifestPort } from './bootstrap/runtime-manifest-port.js';
 import { AnalyticsService } from '../contexts/analytics/analytics-service.js';
 import { UserManagementService } from '../contexts/identity-access/user-management-service.js';
 import { SystemConfigService } from '../contexts/system-config/system-config-service.js';
@@ -448,6 +457,20 @@ export function createAppContext(db: Database): AppContext {
   const personaProvider = buildPersonaProvider(instanceRepo, agentDefinitionRepo);
   agentHarness.setPersonaProvider(personaProvider);
 
+  // v2.0 C11:编译固化层装配。runtimeManifestRepo + BakingService + harness RuntimeManifestPort。
+  // bake 用声明态 spec.persona 固化(personaProvider 是运行时 instance→persona 召回,语义不同,传 null);
+  // assembleTools/assembleSkills 复用 assembly 的 ports(agentDefinitionRepo/toolDefinitionRepo/skillRepo)。
+  const runtimeManifestRepo = new RuntimeManifestRepository(db);
+  const bakingService = new BakingService(
+    adaptAgentDefinition(agentDefinitionRepo),
+    adaptBoundTools(new ToolDefinitionRepository(db)),
+    adaptContentStore(skillRepo),
+    runtimeManifestRepo,
+    new RuntimeRegistry(),
+    { warn: (m) => logger.warn({ component: 'baking-service' }, m), error: (m) => logger.error({ component: 'baking-service' }, m) }
+  );
+  agentHarness.setRuntimeManifestPort(adaptRuntimeManifestPort(instanceRepo, runtimeManifestRepo));
+
   /* ──── ChatService / Matrix bot 对话闭环(T57) ──── */
   // ChatService:对话能力核心(persona/guardrail/history/LiteLLM),cockpit chat route +
   // RuntimeProxyService(Matrix bot)共用(DRY)。RuntimeProxyService 实现 IRuntimeProxyService
@@ -713,6 +736,8 @@ export function createAppContext(db: Database): AppContext {
     oauthStateStore,
     billingService,
     agentDefinitionService,
+    runtimeManifestRepo,
+    bakingService,
     gatewayHealth: new GatewayHealth([
       marketplaceClient,
       profileServiceClient,

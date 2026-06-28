@@ -100,6 +100,135 @@ export interface IAssemblyProvider {
 }
 
 /**
+ * assembleTools — 工具组装纯函数(C4 提纯,bake 与运行时共用,不重发明)。
+ *
+ * 解析逻辑只有一份实现:跨租户校验(防绑别租户工具)/ 禁用跳过 / inputSchema 缺省降级 /
+ * 空数组陷阱(boundTools 非空但全失效 → undefined + degraded 由调用方标)。
+ * BakingService.bake 与 AssemblyProvider.assemble 都调本函数。
+ */
+export async function assembleTools(
+  tenantId: string,
+  boundTools: string[],
+  boundToolsPort: IBoundToolsPort | null,
+  logger: { warn: (msg: string) => void }
+): Promise<{
+  allowedTools: string[] | undefined;
+  externalTools:
+    | Array<{
+        toolId: string;
+        name: string;
+        description: string;
+        inputSchema: Record<string, unknown>;
+      }>
+    | undefined;
+  bound: number;
+  resolved: number;
+  skipped: number;
+}> {
+  if (boundTools.length === 0 || !boundToolsPort) {
+    return {
+      allowedTools: undefined,
+      externalTools: undefined,
+      bound: boundTools.length,
+      resolved: 0,
+      skipped: 0,
+    };
+  }
+
+  const rows = await boundToolsPort.findByIds(boundTools);
+  const names = new Set<string>();
+  const externalTools: Array<{
+    toolId: string;
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }> = [];
+  let skipped = 0;
+  for (const r of rows) {
+    // 跨租户安全:防绑别租户工具
+    if (r.tenantId !== tenantId) {
+      skipped++;
+      logger.warn(`tool ${r.id} tenant mismatch, skipped`);
+      continue;
+    }
+    // 禁用/非 active 跳过
+    if (!r.enabled || r.status !== 'active') {
+      skipped++;
+      logger.warn(`tool ${r.id} disabled/inactive, skipped`);
+      continue;
+    }
+    names.add(r.name);
+    // T18b-A:收集完整工具定义透传给 worker,注册为 SDK custom tool
+    // (handler 调 server /tool-invoke 收口:审批/凭证/计费/日志对本路径生效)
+    externalTools.push({
+      toolId: r.id,
+      name: r.name,
+      // description 缺省降级为 name(LLM 仍可据名选择),inputSchema 缺省为空 schema(无参工具)
+      description: r.description ?? r.name,
+      inputSchema: r.inputSchema ?? {},
+    });
+  }
+  // 不存在的 id 也算 skipped
+  skipped += boundTools.length - rows.length;
+
+  // 空数组陷阱:resolved 为 0 → 返回 undefined(不覆盖,走默认),由调用方标 degraded
+  return {
+    allowedTools: names.size > 0 ? Array.from(names) : undefined,
+    externalTools: names.size > 0 ? externalTools : undefined,
+    bound: boundTools.length,
+    resolved: names.size,
+    skipped,
+  };
+}
+
+/**
+ * assembleSkills — skill 上下文组装纯函数(C4 提纯,bake 与运行时共用)。
+ * content 优先,contentRef 次之(contentRef 若是 url/path 当前无解析器 → 跳过)。
+ */
+export async function assembleSkills(
+  boundSkills: string[],
+  contentStorePort: IContentStorePort | null,
+  logger: { warn: (msg: string) => void }
+): Promise<{ skillsContext: string | undefined; bound: number; resolved: number; skipped: number }> {
+  if (boundSkills.length === 0 || !contentStorePort) {
+    return { skillsContext: undefined, bound: boundSkills.length, resolved: 0, skipped: 0 };
+  }
+
+  const rows = await contentStorePort.getByIds(boundSkills);
+  const lines: string[] = [];
+  let resolved = 0;
+  let skipped = 0;
+  for (const r of rows) {
+    // content 优先,contentRef 次之(contentRef 若是 url 当前无解析器 → 跳过)
+    const content = r.content ?? resolveContentRef(r.contentRef);
+    if (!content) {
+      skipped++;
+      logger.warn(`skill ${r.id} no content, skipped`);
+      continue;
+    }
+    resolved++;
+    lines.push(`## ${r.name}\n${r.description}\n${content}`);
+  }
+  skipped += boundSkills.length - rows.length;
+
+  return {
+    skillsContext: lines.length > 0 ? lines.join('\n\n') : undefined,
+    bound: boundSkills.length,
+    resolved,
+    skipped,
+  };
+}
+
+/** contentRef 解析:当前仅支持纯文本 contentRef(直接当内容);url/path 暂不支持 → null */
+function resolveContentRef(contentRef: string | null): string | null {
+  if (!contentRef) return null;
+  // url/http 开头的不解析(无解析器)
+  if (/^https?:\/\//i.test(contentRef) || /^\//.test(contentRef)) return null;
+  // 纯文本 contentRef 当内容用(向后兼容历史数据)
+  return contentRef;
+}
+
+/**
  * 组装器实现。
  *
  * 流程:instanceId → getAgentDefinitionId → AgentDefinition.getById → boundTools/boundSkills
@@ -143,16 +272,16 @@ export class AssemblyProvider implements IAssemblyProvider {
     const boundTools = def.spec.boundTools ?? [];
     const boundSkills = def.spec.boundSkills ?? [];
 
-    // 并行组装 tools + skills(各自容错)
+    // 并行组装 tools + skills(各自容错)。C4 提纯:调模块级纯函数(行为不变,现成测试守护)
     const [toolsResult, skillsResult] = await Promise.all([
-      this.assembleTools(req, boundTools).catch(() => ({
+      assembleTools(req.tenantId, boundTools, this.boundToolsPort, this.logger).catch(() => ({
         allowedTools: undefined,
         externalTools: undefined,
         bound: boundTools.length,
         resolved: 0,
         skipped: boundTools.length,
       })),
-      this.assembleSkills(boundSkills).catch(() => ({
+      assembleSkills(boundSkills, this.contentStorePort, this.logger).catch(() => ({
         skillsContext: undefined,
         bound: boundSkills.length,
         resolved: 0,
@@ -182,122 +311,5 @@ export class AssemblyProvider implements IAssemblyProvider {
       skipped: false,
       degraded,
     };
-  }
-
-  private async assembleTools(
-    req: AssemblyRequest,
-    boundTools: string[]
-  ): Promise<{
-    allowedTools: string[] | undefined;
-    externalTools:
-      | Array<{
-          toolId: string;
-          name: string;
-          description: string;
-          inputSchema: Record<string, unknown>;
-        }>
-      | undefined;
-    bound: number;
-    resolved: number;
-    skipped: number;
-  }> {
-    if (boundTools.length === 0 || !this.boundToolsPort) {
-      return {
-        allowedTools: undefined,
-        externalTools: undefined,
-        bound: boundTools.length,
-        resolved: 0,
-        skipped: 0,
-      };
-    }
-
-    const rows = await this.boundToolsPort.findByIds(boundTools);
-    const names = new Set<string>();
-    const externalTools: Array<{
-      toolId: string;
-      name: string;
-      description: string;
-      inputSchema: Record<string, unknown>;
-    }> = [];
-    let skipped = 0;
-    for (const r of rows) {
-      // 跨租户安全:防绑别租户工具
-      if (r.tenantId !== req.tenantId) {
-        skipped++;
-        this.logger.warn(`tool ${r.id} tenant mismatch, skipped`);
-        continue;
-      }
-      // 禁用/非 active 跳过
-      if (!r.enabled || r.status !== 'active') {
-        skipped++;
-        this.logger.warn(`tool ${r.id} disabled/inactive, skipped`);
-        continue;
-      }
-      names.add(r.name);
-      // T18b-A:收集完整工具定义透传给 worker,注册为 SDK custom tool
-      // (handler 调 server /tool-invoke 收口:审批/凭证/计费/日志对本路径生效)
-      externalTools.push({
-        toolId: r.id,
-        name: r.name,
-        // description 缺省降级为 name(LLM 仍可据名选择),inputSchema 缺省为空 schema(无参工具)
-        description: r.description ?? r.name,
-        inputSchema: r.inputSchema ?? {},
-      });
-    }
-    // 不存在的 id 也算 skipped
-    skipped += boundTools.length - rows.length;
-
-    // 空数组陷阱:resolved 为 0 → 返回 undefined(不覆盖,走默认),由 assemble 标 degraded
-    return {
-      allowedTools: names.size > 0 ? Array.from(names) : undefined,
-      externalTools: names.size > 0 ? externalTools : undefined,
-      bound: boundTools.length,
-      resolved: names.size,
-      skipped,
-    };
-  }
-
-  private async assembleSkills(boundSkills: string[]): Promise<{
-    skillsContext: string | undefined;
-    bound: number;
-    resolved: number;
-    skipped: number;
-  }> {
-    if (boundSkills.length === 0 || !this.contentStorePort) {
-      return { skillsContext: undefined, bound: boundSkills.length, resolved: 0, skipped: 0 };
-    }
-
-    const rows = await this.contentStorePort.getByIds(boundSkills);
-    const lines: string[] = [];
-    let resolved = 0;
-    let skipped = 0;
-    for (const r of rows) {
-      // content 优先,contentRef 次之(contentRef 若是 url 当前无解析器 → 跳过)
-      const content = r.content ?? this.resolveContentRef(r.contentRef);
-      if (!content) {
-        skipped++;
-        this.logger.warn(`skill ${r.id} no content, skipped`);
-        continue;
-      }
-      resolved++;
-      lines.push(`## ${r.name}\n${r.description}\n${content}`);
-    }
-    skipped += boundSkills.length - rows.length;
-
-    return {
-      skillsContext: lines.length > 0 ? lines.join('\n\n') : undefined,
-      bound: boundSkills.length,
-      resolved,
-      skipped,
-    };
-  }
-
-  /** contentRef 解析:当前仅支持纯文本 contentRef(直接当内容);url/path 暂不支持 → null */
-  private resolveContentRef(contentRef: string | null): string | null {
-    if (!contentRef) return null;
-    // url/http 开头的不解析(无解析器)
-    if (/^https?:\/\//i.test(contentRef) || /^\//.test(contentRef)) return null;
-    // 纯文本 contentRef 当内容用(向后兼容历史数据)
-    return contentRef;
   }
 }

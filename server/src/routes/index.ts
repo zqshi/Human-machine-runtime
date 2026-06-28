@@ -50,6 +50,7 @@ import { createAdminAgentDefinitionRoutes } from './admin/agent-definitions.js';
 import { createAdminToolApprovalRoutes } from './admin/tool-approvals.js';
 import { createAdminRuntimeTemplateRoutes } from './admin/runtime-templates.js';
 import { createAdminFeatureFlagRoutes } from './admin/feature-flags.js';
+import { createAdminRuntimeManifestRoutes } from './admin/runtime-manifests.js';
 import { createCockpitTaskRoutes } from './cockpit/tasks.js';
 import { createCockpitDecisionRoutes } from './cockpit/decisions.js';
 import { createCockpitSignalRoutes } from './cockpit/signals.js';
@@ -217,6 +218,10 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   );
   admin.route('/runtime-templates', createAdminRuntimeTemplateRoutes());
   admin.route('/feature-flags', createAdminFeatureFlagRoutes(ctx.systemConfigService));
+  admin.route(
+    '/runtime-manifests',
+    createAdminRuntimeManifestRoutes(ctx.bakingService, ctx.agentDefinitionService, ctx.runtimeManifestRepo)
+  );
   app.route('/api/admin', admin);
 
   /* ──── Control (L2 管理控制面) ──── */

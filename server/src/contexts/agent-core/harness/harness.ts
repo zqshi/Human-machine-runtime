@@ -15,6 +15,7 @@ import type {
 import type { IRagContextProvider, RagRecallRequest } from '../domain/rag-context-provider.js';
 import type { IAssemblyProvider, AssemblyRequest } from '../domain/assembly-provider.js';
 import type { IPersonaProvider, PersonaResult } from '../domain/persona-provider.js';
+import type { IRuntimeManifestPort } from '../domain/runtime-manifest-port.js';
 import { checkGuardrails } from '../domain/guardrail-checker.js';
 import type { ITraceRecorder } from '../domain/trace-recorder.js';
 import { newId, AppError } from '../../../shared/utils.js';
@@ -41,6 +42,7 @@ export class AgentHarness {
   private ragProvider: IRagContextProvider | null;
   private assemblyProvider: IAssemblyProvider | null;
   private personaProvider: IPersonaProvider | null;
+  private runtimeManifestPort: IRuntimeManifestPort | null;
   private traceRecorder: ITraceRecorder | null;
 
   constructor(
@@ -58,6 +60,7 @@ export class AgentHarness {
     this.ragProvider = ragProvider ?? null;
     this.assemblyProvider = null;
     this.personaProvider = null;
+    this.runtimeManifestPort = null;
     this.traceRecorder = null;
     const execStores: AgentExecutorStores = { tasks: session.taskArtifactStore };
     this.executor = new AgentExecutor(llmClient, execStores, this.broadcast);
@@ -176,9 +179,57 @@ export class AgentHarness {
       }
     }
 
+    // v2.0:编译固化路径(灰度关键)。优先读 baked RuntimeManifest:有则用固化产物
+    // (systemPrompt/tools/skills),跳过下方 assemble + getPersona(声明态产物已固化,不再动态查 DB);
+    // 无则降级老路径(灰度兼容未 bake 的存量 Agent,设计文档 §5.2)。
+    let manifestHit = false;
+    let manifestGuardrails: PersonaResult['guardrails'] = [];
+    let manifestRefusalResponse = '';
+    if (this.runtimeManifestPort && instanceId) {
+      try {
+        const manifest = await traceStep('manifest.load', 'internal', () =>
+          this.runtimeManifestPort!.getManifest(instanceId)
+        ).catch((err) => {
+          appEventBus.publish('harness:manifest:failed', {
+            taskId: task.id,
+            err: err instanceof Error ? err.message : String(err),
+          });
+          return null; // 容错降级老路径
+        });
+        if (manifest) {
+          manifestHit = true;
+          // 固化产物注入 input(调用方优先:已显式传则不覆盖,与 assemble 一致语义)
+          if (manifest.compiledSystemPrompt && input0.systemPrompt === undefined) {
+            input0.systemPrompt = manifest.compiledSystemPrompt;
+          }
+          const toolNames = manifest.compiledTools.map((t) => t.name);
+          if (toolNames.length > 0 && input0.allowedTools === undefined) {
+            input0.allowedTools = toolNames;
+          }
+          // externalTools(worker 路径用,与 assemble 产出同构)
+          if (manifest.compiledTools.length > 0 && input0.externalTools === undefined) {
+            input0.externalTools = manifest.compiledTools;
+          }
+          if (manifest.compiledSkillsContext && input0.skillsContext === undefined) {
+            input0.skillsContext = manifest.compiledSkillsContext;
+          }
+          task.input = input0;
+          manifestGuardrails = manifest.compiledGuardrails;
+          manifestRefusalResponse = manifest.refusalResponse;
+          appEventBus.publish('harness:manifest:hit', { taskId: task.id });
+        }
+      } catch (err) {
+        appEventBus.publish('harness:manifest:failed', {
+          taskId: task.id,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     // v1.4:组装层(按 Agent 定义自动组装 allowedTools + skillsContext)。
     // 调用方优先(已显式传 allowedTools/skillsContext 则不覆盖)。assemble 内部容错,失败不阻断。
-    if (this.assemblyProvider) {
+    // v2.0:manifest 命中则跳过(声明态产物已固化,不再动态查 DB)。
+    if (this.assemblyProvider && !manifestHit) {
       const input = (task.input ?? {}) as Record<string, unknown>;
       const asmInstanceId = typeof input.instanceId === 'string' ? input.instanceId : undefined;
       const asmReq: AssemblyRequest = {
@@ -220,7 +271,27 @@ export class AgentHarness {
 
     // v1.9:persona 注入 + guardrail 拦截(#1)。provider 缺省或无 persona 则不改 task(兼容旧实例)。
     // block 命中 → 抛 GUARDRAIL_BLOCKED(含 refusalResponse),不 dispatch;调用方 catch 返回拒答。
-    if (this.personaProvider && instanceId) {
+    // v2.0:manifest 命中则 guardrail 读 manifest.compiledGuardrails(已固化,跳过 getPersona);
+    //      否则降级 personaProvider 召回(灰度兼容)。
+    if (manifestHit) {
+      // manifest 路径:guardrail 用固化规则
+      if (manifestGuardrails.length > 0) {
+        const promptText = typeof input0.prompt === 'string' ? input0.prompt : task.description;
+        const guardResult = checkGuardrails(promptText, manifestGuardrails);
+        if (guardResult.blocked) {
+          appEventBus.publish('harness:guardrail:blocked', {
+            taskId: task.id,
+            tenantId: task.tenantId,
+            ruleId: guardResult.matchedRule?.id,
+          });
+          throw new AppError(
+            manifestRefusalResponse || '该请求超出我的处理范围。',
+            403,
+            'GUARDRAIL_BLOCKED'
+          );
+        }
+      }
+    } else if (this.personaProvider && instanceId) {
       const persona = await traceStep<PersonaResult | null>(
         'persona.recall',
         'internal',
@@ -335,6 +406,15 @@ export class AgentHarness {
    */
   setPersonaProvider(provider: IPersonaProvider | null): void {
     this.personaProvider = provider;
+  }
+
+  /**
+   * 注入 RuntimeManifestPort,激活 dispatchTask 的编译固化路径(v2.0,#Layer 3 灰度)。
+   * 有 baked manifest → 用固化产物(跳过 assemble + getPersona);无 → 降级老路径。
+   * 延后注入(模式同 setRagProvider/setAssemblyProvider)。
+   */
+  setRuntimeManifestPort(provider: IRuntimeManifestPort | null): void {
+    this.runtimeManifestPort = provider;
   }
 
   /**

@@ -73,6 +73,8 @@ import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
 import type { ConfigRepository } from '../../db/repositories/config-repository.js';
 import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
+import type { RuntimeManifestRepository } from '../../db/repositories/runtime-manifest-repository.js';
+import type { BakingService } from '../../contexts/agent-core/application/baking-service.js';
 import type { OperationalRepository } from '../../db/repositories/operational-repository.js';
 import type { AgentProfileRepository } from '../../db/repositories/agent-profile-repository.js';
 import type { EvalBenchmarkRepository } from '../../db/repositories/eval-benchmark-repository.js';
@@ -155,4 +157,7 @@ export interface AppContext {
   oauthStateStore: IOAuthStateStore;
   billingService: BillingService;
   agentDefinitionService: AgentDefinitionService;
+  /** v2.0 编译固化层:agent_runtime_manifests 表 repo + BakingService(bake 编排)。C12 后台 route 消费 */
+  runtimeManifestRepo: RuntimeManifestRepository;
+  bakingService: BakingService;
 }

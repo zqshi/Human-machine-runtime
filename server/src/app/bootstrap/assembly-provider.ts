@@ -37,8 +37,8 @@ export function adaptAgentDefinition(repo: AgentDefinitionRepository): IAgentDef
   return { getById: (id) => repo.getById(id) };
 }
 
-/** ToolDefinitionRepository → IBoundToolsPort */
-function adaptBoundTools(repo: ToolDefinitionRepository): IBoundToolsPort {
+/** ToolDefinitionRepository → IBoundToolsPort(v2.0:export 供 BakingService 复用,不重发明) */
+export function adaptBoundTools(repo: ToolDefinitionRepository): IBoundToolsPort {
   return {
     async findByIds(ids) {
       const rows = await repo.findByIds(ids);
@@ -56,8 +56,8 @@ function adaptBoundTools(repo: ToolDefinitionRepository): IBoundToolsPort {
   };
 }
 
-/** SkillRepository → IContentStorePort */
-function adaptContentStore(repo: SkillRepository): IContentStorePort {
+/** SkillRepository → IContentStorePort(v2.0:export 供 BakingService 复用,不重发明) */
+export function adaptContentStore(repo: SkillRepository): IContentStorePort {
   return {
     async getByIds(ids) {
       const assets = await repo.getSharedAssetsByIds(ids);

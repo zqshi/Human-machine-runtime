@@ -110,7 +110,7 @@ export interface AgentDefinitionValidationError {
   message: string;
 }
 
-const SANDBOX_TEMPLATES = ['basic', 'high-privilege', 'network-isolated'];
+const SANDBOX_TEMPLATES = ['basic', 'high-privilege', 'network-isolated', 'kvm-microvm'];
 const WORKSPACE_SIZES = ['1Gi', '2Gi', '5Gi', '10Gi', '20Gi', '50Gi'];
 
 /** 校验 spec(轻量:结构与枚举,v1.3 不重复 ResourceConfig 细校验,由 instance 侧做) */
