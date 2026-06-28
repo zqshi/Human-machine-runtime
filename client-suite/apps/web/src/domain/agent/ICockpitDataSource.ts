@@ -12,8 +12,6 @@ export type CockpitEventType =
   | 'workorder:created'
   | 'workorder:completed'
   | 'artifact:created'
-  | 'artifact:progress'
-  | 'artifact:completed'
   | 'connected'
   | 'signal:created'
   | 'correction:applied'

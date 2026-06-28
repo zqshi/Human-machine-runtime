@@ -1,102 +1,47 @@
 /**
- * PreviewChat — 右栏预览对话 + 调试模式（暗色主题）
+ * PreviewChat — 右栏预览对话 + 调试模式(暗色主题)
  *
- * 完整功能：
- * - 多会话支持（新建 / 历史列表 / 切换 / 删除）
- * - 调试模式（Agent Loop Trace 执行链路可视化）
+ * 完整功能:
+ * - 多会话支持(新建 / 历史列表 / 切换 / 删除)
+ * - 调试模式(展示真实调用信息: 模型 / token 用量 / 耗时,不伪造执行链路)
  * - 预设问题快捷入口
+ *
+ * 数据来源: 调用真实 /api/cockpit/chat 端点(ChatService 真调 LiteLLM)。
+ * Studio 编排预览场景无 instanceId,后端用 body.systemPrompt 作为 system prompt。
+ * LiteLLM 未配置/失败时后端返 503/502,UI 诚实暴露错误,不伪装回复。
  */
 import { useState, useRef, useEffect } from 'react';
 import { useOrchestrationStore } from '../../../../application/stores/orchestrationStore';
 import { useToastStore } from '../../../../application/stores/toastStore';
+import { studioApi, PreviewChatError } from '../../../../application/services/studioApi';
 
 interface ChatMessage {
   role: 'user' | 'bot';
   content: string;
+  /** 关联的调用信息(仅 bot 回复有,调试模式展示用);出错时为错误信息 */
+  trace?: CallTrace;
 }
 
-interface TraceStep {
-  type: 'prompt' | 'retrieval' | 'thinking' | 'action' | 'observation' | 'response';
-  label: string;
-  detail: string;
-  duration: number;
+/** 真实调用信息 — 全部来自后端返回,无伪造 */
+interface CallTrace {
+  model?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  elapsedMs: number;
+  blocked?: boolean;
+  error?: boolean;
 }
 
 interface ChatSession {
   id: string;
   title: string;
   messages: ChatMessage[];
-  traces: { input: string; steps: TraceStep[]; totalMs: number }[];
 }
-
-function simulateTrace(input: string, promptLen: number, mcpCount: number): TraceStep[] {
-  const steps: TraceStep[] = [];
-  const tokens = Math.floor(promptLen / 4) + Math.floor(input.length / 4);
-
-  steps.push({
-    type: 'prompt',
-    label: 'Prompt 组装',
-    detail: `system(${promptLen}c) + history + user → ${tokens + 320} tokens`,
-    duration: 15,
-  });
-
-  if (mcpCount > 0) {
-    steps.push({
-      type: 'retrieval',
-      label: 'RAG 检索',
-      detail: `向量检索 → 命中 ${Math.floor(Math.random() * 3) + 2} 段落`,
-      duration: Math.floor(Math.random() * 150) + 80,
-    });
-  }
-
-  steps.push({
-    type: 'thinking',
-    label: '[Loop 1] Agent 思考',
-    detail: '分析意图，决定调用工具',
-    duration: Math.floor(Math.random() * 800) + 600,
-  });
-  steps.push({
-    type: 'action',
-    label: '[Loop 1] Action: Tool Call',
-    detail: `执行工具调用`,
-    duration: Math.floor(Math.random() * 400) + 200,
-  });
-  steps.push({
-    type: 'observation',
-    label: '[Loop 1] Observation',
-    detail: `返回结果，准备生成回复`,
-    duration: Math.floor(Math.random() * 200) + 80,
-  });
-  steps.push({
-    type: 'thinking',
-    label: '[Loop 2] Agent 思考',
-    detail: '信息充足，生成结构化回复',
-    duration: Math.floor(Math.random() * 500) + 300,
-  });
-  steps.push({
-    type: 'response',
-    label: '[Finish] 生成回复',
-    detail: `Agent Loop 完成 (2 轮) | output_tokens: ${Math.floor(Math.random() * 300) + 200}`,
-    duration: Math.floor(Math.random() * 200) + 100,
-  });
-
-  return steps;
-}
-
-const TRACE_ICONS: Record<TraceStep['type'], string> = {
-  prompt: '📋',
-  retrieval: '🔍',
-  thinking: '🧠',
-  action: '⚡',
-  observation: '👁️',
-  response: '✅',
-};
 
 export function PreviewChat() {
   const openingMessage = useOrchestrationStore((s) => s.openingMessage);
   const presetQuestions = useOrchestrationStore((s) => s.presetQuestions);
   const systemPrompt = useOrchestrationStore((s) => s.systemPrompt);
-  const mcpRefs = useOrchestrationStore((s) => s.mcpRefs);
   const toast = useToastStore((s) => s.addToast);
 
   // 多会话
@@ -104,8 +49,7 @@ export function PreviewChat() {
     {
       id: 's1',
       title: '会话 1',
-      messages: [{ role: 'bot', content: openingMessage || '你好！我是你的 AI 助手。' }],
-      traces: [],
+      messages: [{ role: 'bot', content: openingMessage || '你好!我是你的 AI 助手。' }],
     },
   ]);
   const [activeSessionId, setActiveSessionId] = useState('s1');
@@ -130,7 +74,7 @@ export function PreviewChat() {
         s.id === activeSessionId && s.messages.length === 1 && s.messages[0].role === 'bot'
           ? {
               ...s,
-              messages: [{ role: 'bot', content: openingMessage || '你好！我是你的 AI 助手。' }],
+              messages: [{ role: 'bot', content: openingMessage || '你好!我是你的 AI 助手。' }],
             }
           : s
       )
@@ -152,8 +96,7 @@ export function PreviewChat() {
     const session: ChatSession = {
       id,
       title: `会话 ${sessions.length + 1}`,
-      messages: [{ role: 'bot', content: openingMessage || '你好！' }],
-      traces: [],
+      messages: [{ role: 'bot', content: openingMessage || '你好!' }],
     };
     setSessions((prev) => [...prev, session]);
     setActiveSessionId(id);
@@ -171,10 +114,22 @@ export function PreviewChat() {
     if (activeSessionId === id) setActiveSessionId(remaining[0].id);
   };
 
-  const sendMessage = () => {
+  /**
+   * 发送消息 — 调用真实 /api/cockpit/chat,传入当前编排的 systemPrompt。
+   * 历史消息取当前会话已有对话(转成 user/assistant),供后端多轮上下文。
+   */
+  const sendMessage = async () => {
     if (!input.trim() || running) return;
     const userMsg = input.trim();
     setInput('');
+
+    // 构造历史(排除开场白 bot 消息,只取真实多轮)
+    const history = activeSession.messages
+      .filter((_, i) => i > 0 || activeSession.messages[0].role !== 'bot')
+      .map((m) => ({
+        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.content,
+      }));
 
     setSessions((prev) =>
       prev.map((s) =>
@@ -183,60 +138,66 @@ export function PreviewChat() {
           : s
       )
     );
+    setRunning(true);
 
-    if (debugMode) {
-      setRunning(true);
-      const steps = simulateTrace(userMsg, systemPrompt.length, mcpRefs.length);
-      const totalMs = steps.reduce((sum, st) => sum + st.duration, 0);
-      setTimeout(() => {
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === activeSessionId
-              ? {
-                  ...s,
-                  messages: [
-                    ...s.messages,
-                    {
-                      role: 'bot',
-                      content: `针对「${userMsg}」的分析完成。\n\n**结论：** 已生成优化建议。\n\n_耗时 ${totalMs}ms_`,
+    try {
+      const result = await studioApi.previewChat(userMsg, systemPrompt, history);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId
+            ? {
+                ...s,
+                messages: [
+                  ...s.messages,
+                  {
+                    role: 'bot',
+                    content: result.reply || '(空回复)',
+                    trace: {
+                      model: result.model,
+                      promptTokens: result.usage?.prompt_tokens,
+                      completionTokens: result.usage?.completion_tokens,
+                      elapsedMs: result.elapsedMs,
+                      blocked: result.blocked,
                     },
-                  ],
-                  traces: [...s.traces, { input: userMsg, steps, totalMs }],
-                }
-              : s
-          )
-        );
-        setRunning(false);
-      }, 800);
-    } else {
-      setTimeout(() => {
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === activeSessionId
-              ? {
-                  ...s,
-                  messages: [
-                    ...s.messages,
-                    {
-                      role: 'bot',
-                      content: `针对「${userMsg}」，我来分析一下...\n\n基于系统提示词(${systemPrompt.length}字符)的设定，这是一个典型的处理场景。`,
-                    },
-                  ],
-                }
-              : s
-          )
-        );
-      }, 600);
+                  },
+                ],
+              }
+            : s
+        )
+      );
+    } catch (err) {
+      // 诚实暴露错误: 503 LiteLLM 未配置 / 502 调用失败 / 403 模型未授权 / 网络错误
+      const isPreviewErr = err instanceof PreviewChatError;
+      const status = isPreviewErr ? err.status : 0;
+      const hint =
+        status === 503
+          ? 'LiteLLM 未配置,无法进行预览对话(后端不 mock 兜底)'
+          : status === 502
+            ? '对话服务调用失败,请稍后重试'
+            : status === 403
+              ? '当前模型未授权'
+              : '预览对话请求失败';
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId
+            ? {
+                ...s,
+                messages: [
+                  ...s.messages,
+                  {
+                    role: 'bot',
+                    content: `[预览失败] ${hint}`,
+                    trace: { elapsedMs: 0, error: true },
+                  },
+                ],
+              }
+            : s
+        )
+      );
+      toast(hint, 'error');
+    } finally {
+      setRunning(false);
     }
-  };
-
-  // 计算 trace 索引
-  const getTraceForMsg = (
-    msgIdx: number
-  ): { input: string; steps: TraceStep[]; totalMs: number } | null => {
-    const userMsgs = activeSession.messages.slice(0, msgIdx + 1).filter((m) => m.role === 'user');
-    const traceIdx = userMsgs.length - 1;
-    return activeSession.traces[traceIdx] ?? null;
   };
 
   return (
@@ -333,6 +294,8 @@ export function PreviewChat() {
               <div className="border border-white/[0.1] bg-white/[0.04] rounded-[12px] rounded-bl-[3px] px-3 py-2 text-[12px] leading-[1.6] max-w-[90%] whitespace-pre-wrap text-slate-200">
                 {msg.content}
               </div>
+              {/* 调试信息: 真实调用元数据(model/usage/耗时),仅 bot 回复且有 trace 时展示 */}
+              {debugMode && msg.trace && <TraceCard trace={msg.trace} />}
             </div>
           ) : (
             <div key={i} className="flex flex-col gap-1">
@@ -341,8 +304,6 @@ export function PreviewChat() {
                   {msg.content}
                 </div>
               </div>
-              {/* Debug trace inline */}
-              {debugMode && getTraceForMsg(i) && <TraceCard trace={getTraceForMsg(i)!} />}
             </div>
           )
         )}
@@ -362,7 +323,7 @@ export function PreviewChat() {
         {running && (
           <div className="flex items-center gap-2 ml-8 text-[11px] text-slate-500">
             <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            执行中，追踪链路...
+            调用对话服务...
           </div>
         )}
         <div ref={endRef} />
@@ -375,7 +336,7 @@ export function PreviewChat() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           className="flex-1 h-8 border border-white/[0.1] bg-white/[0.03] rounded-lg px-3 text-[12px] outline-none text-slate-200 placeholder:text-slate-500 focus:border-primary/50 focus:ring-[3px] focus:ring-primary/10"
-          placeholder={debugMode ? '输入消息查看执行链路...' : '输入测试消息...'}
+          placeholder={debugMode ? '输入消息查看调用信息...' : '输入测试消息...'}
         />
         <button
           onClick={sendMessage}
@@ -389,34 +350,40 @@ export function PreviewChat() {
   );
 }
 
-/** Inline trace card shown below user messages in debug mode */
-function TraceCard({ trace }: { trace: { input: string; steps: TraceStep[]; totalMs: number } }) {
+/** 调试信息卡片 — 展示真实调用元数据(model/token 用量/耗时),不伪造执行链路 */
+function TraceCard({ trace }: { trace: CallTrace }) {
   const [expanded, setExpanded] = useState(true);
 
+  const items: { label: string; value: string }[] = [];
+  if (trace.error) {
+    items.push({ label: '状态', value: '调用失败' });
+  } else {
+    if (trace.model) items.push({ label: '模型', value: trace.model });
+    if (trace.promptTokens !== undefined)
+      items.push({ label: '输入 tokens', value: String(trace.promptTokens) });
+    if (trace.completionTokens !== undefined)
+      items.push({ label: '输出 tokens', value: String(trace.completionTokens) });
+    if (trace.blocked) items.push({ label: 'guardrail', value: '已拦截' });
+    items.push({ label: '耗时', value: `${trace.elapsedMs}ms` });
+  }
+
   return (
-    <div className="ml-8 mt-1 bg-primary/[0.03] border border-primary/20 rounded-xl overflow-hidden text-[10px]">
+    <div className="ml-8 mt-1 bg-primary/[0.03] border border-primary/20 rounded-xl overflow-hidden text-[10px] w-fit max-w-[90%]">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-primary/[0.04] transition-colors"
       >
-        <span className="font-medium text-primary">{expanded ? '▾' : '▸'} 执行链路</span>
-        <span className="text-[9px] text-slate-500 font-mono">{trace.totalMs}ms</span>
+        <span className="font-medium text-primary">{expanded ? '▾' : '▸'} 调用信息</span>
+        {!trace.error && (
+          <span className="text-[9px] text-slate-500 font-mono">{trace.elapsedMs}ms</span>
+        )}
       </button>
       {expanded && (
         <div className="px-3 pb-2 flex flex-col gap-1">
-          {trace.steps.map((step, si) => (
-            <div key={si} className="flex items-start gap-1.5 relative">
-              {si < trace.steps.length - 1 && (
-                <div className="absolute left-[7px] top-4 bottom-0 w-px bg-primary/10" />
-              )}
-              <span className="text-[10px] shrink-0 relative z-10">{TRACE_ICONS[step.type]}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-slate-300">{step.label}</span>
-                  <span className="text-[9px] text-slate-500 font-mono">{step.duration}ms</span>
-                </div>
-                <div className="text-[9px] text-slate-500 truncate">{step.detail}</div>
-              </div>
+          {items.map((item, si) => (
+            <div key={si} className="flex items-center gap-3">
+              <span className="text-[9px] text-slate-500 w-16 shrink-0">{item.label}</span>
+              <span className="text-[10px] text-slate-300 font-mono truncate">{item.value}</span>
             </div>
           ))}
         </div>

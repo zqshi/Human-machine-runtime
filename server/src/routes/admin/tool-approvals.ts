@@ -3,13 +3,15 @@ import { z } from 'zod';
 import type { ToolApprovalRepository } from '../../db/repositories/tool-approvals-repository.js';
 import type { ToolManagementService } from '../../contexts/tool-management/tool-management-service.js';
 import type { AuditService } from '../../contexts/audit-observability/audit-service.js';
-import type { ExecutionContext } from '../../contexts/tool-management/types.js';
+import { ToolApprovalService } from '../../contexts/tool-management/application/tool-approval-service.js';
 
 /**
  * 工具审批队列路由(admin 控制面,#7 执行时 Human Review)。
  *
- * 薄层(§1.3):参数校验 → 调 repo/toolMgmt → 审计 → 返回。
- * approve 触发实际 executeTool(用 stored params/context 快照),结果存回 approval.result。
+ * 薄层(§1.3):参数校验 → 调 service/repo → 返回。
+ * approve/reject 业务(状态机校验+执行+审计)下沉 ToolApprovalService(§12 信号6,route 不含业务判断)。
+ * findPending 纯查询直调 repo(无业务逻辑)。
+ * 错误:service 抛 AppError(404/409),由全局 errorHandler(app/index.ts:19)统一映射 statusCode,route 不重复 catch。
  * auth:由 admin 聚合层统一挂(见 routes/index.ts)。
  */
 const listQuerySchema = z.object({
@@ -29,6 +31,7 @@ export function createAdminToolApprovalRoutes(
   audit?: AuditService
 ) {
   const app = new Hono();
+  const approvalService = new ToolApprovalService(approvalRepo, toolMgmt, audit);
 
   app.get('/pending', async (c) => {
     const parsed = listQuerySchema.safeParse(c.req.query());
@@ -41,69 +44,13 @@ export function createAdminToolApprovalRoutes(
     return c.json({ items, total: items.length });
   });
 
-  app.post('/:id/approve', async (c) => {
-    const approval = await approvalRepo.findById(c.req.param('id'));
-    if (!approval) return c.json({ error: 'approval not found' }, 404);
-    if (approval.status !== 'pending') {
-      return c.json({ error: `approval already ${approval.status}` }, 409);
-    }
-    const reviewer = reviewerOf(c);
-    await approvalRepo.update(approval.id, {
-      status: 'approved',
-      reviewedBy: reviewer,
-      reviewedAt: new Date(),
-    });
-    // 触发实际执行(用 gate 拦截时存的 params/context 快照)
-    let result: Record<string, unknown>;
-    try {
-      const execResult = await toolMgmt.executeTool(
-        approval.toolId,
-        approval.params,
-        approval.context as unknown as ExecutionContext
-      );
-      result = execResult as unknown as Record<string, unknown>;
-    } catch (err) {
-      result = {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-    await approvalRepo.update(approval.id, { result });
-    audit?.log(
-      'tool_approval.approved',
-      { approvalId: approval.id, toolId: approval.toolId, tenantId: approval.tenantId },
-      { actor: { username: reviewer, role: 'platform_admin' } }
-    );
-    return c.json({ approvalId: approval.id, status: 'approved', result });
-  });
+  app.post('/:id/approve', async (c) =>
+    c.json(await approvalService.approve(c.req.param('id'), reviewerOf(c)))
+  );
 
   app.post('/:id/reject', async (c) => {
-    const body = (await c.req.json<{ reason?: string }>().catch(() => ({}))) as {
-      reason?: string;
-    };
-    const approval = await approvalRepo.findById(c.req.param('id'));
-    if (!approval) return c.json({ error: 'approval not found' }, 404);
-    if (approval.status !== 'pending') {
-      return c.json({ error: `approval already ${approval.status}` }, 409);
-    }
-    const reviewer = reviewerOf(c);
-    await approvalRepo.update(approval.id, {
-      status: 'rejected',
-      reviewedBy: reviewer,
-      reviewNote: body.reason ?? null,
-      reviewedAt: new Date(),
-    });
-    audit?.log(
-      'tool_approval.rejected',
-      {
-        approvalId: approval.id,
-        toolId: approval.toolId,
-        tenantId: approval.tenantId,
-        reason: body.reason,
-      },
-      { actor: { username: reviewer, role: 'platform_admin' } }
-    );
-    return c.json({ approvalId: approval.id, status: 'rejected' });
+    const body = (await c.req.json<{ reason?: string }>().catch(() => ({}))) as { reason?: string };
+    return c.json(await approvalService.reject(c.req.param('id'), reviewerOf(c), body.reason));
   });
 
   return app;

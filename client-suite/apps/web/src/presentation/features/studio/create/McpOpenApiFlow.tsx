@@ -1,14 +1,19 @@
 /**
  * McpOpenApiFlow — OpenAPI 对话式接入
  *
- * ⚠️ [未接真实后端 — 升级项] 当前为前端 setTimeout 假表演(MOCK_ENDPOINTS/MOCK_SWAGGER
- * 假"端点发现"动画),无真实 OpenAPI 解析/MCP 生成。保留作升级项,待真实 MCP 创建链路
- * 就绪后改造(参照 AppCreateFlow T52 真实 dispatch 模式)。用户决策保留,不删。
+ * ⚠️ [演示模式 — 功能开发中] 本流程未接真实后端:后端已有
+ * contexts/tool-management/parsers/openapi-parser.ts 与 ToolSourceService.syncOpenApi
+ * 真实能力(POST /admin/tools/sources + /sync + /upload-spec),但前端对话式编排
+ * (端点发现/Swagger 生成/Higress 导入/mcporter 命令生成)属升级项,当前未实装。
+ * 发送消息不会产生任何真实请求,仅提示功能开发中。
  *
- * 设计源模式：左对话 + 右4Tab实时面板（端点发现 → Swagger → Higress MCP → mcporter）
- * AI 自动完成全流程，用户只需提供文档链接或描述。
+ * 设计源模式:左对话 + 右4Tab实时面板(端点发现 → Swagger → Higress MCP → mcporter)
+ * 保留 UI 骨架(对话/Tab 结构)供预览,执行按钮禁用,不展示假端点/Swagger 数据。
+ *
+ * 接真路径(升级时):参照 McpDatabaseFlow(T37)模式 ——
+ *   createSource(openapi+specUrl/specContent) → syncSource → 展示真实 tools。
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
 import { Icon } from '../../../components/ui/Icon';
 
@@ -16,80 +21,17 @@ interface Props {
   onBack: () => void;
 }
 
-interface ChatMsg {
-  id: number;
-  role: 'user' | 'bot';
-  content: string;
-}
-
-const MOCK_ENDPOINTS = [
-  { method: 'GET', path: '/api/v1/users', name: '获取用户列表' },
-  { method: 'POST', path: '/api/v1/users', name: '创建用户' },
-  { method: 'GET', path: '/api/v1/orders', name: '获取订单列表' },
-];
-
-type RightTab = 'endpoints' | 'swagger' | 'higress' | 'mcporter';
+const DEMO_NOTICE = '功能开发中,即将上线';
 
 export function McpOpenApiFlow({ onBack }: Props) {
   const toast = useToastStore((s) => s.addToast);
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      id: 0,
-      role: 'bot',
-      content:
-        '你好！我是接入助手。提供 API 文档链接或描述你要接入的服务，我会自动完成：\n\n1. 抓取并解析文档内容\n2. 生成 OpenAPI (Swagger) 规范\n3. 通过 Higress 网关导入为 MCP 服务\n4. 生成 mcporter CLI 命令\n\n请开始吧！',
-    },
-  ]);
   const [input, setInput] = useState('');
-  const [phase, setPhase] = useState(0); // 0=waiting, 1=endpoints, 2=swagger, 3=higress, 4=mcporter, 5=done
-  const [activeTab, setActiveTab] = useState<RightTab>('endpoints');
-  const [processing, setProcessing] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const addBot = (content: string) =>
-    setMessages((prev) => [...prev, { id: Date.now() + Math.random(), role: 'bot', content }]);
-
-  const runFlow = async () => {
-    setProcessing(true);
-    await delay(800);
-    addBot('收到！正在连接并解析文档...');
-    setPhase(1);
-    setActiveTab('endpoints');
-    await delay(1200);
-    addBot('文档解析完成！发现 **3 个 API 端点**，请在右侧查看。\n\n接下来生成 OpenAPI 规范...');
-    await delay(1200);
-    setPhase(2);
-    setActiveTab('swagger');
-    addBot('OpenAPI 3.0 规范生成完毕！包含完整 Schema 和认证配置。\n\n正在导入 Higress 网关...');
-    await delay(1200);
-    setPhase(3);
-    setActiveTab('higress');
-    addBot('Higress 网关配置完成！MCP 服务已上线。\n\n生成 mcporter 配置...');
-    await delay(1000);
-    setPhase(4);
-    setActiveTab('mcporter');
-    addBot('🎉 **全部完成！** 服务已注册，可在 Agent 中通过工具调用。');
-    setPhase(5);
-    setProcessing(false);
-  };
 
   const handleSend = () => {
-    if (!input.trim() || processing) return;
-    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: input }]);
+    if (!input.trim()) return;
+    toast(DEMO_NOTICE, 'info');
     setInput('');
-    if (phase === 0) runFlow();
   };
-
-  const TABS: { key: RightTab; label: string }[] = [
-    { key: 'endpoints', label: '端点发现' },
-    { key: 'swagger', label: 'Swagger' },
-    { key: 'higress', label: 'Higress MCP' },
-    { key: 'mcporter', label: 'mcporter' },
-  ];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -101,48 +43,38 @@ export function McpOpenApiFlow({ onBack }: Props) {
           <Icon name="arrow_back" size={13} /> 返回
         </button>
         <div className="ml-3">
-          <h2 className="text-[13px] font-semibold text-slate-100">OpenAPI 接入</h2>
+          <h2 className="text-[13px] font-semibold text-slate-100">
+            OpenAPI 接入
+            <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/15 text-amber-400 align-middle">
+              演示模式
+            </span>
+          </h2>
           <p className="text-[9px] text-slate-500">通过对话快速将 API 文档转为 MCP 工具</p>
         </div>
       </header>
 
+      {/* 演示模式 banner:醒目提示功能开发中 */}
+      <div className="px-5 py-2.5 border-b border-amber-500/20 bg-amber-500/[0.06] flex items-center gap-2">
+        <Icon name="info" size={12} className="text-amber-400 shrink-0" />
+        <p className="text-[11px] text-amber-300">
+          本流程为演示模式,功能开发中,即将上线。对话与各 Tab 不会发起任何真实解析或 MCP 生成请求。
+        </p>
+      </div>
+
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Chat */}
+        {/* Left: Chat(保留对话骨架,发送仅提示开发中) */}
         <div className="flex-1 flex flex-col min-w-[340px] border-r border-white/[0.06]">
           <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
             <div className="flex flex-col gap-3 max-w-[480px]">
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
-                >
-                  {m.role === 'bot' && (
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-[9px] shrink-0">
-                      AI
-                    </div>
-                  )}
-                  <div
-                    className={`rounded-[12px] px-3 py-2 text-[12px] leading-[1.6] max-w-[85%] whitespace-pre-wrap ${
-                      m.role === 'user'
-                        ? 'bg-primary text-white rounded-br-[3px]'
-                        : 'border border-white/[0.1] bg-white/[0.04] text-slate-200 rounded-bl-[3px]'
-                    }`}
-                  >
-                    {renderContent(m.content)}
-                  </div>
+              <div className="flex gap-2">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-[9px] shrink-0">
+                  AI
                 </div>
-              ))}
-              {processing && (
-                <div className="flex gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
-                    <div className="w-3 h-3 border-[1.5px] border-white border-t-transparent rounded-full animate-spin" />
-                  </div>
-                  <div className="border border-white/[0.1] bg-white/[0.04] rounded-[12px] rounded-bl-[3px] px-3 py-2 text-[12px] text-slate-500">
-                    处理中...
-                  </div>
+                <div className="border border-white/[0.1] bg-white/[0.04] rounded-[12px] rounded-bl-[3px] px-3 py-2 text-[12px] leading-[1.6] text-slate-300">
+                  你好!OpenAPI 对话式接入功能正在开发中,即将上线。届时提供 API
+                  文档链接或描述,即可自动完成端点发现、Swagger 生成、Higress 导入与 mcporter 配置。
                 </div>
-              )}
-              <div ref={chatEndRef} />
+              </div>
             </div>
           </div>
           <div className="px-4 pb-3 pt-2 border-t border-white/[0.08] flex items-center gap-2">
@@ -152,162 +84,46 @@ export function McpOpenApiFlow({ onBack }: Props) {
               onKeyDown={(e) =>
                 e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())
               }
-              placeholder={processing ? '处理中...' : '输入 API 文档链接或描述...'}
-              disabled={processing}
-              className="flex-1 h-8 border border-white/[0.1] bg-white/[0.03] rounded-lg px-3 text-[12px] outline-none text-slate-200 placeholder:text-slate-500 focus:border-primary/50 disabled:opacity-50"
+              placeholder="输入 API 文档链接或描述..."
+              className="flex-1 h-8 border border-white/[0.1] bg-white/[0.03] rounded-lg px-3 text-[12px] outline-none text-slate-200 placeholder:text-slate-500 focus:border-primary/50"
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || processing}
+              disabled={!input.trim()}
               className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs disabled:opacity-30"
+              title={DEMO_NOTICE}
             >
               ↑
             </button>
           </div>
         </div>
 
-        {/* Right: Result Panel */}
+        {/* Right: 结果面板(演示模式,各 Tab 不展示假数据) */}
         <div className="w-[45%] min-w-[340px] flex flex-col bg-white/[0.01]">
           <div className="flex px-4 pt-2 gap-0 border-b border-white/[0.06]">
-            {TABS.map((t) => (
+            {['端点发现', 'Swagger', 'Higress MCP', 'mcporter'].map((label) => (
               <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={`px-3 py-2.5 text-[10px] font-medium border-b-2 transition-colors ${
-                  activeTab === t.key
-                    ? 'text-primary border-primary'
-                    : 'text-slate-500 border-transparent'
-                }`}
+                key={label}
+                className="px-3 py-2.5 text-[10px] font-medium border-b-2 border-transparent text-slate-500"
               >
-                {t.label}
+                {label}
               </button>
             ))}
           </div>
           <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
-            {activeTab === 'endpoints' &&
-              (phase >= 1 ? (
-                <div className="space-y-2">
-                  {MOCK_ENDPOINTS.map((ep) => (
-                    <div
-                      key={ep.path + ep.method}
-                      className="border border-white/[0.1] bg-white/[0.03] rounded-xl p-3"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${ep.method === 'GET' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-sky-500/10 text-sky-400'}`}
-                        >
-                          {ep.method}
-                        </span>
-                        <span className="text-[11px] font-mono text-slate-300">{ep.path}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400">{ep.name}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState text="等待输入 API 文档链接..." />
-              ))}
-            {activeTab === 'swagger' &&
-              (phase >= 2 ? (
-                <CodeBlock code={MOCK_SWAGGER} />
-              ) : (
-                <EmptyState text="等待端点解析完成..." />
-              ))}
-            {activeTab === 'higress' &&
-              (phase >= 3 ? (
-                <CodeBlock code={MOCK_HIGRESS} />
-              ) : (
-                <EmptyState text="等待 Swagger 生成..." />
-              ))}
-            {activeTab === 'mcporter' &&
-              (phase >= 4 ? (
-                <CodeBlock code={MOCK_MCPORTER} />
-              ) : (
-                <EmptyState text="等待 Higress 配置..." />
-              ))}
-          </div>
-          {phase === 5 && (
-            <div className="px-4 pb-3 pt-2 border-t border-white/[0.06] flex justify-end">
-              <button
-                onClick={() => {
-                  toast('MCP 工具已创建', 'success');
-                  onBack();
-                }}
-                className="h-7 px-4 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90"
-              >
-                完成
-              </button>
+            <div className="flex flex-col items-center justify-center h-full text-center gap-2">
+              <Icon name="construction" size={28} className="text-slate-600" />
+              <p className="text-[11px] text-slate-500">
+                功能开发中,即将上线
+                <br />
+                <span className="text-[10px] text-slate-600">
+                  端点发现/Swagger/Higress/mcporter 结果将在接入后端后启用
+                </span>
+              </p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="flex items-center justify-center h-full text-[11px] text-slate-500">{text}</div>
-  );
-}
-
-function CodeBlock({ code }: { code: string }) {
-  return (
-    <pre className="bg-[#0d1117] text-emerald-300 rounded-xl p-4 text-[10px] font-mono leading-[1.6] overflow-x-auto whitespace-pre-wrap">
-      {code}
-    </pre>
-  );
-}
-
-function renderContent(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**'))
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
-    return <span key={i}>{part}</span>;
-  });
-}
-
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-const MOCK_SWAGGER = `openapi: "3.0.3"
-info:
-  title: 用户服务 API
-  version: "1.0.0"
-paths:
-  /api/v1/users:
-    get:
-      summary: 获取用户列表
-    post:
-      summary: 创建用户
-  /api/v1/orders:
-    get:
-      summary: 获取订单列表`;
-
-const MOCK_HIGRESS = `{
-  "apiVersion": "networking.higress.io/v1",
-  "kind": "McpBridge",
-  "spec": {
-    "servers": [{
-      "name": "user-service-mcp",
-      "type": "openapi",
-      "tools": [
-        { "name": "listUsers" },
-        { "name": "createUser" },
-        { "name": "listOrders" }
-      ]
-    }]
-  }
-}`;
-
-const MOCK_MCPORTER = `{
-  "mcpServers": {
-    "user-service-mcp": {
-      "url": "https://mcp.clawmate.cn/user-service-mcp/sse",
-      "headers": {
-        "Authorization": "Bearer \${CLAWHUB_TOKEN}"
-      }
-    }
-  }
-}`;

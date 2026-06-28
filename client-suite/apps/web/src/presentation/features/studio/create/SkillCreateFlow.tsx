@@ -2,14 +2,18 @@
  * SkillCreateFlow — Skill 对话式 Workspace 开发
  *
  * 设计源模式：借鉴 skill-creator 工程模型
- * - 左栏: 对话（与 AI 协作开发 Skill）
- * - 右栏: 两Tab — 结构（文件树 + 内容查看） / 测试&验证
+ * - 左栏: 对话（记录 Skill 需求，便于后续手动落地）
+ * - 右栏: 两Tab — 结构（文件树 + 内容查看与编辑） / 测试&验证
  *
- * Skill 文件结构:
- *   SKILL.md → prompt + metadata
- *   scripts/ → 可执行脚本
- *   references/ → 知识文档
- *   assets/ → 模板/素材
+ * 投产诚实化说明（2026-06-28）：
+ * 后端目前仅有「向 workspace 安装已有 skillId」的 installSkill 接口，
+ * 不具备「AI 生成 skill 内容」「执行 skill 脚本测试」「发布 skill」的能力。
+ * 因此本流程不伪造 AI 生成/测试/发布，改为：
+ *   1. 对话仅作需求记录，不假装 AI 生成完整 Skill；
+ *   2. 文件骨架为静态模板，明确标注需手动实现，由用户在右栏编辑；
+ *   3. 测试入口诚实提示「需配置后端执行环境」；
+ *   4. 发布入口改为「保存为本地草稿」，不谎称已发布到后端。
+ * 待后端补齐 skill 创建/执行/发布 API 后，再接真实链路。
  */
 import { useState, useRef, useEffect } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
@@ -33,9 +37,8 @@ interface SkillFile {
 }
 
 type RightTab = 'structure' | 'test';
-type TestStatus = 'idle' | 'validating' | 'running' | 'pass' | 'fail';
 
-/** 预置测试用例 */
+/** 预置测试用例（仅作输入参考，不执行） */
 interface TestCase {
   id: string;
   label: string;
@@ -83,26 +86,23 @@ const INITIAL_FILES: SkillFile[] = [
 export function SkillCreateFlow({ onBack }: Props) {
   const toast = useToastStore((s) => s.addToast);
 
-  // 对话
+  // 对话（仅作需求记录，不调用 AI 生成）
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: 0,
       role: 'bot',
       content:
-        '你好！我是 Skill 开发助手。\n\n描述你想创建的技能，我会帮你生成完整的 Skill 工程结构：\n\n- SKILL.md（定义/触发词/描述）\n- scripts/（可执行逻辑）\n- references/（知识文档）\n\n你想创建什么样的技能？',
+        '你好！这里是 Skill 需求记录区。\n\n请描述你想创建的技能，描述会作为需求保留在对话中，便于你在右侧「结构」Tab 手动编辑对应的工程文件：\n\n- SKILL.md（定义/触发词/描述）\n- scripts/（可执行逻辑，需手动实现）\n- references/（知识文档）\n\n注意：当前后端未提供「AI 生成 Skill 内容」的能力，右侧文件需由你手动编辑实现。',
     },
   ]);
   const [input, setInput] = useState('');
-  const [processing, setProcessing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // 右栏
   const [rightTab, setRightTab] = useState<RightTab>('structure');
   const [files, setFiles] = useState<SkillFile[]>(INITIAL_FILES);
   const [selectedFile, setSelectedFile] = useState<string | null>('SKILL.md');
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testOutput, setTestOutput] = useState('');
-  const [skillReady, setSkillReady] = useState(false);
+  const [hasRequirement, setHasRequirement] = useState(false);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -112,98 +112,32 @@ export function SkillCreateFlow({ onBack }: Props) {
     setMessages((prev) => [...prev, { id: Date.now() + Math.random(), role: 'bot', content }]);
 
   const handleSend = () => {
-    if (!input.trim() || processing) return;
+    if (!input.trim()) return;
     const userMsg = input.trim();
     setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMsg }]);
     setInput('');
-    setProcessing(true);
+    setHasRequirement(true);
 
-    // 模拟 AI 生成 Skill
-    setTimeout(() => {
-      const updatedFiles: SkillFile[] = [
-        {
-          name: 'SKILL.md',
-          type: 'file',
-          indent: 0,
-          content: `---\nname: ${userMsg.slice(0, 20).replace(/\s/g, '-').toLowerCase()}\ndescription: >\n  ${userMsg}\ntriggers:\n  - ${userMsg.split(' ').slice(0, 2).join(' ')}\n---\n\n# ${userMsg.slice(0, 30)}\n\n## Overview\n基于用户描述自动生成的 Skill。\n\n## Workflow\n1. 解析输入参数\n2. 执行核心逻辑\n3. 格式化输出`,
-        },
-        { name: 'scripts/', type: 'folder', indent: 0 },
-        {
-          name: 'main.py',
-          type: 'file',
-          indent: 1,
-          content: `"""${userMsg.slice(0, 40)} — 主脚本"""\nimport json\nfrom typing import Any\n\ndef execute(params: dict[str, Any]) -> dict:\n    """Skill 执行入口"""\n    # TODO: 实现核心逻辑\n    result = process(params)\n    return {"success": True, "data": result}\n\ndef process(params: dict) -> dict:\n    return {"message": f"处理完成: {json.dumps(params)}"}\n`,
-        },
-        {
-          name: 'analyze.py',
-          type: 'file',
-          indent: 1,
-          content: `"""分析模块"""\ndef analyze(data: str) -> dict:\n    return {"tokens": len(data.split()), "chars": len(data)}`,
-        },
-        { name: 'references/', type: 'folder', indent: 0 },
-        {
-          name: 'schema.md',
-          type: 'file',
-          indent: 1,
-          content: `# 接口定义\n\n## 输入\n- params: object\n\n## 输出\n- success: boolean\n- data: object`,
-        },
-        { name: 'assets/', type: 'folder', indent: 0 },
-      ];
-      setFiles(updatedFiles);
-      setSkillReady(true);
-      addBot(
-        `已生成 Skill 工程结构 ✓\n\n- \`SKILL.md\` — 定义和触发词\n- \`scripts/main.py\` — 主执行入口\n- \`scripts/analyze.py\` — 分析模块\n- \`references/schema.md\` — 接口文档\n\n你可以在右侧「结构」Tab 查看文件内容，或切换到「测试」Tab 运行验证。\n\n有什么需要调整的吗？`
-      );
-      setProcessing(false);
-    }, 1200);
+    // 不伪造 AI 生成：仅确认需求已记录，提示用户在右栏手动编辑。
+    // 基于需求更新 SKILL.md 的 description 占位，其余文件由用户手动实现。
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.name === 'SKILL.md'
+          ? {
+              ...f,
+              content: `---\nname: my-skill\ndescription: ${userMsg}\ntriggers:\n  - 触发词\n---\n\n# My Skill\n\n## Overview\n${userMsg}\n\n## Workflow\n1. 解析输入参数\n2. 执行核心逻辑（需在 scripts/main.py 手动实现）\n3. 格式化输出`,
+            }
+          : f
+      )
+    );
+    addBot(
+      '需求已记录。\n\n请在右侧「结构」Tab 手动编辑各文件实现：\n- SKILL.md — 已填入描述，可补全触发词\n- scripts/main.py — 需手动实现核心逻辑\n- references/ — 可补充知识文档\n\n完成后可切换到「测试」Tab 查看测试说明。'
+    );
   };
 
-  const runTest = (testInput?: string) => {
-    const userInput = testInput || '{"test": true}';
-    setTestStatus('validating');
-    setTestOutput('');
-    setRightTab('test');
-    setTimeout(() => {
-      setTestStatus('running');
-      setTestOutput(
-        `✓ SKILL.md 格式验证通过\n✓ triggers 配置有效\n✓ scripts/main.py 语法正确\n\n─── 执行 main.py ───\n输入: ${userInput}\n`
-      );
-      setTimeout(() => {
-        // 模拟根据输入生成不同结果
-        const isEmptyInput =
-          userInput === '{}' || userInput === '' || userInput === '{"query": ""}';
-        if (isEmptyInput) {
-          setTestOutput(
-            (prev) =>
-              prev +
-              `\n❌ 错误: 输入参数为空\n   → execute() raised ValueError: 输入不能为空\n\n✕ 执行失败 (45ms)`
-          );
-          setTestStatus('fail');
-        } else {
-          try {
-            const parsed = JSON.parse(userInput);
-            setTestOutput(
-              (prev) =>
-                prev +
-                `\n输出: ${JSON.stringify({ success: true, data: { message: `处理完成`, input_keys: Object.keys(parsed), token_count: JSON.stringify(parsed).length } }, null, 2)}\n\n✓ 执行通过 (${Math.floor(Math.random() * 200) + 80}ms)`
-            );
-            setTestStatus('pass');
-          } catch {
-            setTestOutput(
-              (prev) =>
-                prev +
-                `\n输出: ${JSON.stringify({ success: true, data: { message: `处理完成: ${userInput.slice(0, 50)}`, chars: userInput.length } }, null, 2)}\n\n✓ 执行通过 (${Math.floor(Math.random() * 200) + 80}ms)`
-            );
-            setTestStatus('pass');
-          }
-        }
-      }, 800);
-    }, 600);
-  };
-
-  const handlePublish = () => {
-    toast('Skill 已发布', 'success');
-    onBack();
+  /** 手动保存为本地草稿（后端无 skill 创建/发布 API，不谎称已发布） */
+  const handleSaveDraft = () => {
+    toast('已保存为本地草稿（发布需后端 skill 创建接口）', 'info');
   };
 
   const selectedFileContent = files.find((f) => f.name === selectedFile)?.content || '';
@@ -221,21 +155,13 @@ export function SkillCreateFlow({ onBack }: Props) {
           <h2 className="text-[13px] font-semibold text-slate-100">Skill Workspace</h2>
         </div>
         <div className="flex items-center gap-2">
-          {skillReady && (
-            <>
-              <button
-                onClick={() => runTest()}
-                className="h-7 px-3 rounded-lg text-[11px] font-medium border border-white/[0.15] text-slate-300 hover:bg-white/[0.06]"
-              >
-                ▶ 测试
-              </button>
-              <button
-                onClick={handlePublish}
-                className="h-7 px-3 rounded-lg text-[11px] font-medium bg-emerald-600 text-white hover:opacity-90"
-              >
-                发布
-              </button>
-            </>
+          {hasRequirement && (
+            <button
+              onClick={handleSaveDraft}
+              className="h-7 px-3 rounded-lg text-[11px] font-medium bg-emerald-600 text-white hover:opacity-90"
+            >
+              保存草稿
+            </button>
           )}
         </div>
       </header>
@@ -262,16 +188,6 @@ export function SkillCreateFlow({ onBack }: Props) {
                   </div>
                 </div>
               ))}
-              {processing && (
-                <div className="flex gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
-                    <div className="w-3 h-3 border-[1.5px] border-white border-t-transparent rounded-full animate-spin" />
-                  </div>
-                  <div className="border border-white/[0.1] bg-white/[0.04] rounded-[12px] rounded-bl-[3px] px-3 py-2 text-[12px] text-slate-500">
-                    生成中...
-                  </div>
-                </div>
-              )}
               <div ref={chatEndRef} />
             </div>
           </div>
@@ -280,13 +196,12 @@ export function SkillCreateFlow({ onBack }: Props) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="描述你想创建的技能..."
-              disabled={processing}
-              className="flex-1 h-8 border border-white/[0.1] bg-white/[0.03] rounded-lg px-3 text-[12px] outline-none text-slate-200 placeholder:text-slate-500 focus:border-primary/50 disabled:opacity-50"
+              placeholder="记录你的 Skill 需求..."
+              className="flex-1 h-8 border border-white/[0.1] bg-white/[0.03] rounded-lg px-3 text-[12px] outline-none text-slate-200 placeholder:text-slate-500 focus:border-primary/50"
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || processing}
+              disabled={!input.trim()}
               className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs disabled:opacity-30"
             >
               ↑
@@ -346,13 +261,7 @@ export function SkillCreateFlow({ onBack }: Props) {
                 </div>
               </div>
             ) : (
-              <TestPanel
-                skillReady={skillReady}
-                testStatus={testStatus}
-                testOutput={testOutput}
-                onRun={runTest}
-                onAutoFix={() => setInput('请修复测试中发现的问题')}
-              />
+              <TestPanel hasRequirement={hasRequirement} />
             )}
           </div>
         </div>
@@ -361,86 +270,43 @@ export function SkillCreateFlow({ onBack }: Props) {
   );
 }
 
-/* ─── TestPanel: 用户可输入真实场景数据做测试 ─── */
+/* ─── TestPanel: 诚实提示测试需后端执行环境 ─── */
 
-function TestPanel({
-  skillReady,
-  testStatus,
-  testOutput,
-  onRun,
-  onAutoFix,
-}: {
-  skillReady: boolean;
-  testStatus: TestStatus;
-  testOutput: string;
-  onRun: (input?: string) => void;
-  onAutoFix: () => void;
-}) {
-  const [customInput, setCustomInput] = useState('');
-  const [activeCase, setActiveCase] = useState<string | null>(null);
-
-  const handleRunCustom = () => {
-    onRun(customInput || '{"test": true}');
-  };
-
-  const handleRunCase = (tc: TestCase) => {
-    setActiveCase(tc.id);
-    setCustomInput(tc.input);
-    onRun(tc.input);
-  };
-
+function TestPanel({ hasRequirement }: { hasRequirement: boolean }) {
   return (
     <div className="p-4 space-y-3 overflow-y-auto hmr-scrollbar h-full">
-      {/* 状态提示 */}
-      {!skillReady && (
+      {!hasRequirement && (
         <div className="flex items-center justify-center h-[120px] text-[11px] text-slate-500">
-          先在对话中描述 Skill，生成后可测试
+          先在对话中记录 Skill 需求，再查看测试说明
         </div>
       )}
 
-      {skillReady && (
+      {hasRequirement && (
         <>
-          {/* 自定义输入区 */}
-          <div className="border border-white/[0.08] bg-white/[0.03] rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-medium text-slate-200">📝 测试输入</span>
-              <span className="text-[9px] text-slate-500">JSON 或纯文本</span>
+          {/* 测试执行需后端环境提示 */}
+          <div className="border border-amber-500/20 bg-amber-500/[0.04] rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[11px] font-medium text-amber-400">
+                ⚠ 测试执行需配置后端环境
+              </span>
             </div>
-            <textarea
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              placeholder='输入测试数据，如：{"query": "SELECT * FROM users"}'
-              className="w-full h-20 p-2.5 bg-[#0d1117] border border-white/[0.06] rounded-lg text-[11px] font-mono text-emerald-300 outline-none resize-none placeholder:text-slate-600 focus:border-primary/40"
-            />
-            <button
-              onClick={handleRunCustom}
-              disabled={testStatus === 'validating' || testStatus === 'running'}
-              className="mt-2 h-7 px-4 rounded-lg text-[10px] font-medium bg-emerald-600 text-white hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
-            >
-              {testStatus === 'validating' || testStatus === 'running' ? (
-                <>
-                  <span className="w-3 h-3 border-[1.5px] border-white/40 border-t-white rounded-full animate-spin" />{' '}
-                  执行中...
-                </>
-              ) : (
-                <>▶ 运行测试</>
-              )}
-            </button>
+            <p className="text-[10px] text-slate-400 leading-[1.6]">
+              当前后端未接入 Skill 脚本执行环境（OpenSandbox/容器）。测试执行需后端提供运行
+              <code className="text-emerald-300">scripts/main.py</code>
+              的能力并返回真实输出。配置后此处将展示真实执行结果。
+            </p>
           </div>
 
-          {/* 预置测试用例 */}
+          {/* 预置用例（仅作输入参考） */}
           <div className="border border-white/[0.08] bg-white/[0.03] rounded-xl p-3">
-            <span className="text-[11px] font-medium text-slate-200 mb-2 block">🧪 预置用例</span>
+            <span className="text-[11px] font-medium text-slate-200 mb-2 block">
+              🧪 预置用例（输入参考）
+            </span>
             <div className="space-y-1.5">
               {DEFAULT_TEST_CASES.map((tc) => (
-                <button
+                <div
                   key={tc.id}
-                  onClick={() => handleRunCase(tc)}
-                  className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-all ${
-                    activeCase === tc.id
-                      ? 'bg-primary/10 border border-primary/30'
-                      : 'border border-white/[0.06] hover:bg-white/[0.04]'
-                  }`}
+                  className="w-full flex items-center gap-2 p-2 rounded-lg border border-white/[0.06]"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-medium text-slate-200">{tc.label}</div>
@@ -449,51 +315,10 @@ function TestPanel({
                   {tc.expected && (
                     <span className="text-[8px] text-slate-500 shrink-0">期望: {tc.expected}</span>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* 输出结果 */}
-          {testStatus !== 'idle' && (
-            <div
-              className={`rounded-xl border p-3 ${
-                testStatus === 'pass'
-                  ? 'border-emerald-500/20 bg-emerald-500/[0.04]'
-                  : testStatus === 'fail'
-                    ? 'border-red-500/20 bg-red-500/[0.04]'
-                    : 'border-white/[0.08] bg-white/[0.03]'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {testStatus === 'pass' && (
-                  <span className="text-[11px] font-medium text-emerald-400">✓ 测试通过</span>
-                )}
-                {testStatus === 'fail' && (
-                  <span className="text-[11px] font-medium text-red-400">✕ 测试失败</span>
-                )}
-                {(testStatus === 'validating' || testStatus === 'running') && (
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                    <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    {testStatus === 'validating' ? '验证中...' : '执行中...'}
-                  </span>
-                )}
-              </div>
-              <pre className="text-[10px] font-mono text-slate-300 whitespace-pre-wrap leading-[1.5]">
-                {testOutput}
-              </pre>
-            </div>
-          )}
-
-          {/* 失败时的修复按钮 */}
-          {testStatus === 'fail' && (
-            <button
-              onClick={onAutoFix}
-              className="h-7 px-3 rounded-lg text-[10px] font-medium border border-primary/30 text-primary hover:bg-primary/[0.06] transition-colors"
-            >
-              ✨ AI 修复
-            </button>
-          )}
         </>
       )}
     </div>

@@ -22,7 +22,12 @@ export function createWorkspaceProxyRoutes(client: WorkspaceBackendClient) {
         { service: 'workspace-backend', err: err instanceof Error ? err.message : String(err) },
         'workspace proxy degraded — upstream failed, returning empty workspaces'
       );
-      return c.json({ success: true, degraded: true, data: { workspaces: [] } });
+      return c.json({
+        success: true,
+        degraded: true,
+        error: err instanceof Error ? err.message : 'workspace upstream failed',
+        data: { workspaces: [] },
+      });
     }
   });
 
@@ -43,7 +48,12 @@ export function createWorkspaceProxyRoutes(client: WorkspaceBackendClient) {
         { service: 'workspace-backend', err: err instanceof Error ? err.message : String(err) },
         'workspace proxy degraded — upstream failed, returning empty workspaces'
       );
-      return c.json({ success: true, degraded: true, data: { workspaces: [] } });
+      return c.json({
+        success: true,
+        degraded: true,
+        error: err instanceof Error ? err.message : 'workspace upstream failed',
+        data: { workspaces: [] },
+      });
     }
   });
 
@@ -86,7 +96,12 @@ export function createWorkspaceProxyRoutes(client: WorkspaceBackendClient) {
         { service: 'workspace-backend', err: err instanceof Error ? err.message : String(err) },
         'workspace proxy degraded — upstream failed, returning empty conversations'
       );
-      return c.json({ success: true, degraded: true, data: { conversations: [] } });
+      return c.json({
+        success: true,
+        degraded: true,
+        error: err instanceof Error ? err.message : 'workspace upstream failed',
+        data: { conversations: [] },
+      });
     }
   });
 
@@ -102,7 +117,12 @@ export function createWorkspaceProxyRoutes(client: WorkspaceBackendClient) {
         { service: 'workspace-backend', err: err instanceof Error ? err.message : String(err) },
         'workspace proxy degraded — upstream failed, returning empty apps'
       );
-      return c.json({ success: true, degraded: true, data: { apps: [] } });
+      return c.json({
+        success: true,
+        degraded: true,
+        error: err instanceof Error ? err.message : 'workspace upstream failed',
+        data: { apps: [] },
+      });
     }
   });
 

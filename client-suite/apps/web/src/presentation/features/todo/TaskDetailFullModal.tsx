@@ -2,65 +2,38 @@
  * TaskDetailFullModal — 任务详情全屏模态 (stitch_3 对齐)
  * 左栏: 子任务列表 + 任务属性 + 协作成员
  * 右栏: 进展同步富文本 + 活动记录流 (含文件/图片/系统日志)
+ *
+ * 数据源: 从 props 接收真实 Todo 实体。子任务取自 todo.subtasks；
+ * 活动流后端尚无 API，渲染诚实空态。绝不虚构协作者/附件/活动。
  */
 import { useState } from 'react';
 import { Icon } from '../../components/ui/Icon';
 import { useToastStore } from '../../../application/stores/toastStore';
+import type { Todo, TodoPriority } from '../../../domain/todo/Todo';
 
-interface SubTask {
-  text: string;
-  done: boolean;
-  status?: string;
-  statusColor?: string;
-}
+const PRIORITY_LABELS: Record<TodoPriority, string> = {
+  high: '最高',
+  medium: '中',
+  low: '低',
+};
 
-interface Activity {
-  user: string;
-  avatar: string;
-  time: string;
-  content: string;
-  attachment?: { type: 'file' | 'images'; name?: string; count?: number };
-  isSystem?: boolean;
-}
-
-const SUBTASKS: SubTask[] = [
-  { text: '完成基础组件树审计', done: true, status: '已完成', statusColor: '#34C759' },
-  { text: '合并依赖冲突解决方案', done: true, status: '已完成', statusColor: '#34C759' },
-  { text: '响应式布局边界测试', done: false, status: '进行中', statusColor: '#007AFF' },
-  { text: '暗黑模式色彩变量校验', done: false, status: '待办', statusColor: '#8E8E93' },
-];
-
-const ACTIVITIES: Activity[] = [
-  {
-    user: '李明',
-    avatar: '李',
-    time: '10分钟前',
-    content: '已完成 #依赖冲突解决方案 的修复，附上测试报告。',
-    attachment: { type: 'file', name: 'Test_Report_v2.pdf' },
-  },
-  {
-    user: 'Sarah Chen',
-    avatar: 'S',
-    time: '1小时前',
-    content: '新的主题引擎分支 feat/theme-engine 已经推送，请查看截图。',
-    attachment: { type: 'images', count: 4 },
-  },
-  {
-    user: 'Alex Rivera',
-    avatar: 'A',
-    time: '2小时前',
-    content: '任务由 Alex Rivera 标记为 进行中',
-    isSystem: true,
-  },
-];
+const PRIORITY_COLORS: Record<TodoPriority, string> = {
+  high: '#FF3B30',
+  medium: '#FF9500',
+  low: '#34C759',
+};
 
 interface TaskDetailFullModalProps {
+  todo: Todo;
   onClose?: () => void;
   onComplete?: () => void;
 }
 
-export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModalProps) {
+export function TaskDetailFullModal({ todo, onClose, onComplete }: TaskDetailFullModalProps) {
   const [progressNote, setProgressNote] = useState('');
+  const subtaskTotal = todo.subtasks.length;
+  const subtaskDone = todo.completedSubtaskCount;
+  const subtaskPercent = subtaskTotal > 0 ? Math.round((subtaskDone / subtaskTotal) * 100) : 0;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="w-[900px] max-h-[85vh] bg-bg-white-var rounded-2xl shadow-2xl flex overflow-hidden">
@@ -68,7 +41,11 @@ export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModal
         <div className="w-[400px] border-r border-border flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-            <button type="button" onClick={onClose} className="p-1 text-text-muted hover:text-text-secondary">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-text-muted hover:text-text-secondary"
+            >
               <Icon name="arrow_back" size={18} />
             </button>
             <div className="flex items-center gap-2">
@@ -79,10 +56,18 @@ export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModal
               >
                 <Icon name="check" size={14} /> 完成任务
               </button>
-              <button type="button" onClick={() => useToastStore.getState().addToast('更多操作开发中', 'info')} className="p-1 text-text-muted hover:text-text-secondary">
+              <button
+                type="button"
+                onClick={() => useToastStore.getState().addToast('更多操作开发中', 'info')}
+                className="p-1 text-text-muted hover:text-text-secondary"
+              >
                 <Icon name="more_horiz" size={18} />
               </button>
-              <button type="button" onClick={onClose} className="p-1 text-text-muted hover:text-text-secondary">
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 text-text-muted hover:text-text-secondary"
+              >
                 <Icon name="close" size={18} />
               </button>
             </div>
@@ -90,60 +75,85 @@ export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModal
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
             <div>
-              <h2 className="text-lg font-bold text-text-primary">审核桌面客户端重构 PR</h2>
-              <p className="text-xs text-text-muted mt-1">项目：前端架构重构 2024</p>
+              <h2 className="text-lg font-bold text-text-primary">{todo.title}</h2>
             </div>
 
             {/* Subtasks */}
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold text-text-secondary">子任务 ({SUBTASKS.filter(s => s.done).length}/{SUBTASKS.length})</h4>
-                <span className="text-[10px] text-text-muted">{Math.round((SUBTASKS.filter(s => s.done).length / SUBTASKS.length) * 100)}%</span>
+                <h4 className="text-xs font-semibold text-text-secondary">
+                  子任务 ({subtaskDone}/{subtaskTotal})
+                </h4>
+                {subtaskTotal > 0 && (
+                  <span className="text-[10px] text-text-muted">{subtaskPercent}%</span>
+                )}
               </div>
-              <div className="h-1.5 bg-fill-tertiary rounded-full overflow-hidden mb-3">
-                <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${(SUBTASKS.filter(s => s.done).length / SUBTASKS.length) * 100}%` }}
-                />
-              </div>
-              <div className="space-y-2">
-                {SUBTASKS.map((st, i) => (
-                  <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/50">
-                    <span
-                      className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        st.done ? 'bg-primary border-primary' : 'border-border'
-                      }`}
-                    >
-                      {st.done && <Icon name="check" size={10} className="text-white" />}
-                    </span>
-                    <span className={`flex-1 text-xs ${st.done ? 'text-text-muted' : 'text-text-primary'}`}>{st.text}</span>
-                    {st.status && (
-                      <span className="px-2 py-0.5 text-[9px] font-medium rounded-full" style={{ color: st.statusColor, backgroundColor: `${st.statusColor}15` }}>
-                        {st.status}
-                      </span>
-                    )}
+              {subtaskTotal > 0 ? (
+                <>
+                  <div className="h-1.5 bg-fill-tertiary rounded-full overflow-hidden mb-3">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${subtaskPercent}%` }}
+                    />
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2">
+                    {todo.subtasks.map((st) => (
+                      <div
+                        key={st.id}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/50"
+                      >
+                        <span
+                          className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            st.completed ? 'bg-primary border-primary' : 'border-border'
+                          }`}
+                        >
+                          {st.completed && <Icon name="check" size={10} className="text-white" />}
+                        </span>
+                        <span
+                          className={`flex-1 text-xs ${st.completed ? 'text-text-muted' : 'text-text-primary'}`}
+                        >
+                          {st.title}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-text-muted">暂无子任务</p>
+              )}
             </section>
 
             {/* Properties */}
             <section className="space-y-3">
               <h4 className="text-xs font-semibold text-text-secondary">任务属性</h4>
+              {todo.dueDate ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <Icon name="calendar_today" size={14} className="text-text-muted" />
+                  <span className="text-text-muted w-16">截止时间</span>
+                  <span className={todo.isOverdue ? 'text-error' : 'text-text-primary'}>
+                    {todo.dueDate}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs">
+                  <Icon name="calendar_today" size={14} className="text-text-muted" />
+                  <span className="text-text-muted w-16">截止时间</span>
+                  <span className="text-text-muted">未设置</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-xs">
-                <Icon name="calendar_today" size={14} className="text-text-muted" />
-                <span className="text-text-muted w-16">截止时间</span>
-                <span className="text-text-primary">10月24日 18:00</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <Icon name="flag" size={14} className="text-error" />
+                <Icon name="flag" size={14} style={{ color: PRIORITY_COLORS[todo.priority] }} />
                 <span className="text-text-muted w-16">优先级</span>
-                <span className="text-error font-medium">最高</span>
+                <span className="font-medium" style={{ color: PRIORITY_COLORS[todo.priority] }}>
+                  {PRIORITY_LABELS[todo.priority]}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <Icon name="person" size={14} className="text-text-muted" />
                 <span className="text-text-muted w-16">负责人</span>
-                <span className="text-text-primary">李明 (我)</span>
+                <span className={todo.assignee ? 'text-text-primary' : 'text-text-muted'}>
+                  {todo.assignee ?? '未指派'}
+                </span>
               </div>
             </section>
 
@@ -151,10 +161,20 @@ export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModal
             <section>
               <h4 className="text-xs font-semibold text-text-secondary mb-2">协作成员</h4>
               <div className="flex items-center gap-1">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">李</div>
-                <div className="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center text-xs font-bold text-warning">S</div>
-                <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center text-xs font-bold text-success">A</div>
-                <button type="button" onClick={() => useToastStore.getState().addToast('添加协作成员功能开发中', 'info')} className="w-8 h-8 rounded-full border-2 border-dashed border-border flex items-center justify-center text-text-muted">
+                {todo.assignee ? (
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                    {todo.assignee.slice(0, 1)}
+                  </div>
+                ) : (
+                  <span className="text-xs text-text-muted">暂无协作成员</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    useToastStore.getState().addToast('添加协作成员功能开发中', 'info')
+                  }
+                  className="w-8 h-8 rounded-full border-2 border-dashed border-border flex items-center justify-center text-text-muted"
+                >
                   <Icon name="add" size={14} />
                 </button>
               </div>
@@ -175,60 +195,48 @@ export function TaskDetailFullModal({ onClose, onComplete }: TaskDetailFullModal
               />
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-1.5">
-                  <button type="button" onClick={() => useToastStore.getState().addToast('插入图片功能开发中', 'info')} className="p-1 text-text-muted hover:text-text-secondary"><Icon name="image" size={14} /></button>
-                  <button type="button" onClick={() => useToastStore.getState().addToast('添加附件功能开发中', 'info')} className="p-1 text-text-muted hover:text-text-secondary"><Icon name="attach_file" size={14} /></button>
-                  <button type="button" onClick={() => useToastStore.getState().addToast('插入表情功能开发中', 'info')} className="p-1 text-text-muted hover:text-text-secondary"><Icon name="sentiment_satisfied" size={14} /></button>
+                  <button
+                    type="button"
+                    onClick={() => useToastStore.getState().addToast('插入图片功能开发中', 'info')}
+                    className="p-1 text-text-muted hover:text-text-secondary"
+                  >
+                    <Icon name="image" size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => useToastStore.getState().addToast('添加附件功能开发中', 'info')}
+                    className="p-1 text-text-muted hover:text-text-secondary"
+                  >
+                    <Icon name="attach_file" size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => useToastStore.getState().addToast('插入表情功能开发中', 'info')}
+                    className="p-1 text-text-muted hover:text-text-secondary"
+                  >
+                    <Icon name="sentiment_satisfied" size={14} />
+                  </button>
                 </div>
-                <button type="button" onClick={() => { useToastStore.getState().addToast('进展已更新', 'success'); setProgressNote(''); }} className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90">
+                <button
+                  type="button"
+                  onClick={() => {
+                    useToastStore.getState().addToast('进展已更新', 'success');
+                    setProgressNote('');
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
+                >
                   更新进展
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Activity feed */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {ACTIVITIES.map((act, i) => (
-              <div key={i} className={`flex gap-3 ${act.isSystem ? 'items-center' : 'items-start'}`}>
-                {act.isSystem ? (
-                  <div className="flex-1 flex items-center gap-2 text-xs text-text-muted">
-                    <div className="flex-1 h-px bg-border" />
-                    <span>{act.content} · {act.time}</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                      {act.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-text-primary">{act.user}</span>
-                        <span className="text-[10px] text-text-muted">{act.time}</span>
-                      </div>
-                      <p className="text-xs text-text-secondary leading-relaxed">{act.content}</p>
-                      {act.attachment?.type === 'file' && (
-                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-fill-tertiary/20">
-                          <Icon name="description" size={16} className="text-error" />
-                          <span className="text-xs text-text-primary">{act.attachment.name}</span>
-                          <button type="button" onClick={() => useToastStore.getState().addToast('文件下载功能开发中', 'info')} className="p-0.5 text-text-muted hover:text-primary">
-                            <Icon name="download" size={14} />
-                          </button>
-                        </div>
-                      )}
-                      {act.attachment?.type === 'images' && (
-                        <div className="mt-2 flex gap-2">
-                          <div className="w-20 h-14 rounded-lg bg-fill-tertiary/30 border border-border" />
-                          <div className="w-20 h-14 rounded-lg bg-fill-tertiary/30 border border-border flex items-center justify-center text-xs text-text-muted">
-                            +{(act.attachment.count ?? 2) - 1} 图片
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+          {/* Activity feed — 后端尚无活动流 API，渲染诚实空态 */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col items-center justify-center h-full text-center text-text-muted">
+              <Icon name="forum" size={40} className="opacity-30 mb-2" />
+              <p className="text-xs">暂无活动记录</p>
+            </div>
           </div>
         </div>
       </div>

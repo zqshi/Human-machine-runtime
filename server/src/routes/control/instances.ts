@@ -29,7 +29,10 @@ export function createInstanceRoutes(
 
   app.get('/', async (c) => {
     const tenantId = c.req.query('tenantId');
-    const instances = await instanceService.list(tenantId);
+    // §7.2.1 第2条:列表分页,limit 下推 DB(默认 100,max 100,避免无限制全量)
+    const limit = Math.min(100, parseInt(c.req.query('limit') ?? '100', 10) || 100);
+    const offset = Math.max(0, parseInt(c.req.query('skip') ?? '0', 10) || 0);
+    const instances = await instanceService.list(tenantId, undefined, { limit, offset });
 
     if (!instances.length && clusterInstanceClient?.isConfigured()) {
       try {

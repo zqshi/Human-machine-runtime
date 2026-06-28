@@ -187,13 +187,21 @@ describe('AgentExecutor', () => {
     expect(result.artifactId).toBeDefined();
     const task = store.get(result.artifactId!);
     expect(task).toBeDefined();
-    expect(task!.status).toBe('running');
+    // 诚实化:意图识别产物为 queued(待执行),非 running/progress 推进(假进度已删)
+    expect(task!.status).toBe('queued');
+    expect(task!.progress).toBe(0);
+    expect(task!.subtasks).toEqual([]);
     executor.stop();
   });
 
-  it('stop clears progress timers', async () => {
-    const executor = new AgentExecutor(null, { tasks: makeTaskStore() }, vi.fn());
+  it('execute no longer simulates progress (honest intent-only)', async () => {
+    const broadcast = vi.fn();
+    const executor = new AgentExecutor(null, { tasks: makeTaskStore() }, broadcast);
     await executor.execute('', '开始优化', 's1');
+    // 诚实化:不再广播假进度/完成事件(仅 artifact:created)
+    expect(broadcast).not.toHaveBeenCalledWith('artifact:progress', expect.anything());
+    expect(broadcast).not.toHaveBeenCalledWith('artifact:completed', expect.anything());
+    expect(broadcast).not.toHaveBeenCalledWith('task:updated', expect.anything());
     executor.stop();
   });
 });

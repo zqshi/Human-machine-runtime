@@ -269,8 +269,10 @@ export class ToolRegistryService implements IToolRegistry {
           return { ok: res.ok, error: res.ok ? null : `HTTP ${res.status}` };
         }
         case 'database':
-          // DB 探活需凭证链路（service.ts:516 STUB），暂跳过，不误报
-          return { ok: true, error: null };
+          // DB 工具源健康检查未实现真连探活（需凭证链路 + DB client）。
+          // 保守判 ok:true 避免 scheduler healthCheckAll 误禁用 DB 源;
+          // error 诚实标注未真探活,供面板区分（真实现记 backlog）。
+          return { ok: true, error: 'DB 源健康检查未实现（保守判健康，不误报）' };
         default:
           return { ok: true, error: null };
       }

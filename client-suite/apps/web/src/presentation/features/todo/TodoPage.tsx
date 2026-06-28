@@ -305,6 +305,7 @@ export function TodoPage() {
 
       {modalTodo && (
         <TaskDetailFullModal
+          todo={modalTodo}
           onClose={() => setModalTodo(null)}
           onComplete={() => {
             if (selectedList) toggleTodo(selectedList.id, modalTodo.id);

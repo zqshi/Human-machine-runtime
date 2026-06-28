@@ -491,8 +491,6 @@ export class CockpitApiAdapter implements ICockpitDataSource {
         'workorder:created',
         'workorder:completed',
         'artifact:created',
-        'artifact:progress',
-        'artifact:completed',
         'signal:created',
         'correction:applied',
         'intent:dispatched',

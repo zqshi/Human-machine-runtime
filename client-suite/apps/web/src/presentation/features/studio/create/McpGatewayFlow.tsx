@@ -1,12 +1,16 @@
 /**
  * McpGatewayFlow — Gateway 对接模式
  *
- * ⚠️ [未接真实后端 — 升级项] 当前为前端 setTimeout 假表演(MOCK_ROUTES 假"路由发现"),
- * 无真实 Gateway Admin API 对接。保留作升级项,待真实 MCP Gateway 链路就绪后改造。
- * 用户决策保留,不删。
+ * ⚠️ [演示模式 — 功能开发中] 本流程未接真实后端:后端已有
+ * contexts/tool-management/parsers/gateway-discoverer.ts 与 ToolSourceService.syncGateway
+ * 真实能力(POST /admin/tools/sources + /sync),但前端对接(网关可达性/凭证/契约对齐)
+ * 属升级项,当前未实装。点击"连接网关"等动作不会产生任何真实请求,仅提示功能开发中。
  *
- * 设计源模式：左网关配置 + 右路由发现列表
- * 流程：选网关类型 → 填 Admin API 地址 → 连接发现路由 → 勾选路由 → 确认发布
+ * 设计源模式:左网关配置 + 右路由发现列表
+ * 保留 UI 骨架(表单/步骤结构)供预览,执行按钮禁用,不展示假路由数据。
+ *
+ * 接真路径(升级时):参照 McpDatabaseFlow(T37)模式 ——
+ *   createSource(gatewayType+gatewayUrl+gatewayCredentialId) → syncSource → 展示真实 routes。
  */
 import { useState } from 'react';
 import { useToastStore } from '../../../../application/stores/toastStore';
@@ -16,77 +20,10 @@ interface Props {
   onBack: () => void;
 }
 
-interface Route {
-  id: string;
-  name: string;
-  method: string;
-  path: string;
-  upstream: string;
-  enabled: boolean;
-}
-
-const MOCK_ROUTES: Route[] = [
-  {
-    id: '1',
-    name: 'get-users',
-    method: 'GET',
-    path: '/api/v1/users',
-    upstream: 'user-service:8080',
-    enabled: true,
-  },
-  {
-    id: '2',
-    name: 'create-user',
-    method: 'POST',
-    path: '/api/v1/users',
-    upstream: 'user-service:8080',
-    enabled: true,
-  },
-  {
-    id: '3',
-    name: 'get-orders',
-    method: 'GET',
-    path: '/api/v1/orders',
-    upstream: 'order-service:8080',
-    enabled: true,
-  },
-  {
-    id: '4',
-    name: 'create-order',
-    method: 'POST',
-    path: '/api/v1/orders',
-    upstream: 'order-service:8080',
-    enabled: true,
-  },
-  {
-    id: '5',
-    name: 'get-products',
-    method: 'GET',
-    path: '/api/v1/products',
-    upstream: 'product-service:8080',
-    enabled: true,
-  },
-  {
-    id: '6',
-    name: 'admin-config',
-    method: 'PUT',
-    path: '/admin/config',
-    upstream: 'admin-service:9090',
-    enabled: true,
-  },
-  {
-    id: '7',
-    name: 'health-check',
-    method: 'GET',
-    path: '/health',
-    upstream: 'gateway:80',
-    enabled: false,
-  },
-];
-
 const GW_TYPES = ['Higress', 'Kong', 'APISIX'] as const;
 
-type Step = 'form' | 'discovering' | 'done';
+// 演示模式:不执行任何真实/模拟连接,所有执行按钮禁用,提示功能开发中。
+const DEMO_NOTICE = '功能开发中,即将上线';
 
 export function McpGatewayFlow({ onBack }: Props) {
   const toast = useToastStore((s) => s.addToast);
@@ -94,64 +31,8 @@ export function McpGatewayFlow({ onBack }: Props) {
   const [gwType, setGwType] = useState<string>('Higress');
   const [gwUrl, setGwUrl] = useState('');
   const [token, setToken] = useState('');
-  const [step, setStep] = useState<Step>('form');
-  const [selectedRoutes, setSelectedRoutes] = useState<Set<string>>(new Set());
 
-  const handleDiscover = async () => {
-    if (!gwUrl.trim()) {
-      toast('请输入网关 Admin API 地址', 'error');
-      return;
-    }
-    setStep('discovering');
-    await new Promise((r) => setTimeout(r, 1500));
-    // 自动选择已启用的非内部路由
-    setSelectedRoutes(
-      new Set(
-        MOCK_ROUTES.filter(
-          (r) => r.enabled && !r.path.startsWith('/admin') && !r.path.startsWith('/health')
-        ).map((r) => r.id)
-      )
-    );
-    setStep('done');
-    toast(`发现 ${MOCK_ROUTES.length} 条路由`, 'success');
-  };
-
-  const toggleRoute = (id: string) => {
-    const route = MOCK_ROUTES.find((r) => r.id === id);
-    if (!route?.enabled) return;
-    setSelectedRoutes((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) {
-        n.delete(id);
-      } else {
-        n.add(id);
-      }
-      return n;
-    });
-  };
-
-  const selectAll = () => {
-    const enabledIds = MOCK_ROUTES.filter((r) => r.enabled).map((r) => r.id);
-    setSelectedRoutes((prev) =>
-      prev.size === enabledIds.length ? new Set() : new Set(enabledIds)
-    );
-  };
-
-  const handlePublish = () => {
-    if (selectedRoutes.size === 0) {
-      toast('请至少选择一条路由', 'error');
-      return;
-    }
-    toast(`MCP 工具集已创建（${selectedRoutes.size} 条路由）`, 'success');
-    onBack();
-  };
-
-  const METHOD_STYLE: Record<string, string> = {
-    GET: 'bg-emerald-500/10 text-emerald-400',
-    POST: 'bg-sky-500/10 text-sky-400',
-    PUT: 'bg-amber-500/10 text-amber-400',
-    DELETE: 'bg-red-500/10 text-red-400',
-  };
+  const notifyDev = () => toast(DEMO_NOTICE, 'info');
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -163,10 +44,23 @@ export function McpGatewayFlow({ onBack }: Props) {
           <Icon name="arrow_back" size={13} /> 返回
         </button>
         <div className="ml-3">
-          <h2 className="text-[13px] font-semibold text-slate-100">Gateway 对接</h2>
-          <p className="text-[9px] text-slate-500">连接 API 网关，自动发现路由转为 MCP 工具</p>
+          <h2 className="text-[13px] font-semibold text-slate-100">
+            Gateway 对接
+            <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-500/15 text-amber-400 align-middle">
+              演示模式
+            </span>
+          </h2>
+          <p className="text-[9px] text-slate-500">连接 API 网关,自动发现路由转为 MCP 工具</p>
         </div>
       </header>
+
+      {/* 演示模式 banner:醒目提示功能开发中,不执行真实/模拟连接 */}
+      <div className="px-5 py-2.5 border-b border-amber-500/20 bg-amber-500/[0.06] flex items-center gap-2">
+        <Icon name="info" size={12} className="text-amber-400 shrink-0" />
+        <p className="text-[11px] text-amber-300">
+          本流程为演示模式,功能开发中,即将上线。表单可填写预览,但不会发起任何真实连接或路由发现请求。
+        </p>
+      </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Config */}
@@ -192,7 +86,7 @@ export function McpGatewayFlow({ onBack }: Props) {
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 mb-1 block">Admin API 地址 *</label>
+              <label className="text-[10px] text-slate-400 mb-1 block">Admin API 地址</label>
               <input
                 value={gwUrl}
                 onChange={(e) => setGwUrl(e.target.value)}
@@ -215,7 +109,7 @@ export function McpGatewayFlow({ onBack }: Props) {
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 mb-1 block">认证 Token（可选）</label>
+              <label className="text-[10px] text-slate-400 mb-1 block">认证 Token(可选)</label>
               <input
                 type="password"
                 value={token}
@@ -225,97 +119,32 @@ export function McpGatewayFlow({ onBack }: Props) {
               />
             </div>
 
+            {/* 演示模式:执行按钮禁用,点击仅提示功能开发中 */}
             <button
-              onClick={handleDiscover}
-              disabled={step === 'discovering'}
-              className="w-full h-9 rounded-xl text-[12px] font-medium bg-primary text-white disabled:opacity-50 transition-all"
+              onClick={notifyDev}
+              className="w-full h-9 rounded-xl text-[12px] font-medium bg-white/[0.06] text-slate-400 cursor-not-allowed"
+              title={DEMO_NOTICE}
             >
-              {step === 'form'
-                ? '连接网关并发现路由'
-                : step === 'discovering'
-                  ? '正在发现路由...'
-                  : '✓ 发现完成 · 重新发现'}
+              连接网关并发现路由
             </button>
-
-            {step === 'done' && (
-              <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-3 text-[11px] text-emerald-400 flex items-center gap-2">
-                ✓ 连接成功，发现 {MOCK_ROUTES.length} 条路由（
-                {MOCK_ROUTES.filter((r) => r.enabled).length} 条已启用）
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right: Discovered routes */}
+        {/* Right: 路由发现占位(演示模式不展示假路由数据) */}
         <div className="flex-1 flex flex-col min-w-[360px]">
           <div className="px-4 pt-3 pb-2.5 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-200">路由列表</span>
-            {step === 'done' && (
-              <button onClick={selectAll} className="text-[10px] text-primary font-medium">
-                {selectedRoutes.size === MOCK_ROUTES.filter((r) => r.enabled).length
-                  ? '取消全选'
-                  : '全选已启用'}
-              </button>
-            )}
           </div>
           <div className="flex-1 p-4 overflow-y-auto hmr-scrollbar">
-            {step !== 'done' ? (
-              <div className="flex items-center justify-center h-full text-[11px] text-slate-500">
-                {step === 'discovering' ? '正在发现路由...' : '填写网关信息后点击"连接网关"'}
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {MOCK_ROUTES.map((route) => (
-                  <div
-                    key={route.id}
-                    onClick={() => toggleRoute(route.id)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                      !route.enabled
-                        ? 'opacity-40 cursor-not-allowed border-white/[0.06]'
-                        : selectedRoutes.has(route.id)
-                          ? 'border-primary/30 bg-primary/[0.04] cursor-pointer'
-                          : 'border-white/[0.06] bg-white/[0.02] cursor-pointer hover:border-white/[0.15]'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRoutes.has(route.id)}
-                      readOnly
-                      disabled={!route.enabled}
-                      className="accent-primary shrink-0"
-                    />
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${METHOD_STYLE[route.method] || 'bg-white/[0.06] text-slate-400'}`}
-                    >
-                      {route.method}
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-300 flex-1 truncate">
-                      {route.path}
-                    </span>
-                    <span className="text-[9px] text-slate-500 shrink-0">{route.upstream}</span>
-                    {!route.enabled && (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-500 shrink-0">
-                        已禁用
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {step === 'done' && (
-            <div className="px-4 pb-3 pt-2 border-t border-white/[0.06] flex justify-between items-center">
-              <span className="text-[10px] text-slate-500">
-                已选 {selectedRoutes.size} / {MOCK_ROUTES.filter((r) => r.enabled).length} 条路由
-              </span>
-              <button
-                onClick={handlePublish}
-                className="h-7 px-4 rounded-lg text-[11px] font-medium bg-primary text-white hover:opacity-90"
-              >
-                确认发布
-              </button>
+            <div className="flex flex-col items-center justify-center h-full text-center gap-2">
+              <Icon name="construction" size={28} className="text-slate-600" />
+              <p className="text-[11px] text-slate-500">
+                功能开发中,即将上线
+                <br />
+                <span className="text-[10px] text-slate-600">真实路由发现将在接入后端后启用</span>
+              </p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

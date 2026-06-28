@@ -20,7 +20,12 @@ import { nowIso, AppError } from '../../shared/utils.js';
 /* ---------- Repository interface ---------- */
 
 export interface IInstanceRepository {
-  findAll(tenantId?: string, resourceSource?: string): Promise<Instance[]>;
+  findAll(
+    tenantId?: string,
+    resourceSource?: string,
+    limit?: number,
+    offset?: number
+  ): Promise<Instance[]>;
   findById(id: string): Promise<Instance | undefined>;
   save(instance: Instance): Promise<number>;
   delete(id: string): Promise<void>;
@@ -96,8 +101,12 @@ export class InstanceService {
 
   /* ---- query ---- */
 
-  async list(tenantId?: string, resourceSource?: string): Promise<Instance[]> {
-    return this.repo.findAll(tenantId, resourceSource);
+  async list(
+    tenantId?: string,
+    resourceSource?: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<Instance[]> {
+    return this.repo.findAll(tenantId, resourceSource, options?.limit, options?.offset);
   }
 
   async get(instanceId: string): Promise<Instance> {

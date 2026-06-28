@@ -12,10 +12,18 @@ import { AppError } from '../../shared/utils.js';
 export class InstanceRepository implements IInstanceRepository {
   constructor(private db: Database) {}
 
-  async findAll(tenantId?: string, resourceSource?: string): Promise<Instance[]> {
-    const rows = tenantId
-      ? await this.db.select().from(instances).where(eq(instances.tenantId, tenantId))
-      : await this.db.select().from(instances);
+  async findAll(
+    tenantId?: string,
+    resourceSource?: string,
+    limit?: number,
+    offset?: number
+  ): Promise<Instance[]> {
+    // §7.2.1 第2条:limit/offset 下推 DB(动态查询),避免无限制全量返回
+    let query = this.db.select().from(instances).$dynamic();
+    if (tenantId) query = query.where(eq(instances.tenantId, tenantId));
+    if (limit !== undefined) query = query.limit(limit);
+    if (offset !== undefined) query = query.offset(offset);
+    const rows = await query;
     let result = rows.map(toInstanceDomain);
     if (resourceSource === 'custom') {
       result = result.filter((r) => r.resources.source === 'custom');
