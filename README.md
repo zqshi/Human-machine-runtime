@@ -156,6 +156,35 @@ graph TB
   style ChannelPlane fill:#f3e8fe,stroke:#af52de,stroke-width:2px
 ```
 
+### 声明 → 编译固化 → 运行时三层执行架构（v2.0）
+
+上层"运行时四面体"描述的是**接入解耦**（Agent 框架/渠道可插拔）。本节描述 **Agent 执行侧**的三层分离——声明态定义、发布时编译固化、运行时读取固化产物执行，使线上 Agent 行为可锁定/审计/回滚。
+
+```mermaid
+graph LR
+  subgraph L1["Layer 1 声明层"]
+    Spec["AgentDefinitionSpec<br/>(CRD: persona/guardrails/<br/>boundTools/boundKnowledge/<br/>runtime/ragRecallPolicy)"]
+  end
+  subgraph L2["Layer 2 编译固化层"]
+    Bake["BakingService.bake"]
+    Manifest["RuntimeManifest<br/>(不可变: compiledSystemPrompt<br/>/tools/skills/quota)"]
+  end
+  subgraph L3["Layer 3 运行时层"]
+    Harness["harness.dispatchTask"]
+    Asm["(降级) assemble + getPersona"]
+  end
+  Spec -->|发布| Bake --> Manifest
+  Manifest -->|读 manifest 命中| Harness
+  Harness -.未 bake/灰度.-> Asm
+  style L2 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+```
+
+- **声明层**：`AgentDefinitionSpec` 是云原生 CRD 式声明态定义，包含人设/拒答规则/绑定工具技能知识库/运行时类型/RAG 召回策略等。
+- **编译固化层**：Agent 发布时 `bake` 成不可变 `RuntimeManifest`（落 `agent_runtime_manifests` 表），固化 systemPrompt/tools/skills/quota 快照。spec 变更 → bumpGeneration → re-bake 新 manifest，旧 instance 引用旧 generation（灰度/回滚）。
+- **运行时层**：`harness.dispatchTask` 优先读 baked manifest（命中则跳过动态查 DB 拼装，消除运行时漂移），未 bake 的存量 Agent降级走 assemble + getPersona 老路径（灰度兼容）。
+
+> **实现状态**：baking 编译固化链路 `[已落地]`；CubeSandbox（KVM MicroVM）高安全执行层 `[待 KVM 宿主]`。详见 [v2.0 设计文档](docs/architecture/v2.0-declarative-baking-runtime.md)，进度见 [v2.0-current](docs/versions/v2.0-current.md)。
+
 ### DDD 限界上下文（29 个）
 
 ```mermaid
