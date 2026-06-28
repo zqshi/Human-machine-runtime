@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  ensureViteSandbox,
-  VITE_SCAFFOLD_FILES,
-} from './vite-scaffold.js';
+import { ensureViteSandbox, VITE_SCAFFOLD_FILES } from './vite-scaffold.js';
 import type { Sandbox } from '@alibaba-group/opensandbox';
 
 /**
@@ -17,7 +14,8 @@ function makeSandbox(
 ): Sandbox {
   const readFile = vi.fn(async (path: string) => {
     if (path === '/workspace/package.json' && opts.pkgExists) return '{}';
-    if (path === '/workspace/src/App.tsx' && opts.appTsxExists) return 'export default function App() {}';
+    if (path === '/workspace/src/App.tsx' && opts.appTsxExists)
+      return 'export default function App() {}';
     throw new Error('not found');
   });
   return {

@@ -193,13 +193,16 @@ export function createCockpitBootstrapRoutes(repo: CockpitRepository, agentCore?
       //    → 预览报 "no package.json" 或 vite dev 起不来。无 package.json 则注入最小可运行脚手架,
       //    LLM 业务文件叠加其上(同名覆盖)。逻辑提纯在 vite-scaffold.ts(§12 信号6:route 不堆逻辑)。
       const { injected } = await ensureViteSandbox(sandbox as never);
-      const scaffoldNote = injected ? '[scaffold] 注入 vite+React+TS 脚手架(工作区无 package.json)\n' : '';
+      const scaffoldNote = injected
+        ? '[scaffold] 注入 vite+React+TS 脚手架(工作区无 package.json)\n'
+        : '';
       // 2. npm install(前台同步,超时 120s;复用缓存则秒过)
       const installRes = await sandbox.commands.run(
         'cd /workspace && npm install --no-audit --prefer-offline 2>&1 | tail -3',
         { timeoutSeconds: 120, workingDirectory: '/workspace' }
       );
-      const installLog = scaffoldNote + (installRes.logs?.stdout ?? []).map((l) => l.text).join('\n');
+      const installLog =
+        scaffoldNote + (installRes.logs?.stdout ?? []).map((l) => l.text).join('\n');
       // 3. 启动 vite dev。先清残留进程(上次预览的 background vite 未杀会占 5173,
       //    导致新 vite 退到 5174 而 probe 固定查 5173 → 误判未就绪)。
       try {
