@@ -22,9 +22,11 @@
 
 1. **Matrix 服务器实际用 Synapse 不是 Conduit**。根 `docker-compose.yml` 声明的是 `matrixconduit/matrix-conduit`(端口 6167)，README 也写 Conduit，但**实测运行的是 Synapse**(端口 8008，来自 `deploy/local/docker-compose.openclaw-matrix.yml`)。IM 功能实际依赖 Synapse，不是 Conduit。
 2. **WeKnora 来源分裂**。实际有两组 WeKnora 相关容器：
-   - `deploy/local/...openclaw-matrix.yml` 的 `hmr-weknora-*`（app/ui/docreader/redis/pg，镜像 `wechatopenai/weknora-*`）—— 属 HMR。
-   - `WeKnora-neo4j` —— compose 项目名 `weknora`，来自**仓库外独立项目** `/Users/zqs/Downloads/project/WeKnora/docker-compose.yml`，非 HMR 本仓库管理。它是 WeKnora 的图数据库，是否需要随 HMR 起取决于 WeKnora 独立项目的部署，**HMR 启动文档不对其负责**。
-3. **LiteLLM 用 profile 控制**。根 compose 的 litellm 带 profiles(litellm/full)，`docker compose up -d` 默认不起，需 `--profile litellm` 或 `--profile full`。
+   - `deploy/local/...openclaw-matrix.yml` 的 `hmr-weknora-*`（app/ui/docreader/redis/pg，镜像 `wechatopenai/weknora-*`，对应腾讯开源 `Tencent/WeKnora`）—— 属 HMR。
+   - `WeKnora-neo4j` —— compose 项目名 `weknora`，来自**仓库外独立项目** `/Users/zqs/Downloads/project/WeKnora/docker-compose.yml`，非 HMR 本仓库管理。WeKnora 本身用 pgvector 做向量存储（不依赖 neo4j），这个 neo4j 容器是否随 HMR 起取决于 WeKnora 独立项目部署，**HMR 启动文档不对其负责**。
+3. **WeKnora env 必传 DB_DRIVER / RETRIEVE_DRIVER**。`deploy/local` compose 的 weknora-app 必须 `DB_DRIVER: postgres` + `RETRIEVE_DRIVER: postgres`——缺任一 WeKnora `initDatabase` 读空 driver 直接 panic 崩溃重启（对齐 `Tencent/WeKnora` 官方 .env.example）。Redis 用 `REDIS_ADDR`（非 REDIS_HOST）。当前 compose 已补全。
+4. **WeKnora 端口随部署方式变，.env 须对齐**。`deploy/local` 部署 weknora-app 映射 **19000**（非根 compose profile 的 8088）。`server/.env` 的 `WEKNORA_API_URL` 须设 `http://localhost:19000`，否则 WeKnoraClient 请求打到无人监听的死端口。
+5. **LiteLLM 用 profile 控制**。根 compose 的 litellm 带 profiles(litellm/full)，`docker compose up -d` 默认不起，需 `--profile litellm` 或 `--profile full`。
 
 ---
 

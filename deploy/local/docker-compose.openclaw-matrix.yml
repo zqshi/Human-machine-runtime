@@ -119,13 +119,19 @@ services:
     ports:
       - "${WEKNORA_FRONTEND_PORT:-19000}:8080"
     environment:
+      # DB_DRIVER / RETRIEVE_DRIVER 必传——缺则 WeKnora initDatabase 读空 driver 直接 panic
+      # （对齐 Tencent/WeKnora 官方 .env.example；RETRIEVE_DRIVER=postgres 走 pgvector）
+      DB_DRIVER: postgres
       DB_HOST: weknora-pg
       DB_PORT: 5432
       DB_USER: ${WEKNORA_DB_USER:-postgres}
       DB_PASSWORD: ${WEKNORA_DB_PASSWORD:-postgres123}
       DB_NAME: ${WEKNORA_DB_NAME:-weknora}
-      REDIS_HOST: weknora-redis
-      REDIS_PORT: 6379
+      RETRIEVE_DRIVER: postgres
+      # WeKnora 读 REDIS_ADDR（非 REDIS_HOST）；不配则进 Lite 模式，配上启用 Redis 流处理
+      REDIS_ADDR: weknora-redis:6379
+      REDIS_PASSWORD: ${WEKNORA_REDIS_PASSWORD:-}
+      STREAM_MANAGER_TYPE: redis
       DOC_READER_ADDR: weknora-docreader:50051
       JWT_SECRET: ${WEKNORA_JWT_SECRET:-weknora-jwt-secret}
       STORAGE_TYPE: ${WEKNORA_STORAGE_TYPE:-local}
