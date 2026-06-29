@@ -29,6 +29,8 @@ interface UIState {
   contactsDept: string;
   /** IM 模式内共享 Agent 对话：当前打开的 agent id（null=显示 Agent Team 列表） */
   imChatAgentId: string | null;
+  /** Cockpit: 数字分身编辑 popover 开关（受控于 store，供兄弟组件如 welcome 页触发） */
+  profileEditOpen: boolean;
 
   reset(): void;
   setDock(tab: DockTab): void;
@@ -43,6 +45,7 @@ interface UIState {
   setSelectedAgentId(id: string | null): void;
   setContactsDept(dept: string): void;
   setImChatAgentId(id: string | null): void;
+  setProfileEditOpen(v: boolean): void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -57,6 +60,7 @@ export const useUIStore = create<UIState>((set) => ({
   selectedAgentId: 'sa-1',
   contactsDept: 'all',
   imChatAgentId: null,
+  profileEditOpen: false,
 
   reset() {
     set({
@@ -71,6 +75,7 @@ export const useUIStore = create<UIState>((set) => ({
       selectedAgentId: 'sa-1',
       contactsDept: 'all',
       imChatAgentId: null,
+      profileEditOpen: false,
     });
   },
 
@@ -140,5 +145,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setImChatAgentId(id) {
     set({ imChatAgentId: id });
+  },
+
+  setProfileEditOpen(v) {
+    set({ profileEditOpen: v });
   },
 }));

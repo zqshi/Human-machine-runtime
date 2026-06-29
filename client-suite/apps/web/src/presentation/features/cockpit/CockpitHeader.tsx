@@ -9,6 +9,7 @@ import { useCockpitStore } from '../../../application/stores/cockpitStore';
 import { useAgentStore } from '../../../application/stores/agentStore';
 import { useToastStore } from '../../../application/stores/toastStore';
 import { useChannelConfigStore } from '../../../application/stores/channelConfigStore';
+import { useUIStore } from '../../../application/stores/uiStore';
 import { CHANNEL_TYPE_META } from '../../../domain/agent/ChannelConfig';
 import type { ChannelConnection } from '../../../domain/agent/AgentRuntime';
 import type { ChannelType } from '../../../domain/shared/types';
@@ -36,7 +37,9 @@ export function CockpitHeader() {
   const primaryAgent = useAgentStore((s) => s.primaryAgent);
   const configuredChannels = useChannelConfigStore((s) => s.channels) ?? [];
   const [clock, setClock] = useState(formatTime());
-  const [showEdit, setShowEdit] = useState(false);
+  // 编辑 popover 受控于 uiStore，供兄弟组件（如 welcome 页）触发；editForm 随开关初始化。
+  const showEdit = useUIStore((s) => s.profileEditOpen);
+  const setShowEdit = useUIStore((s) => s.setProfileEditOpen);
   const [editForm, setEditForm] = useState({ name: '', role: '', department: '', persona: '' });
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +52,17 @@ export function CockpitHeader() {
     return () => clearInterval(tid);
   }, []);
 
+  // popover 打开时用当前 primaryAgent 初始化 editForm（对齐原 openEdit 逻辑，支持外部触发）
+  useEffect(() => {
+    if (!showEdit) return;
+    setEditForm({
+      name: primaryAgent?.name ?? '',
+      role: primaryAgent?.role ?? '',
+      department: primaryAgent?.department ?? '',
+      persona: primaryAgent?.persona ?? '',
+    });
+  }, [showEdit, primaryAgent]);
+
   useEffect(() => {
     if (!showEdit) return;
     const handler = (e: MouseEvent) => {
@@ -58,23 +72,13 @@ export function CockpitHeader() {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showEdit]);
-
-  const openEdit = useCallback(() => {
-    setEditForm({
-      name: primaryAgent?.name ?? '',
-      role: primaryAgent?.role ?? '',
-      department: primaryAgent?.department ?? '',
-      persona: primaryAgent?.persona ?? '',
-    });
-    setShowEdit(true);
-  }, [primaryAgent]);
+  }, [showEdit, setShowEdit]);
 
   const saveEdit = useCallback(() => {
     useAgentStore.getState().updatePrimaryAgent(editForm);
     setShowEdit(false);
     useToastStore.getState().addToast('数字分身信息已更新', 'success');
-  }, [editForm]);
+  }, [editForm, setShowEdit]);
 
   const channels = systemHealth?.channelStatuses ?? [];
   const tokenCount = systemHealth?.totalTokenUsage ?? 0;
@@ -96,7 +100,7 @@ export function CockpitHeader() {
         <div className="relative" ref={popoverRef}>
           <button
             type="button"
-            onClick={openEdit}
+            onClick={() => setShowEdit(!showEdit)}
             className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors"
           >
             <span className="text-xs text-text-secondary truncate max-w-[120px]">

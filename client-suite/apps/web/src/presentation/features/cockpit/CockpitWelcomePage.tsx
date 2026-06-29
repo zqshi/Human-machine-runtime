@@ -6,11 +6,11 @@
  * - 直接对话共享 Agent：显示该 Agent 信息 + 专属问候
  * - 日常访问：简洁问候 + 快捷指令（详细信息已在右侧面板展示）
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { Icon } from '../../components/ui/Icon';
 import { useAgentStore } from '../../../application/stores/agentStore';
 import { useCockpitStore } from '../../../application/stores/cockpitStore';
-import { useToastStore } from '../../../application/stores/toastStore';
+import { useUIStore } from '../../../application/stores/uiStore';
 import { getCategoryDisplay } from '../../../domain/agent/AgentCategoryConfig';
 import { GoalCreationDialog } from './GoalCreationDialog';
 
@@ -38,6 +38,8 @@ export function CockpitWelcomePage({ onStartChat }: WelcomePageProps) {
   const workOrders = useCockpitStore((s) => s.workOrders);
   const setDiscussingWorkOrderId = useCockpitStore((s) => s.setDiscussingWorkOrderId);
   const setDiscussingGoalId = useCockpitStore((s) => s.setDiscussingGoalId);
+  const setProfileEditOpen = useUIStore((s) => s.setProfileEditOpen);
+  const isSending = useCockpitStore((s) => s.isSending);
 
   const [showGoalCreation, setShowGoalCreation] = useState(false);
 
@@ -114,10 +116,7 @@ export function CockpitWelcomePage({ onStartChat }: WelcomePageProps) {
             <div className="flex gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => {
-                  useAgentStore.getState().markVisited();
-                  useToastStore.getState().addToast('可以在左侧面板编辑数字分身设定', 'info');
-                }}
+                onClick={() => setProfileEditOpen(true)}
                 className="flex-1 h-10 rounded-xl border border-white/10 text-sm text-slate-300 hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
               >
                 <Icon name="edit" size={16} />
@@ -135,7 +134,7 @@ export function CockpitWelcomePage({ onStartChat }: WelcomePageProps) {
           </div>
 
           <p className="text-[10px] text-slate-600 text-center mt-4">
-            你可以随时在左侧面板修改数字分身的设定
+            点击顶部头像或「编辑设定」可随时修改数字分身设定
           </p>
         </div>
       </div>
@@ -218,6 +217,9 @@ export function CockpitWelcomePage({ onStartChat }: WelcomePageProps) {
             <p className="text-sm text-slate-400 mt-1">有什么我可以帮你的？</p>
           </div>
         </div>
+
+        {/* Central input — 进入对话流的轻量入口，发送后底部常驻 composer 出现 */}
+        <WelcomeComposer onSend={handleStartChat} disabled={isSending} />
 
         {/* Quick commands grid */}
         <div className="grid grid-cols-2 gap-2">
@@ -347,11 +349,79 @@ export function CockpitWelcomePage({ onStartChat }: WelcomePageProps) {
           </div>
         )}
 
-        <p className="text-[10px] text-slate-600 text-center">
-          直接输入或选择上方快捷指令开始对话 · 任务和洞察信息见右侧面板
-        </p>
+        <p className="text-[10px] text-slate-600 text-center">任务和洞察信息见右侧面板</p>
       </div>
       <GoalCreationDialog open={showGoalCreation} onClose={() => setShowGoalCreation(false)} />
+    </div>
+  );
+}
+
+/**
+ * WelcomeComposer — 欢迎页中央轻量输入框
+ *
+ * 仅文本 + 发送（无附件/语音/InstanceConversationSelector，那些在对话态底部
+ * CockpitComposer）。发送即经 handleStartChat → sendMessage 进入对话流，底部
+ * 常驻 composer 随后出现。承接 data-guide="composer" 供引导教程定位。
+ */
+interface WelcomeComposerProps {
+  onSend: (text: string) => void;
+  disabled: boolean;
+}
+
+function WelcomeComposer({ onSend, disabled }: WelcomeComposerProps) {
+  const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const resize = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+  }, []);
+
+  const handleSend = useCallback(() => {
+    const trimmed = text.trim();
+    if (!trimmed || disabled) return;
+    onSend(trimmed);
+    setText('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  }, [text, disabled, onSend]);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div
+      data-guide="composer"
+      className="w-full rounded-xl border border-white/10 bg-white/[0.03] focus-within:border-primary/40 transition-colors"
+    >
+      <textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          resize();
+        }}
+        onKeyDown={handleKeyDown}
+        rows={1}
+        placeholder="输入问题，或选择下方快捷指令…"
+        className="w-full min-h-[42px] max-h-[140px] px-4 py-3 text-sm bg-transparent resize-none outline-none text-slate-200 placeholder:text-slate-500"
+      />
+      <div className="flex justify-end px-2 pb-2">
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={!text.trim() || disabled}
+          className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white hover:bg-primary-dark transition-colors disabled:opacity-40"
+        >
+          <Icon name="send" size={18} />
+        </button>
+      </div>
     </div>
   );
 }

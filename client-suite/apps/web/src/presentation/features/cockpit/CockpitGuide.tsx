@@ -48,6 +48,7 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-guide="composer"]',
+    fallback: '[data-guide="main-content"]',
     title: '对话输入',
     description: '在此输入消息与 Agent 协商。输入 / 可唤起快捷指令，Agent 会给出方案建议。',
     icon: 'chat',

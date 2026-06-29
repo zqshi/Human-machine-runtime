@@ -230,6 +230,15 @@ export function CockpitPage() {
     [isSending, sendMessage]
   );
 
+  // welcome 态：无讨论上下文且当前对话无消息 → 隐藏底部常驻输入框（welcome 页自带中央输入框，避免双入口割裂）
+  const showWelcome =
+    !discussingNotificationId &&
+    !discussingDecisionId &&
+    !discussingTaskId &&
+    !discussingGoalId &&
+    !discussingWorkOrderId &&
+    messages.length === 0;
+
   if (subView === 'cockpit:task-detail') {
     return <TaskDetailView />;
   }
@@ -325,14 +334,7 @@ export function CockpitPage() {
           {discussingWorkOrderId && <WorkOrderInitPage />}
 
           {/* Welcome page — only when no active discussion and no messages */}
-          {!discussingNotificationId &&
-            !discussingDecisionId &&
-            !discussingTaskId &&
-            !discussingGoalId &&
-            !discussingWorkOrderId &&
-            messages.length === 0 && (
-              <CockpitWelcomePage onStartChat={(text) => sendMessage(text)} />
-            )}
+          {showWelcome && <CockpitWelcomePage onStartChat={(text) => sendMessage(text)} />}
 
           {/* Full message stream */}
           {messages.map((msg) => (
@@ -342,24 +344,26 @@ export function CockpitPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Composer — always present */}
-        <div className="relative shrink-0" data-guide="composer">
-          <CockpitComposer
-            onSend={handleSend}
-            disabled={isSending}
-            placeholder={
-              discussingNotificationId
-                ? useNotificationStore
-                    .getState()
-                    .notifications.find((n) => n.id === discussingNotificationId)?.channel ===
-                  'email'
-                  ? '输入邮件回复要求，如"修改草稿"、"用正式语气重写"…'
-                  : '向 Agent 提问或下达指令…'
-                : "发送消息或输入 '/' 唤起指令圈…"
-            }
-            autoFocus
-          />
-        </div>
+        {/* Composer — welcome 态隐藏（welcome 页自带中央输入框），其余态常驻 */}
+        {!showWelcome && (
+          <div className="relative shrink-0" data-guide="composer">
+            <CockpitComposer
+              onSend={handleSend}
+              disabled={isSending}
+              placeholder={
+                discussingNotificationId
+                  ? useNotificationStore
+                      .getState()
+                      .notifications.find((n) => n.id === discussingNotificationId)?.channel ===
+                    'email'
+                    ? '输入邮件回复要求，如"修改草稿"、"用正式语气重写"…'
+                    : '向 Agent 提问或下达指令…'
+                  : "发送消息或输入 '/' 唤起指令圈…"
+              }
+              autoFocus
+            />
+          </div>
+        )}
       </div>
 
       {/* D: Intelligence panel */}
