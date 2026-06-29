@@ -87,9 +87,12 @@ import { JudgmentRecordRepository } from '../db/repositories/judgment-record-rep
 import { OrchestrationChainRepository } from '../db/repositories/orchestration-chain-repository.js';
 import { EscalationRepository } from '../db/repositories/escalation-repository.js';
 import { OrchestrationAgentRepository } from '../db/repositories/orchestration-agent-repository.js';
+import { EvaluationMetricRepository } from '../db/repositories/evaluation-metric-repository.js';
+import { ScorecardRepository } from '../db/repositories/scorecard-repository.js';
 import { DecisionService } from '../contexts/cockpit/application/decision-service.js';
 import { OrchestrationService } from '../contexts/cockpit/application/orchestration-service.js';
-import { decodeStrategy } from '../routes/cockpit/llm-analysis.js';
+import { EvaluationService } from '../contexts/cockpit/application/evaluation-service.js';
+import { decodeStrategy, generateInsights } from '../routes/cockpit/llm-analysis.js';
 import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
@@ -274,6 +277,22 @@ export function createAppContext(db: Database): AppContext {
     escalationRepo,
     orchestrationAgentRepo,
     appEventBus
+  );
+
+  // v2.1 Phase C E12:cockpit 评估子系统。evaluation_metrics/scorecards 走新实体表（破 EAV 贫血）。
+  // overallScore 计算 + dual-track 聚合 + trends 在 EvaluationService（route 下沉守 §12信号6）。
+  // dual-track LLM 洞察经 InsightsPort 注入 generateInsights（避免 application→routes 反向依赖 §1.1）。
+  // llm 未配置→insightsPort=null→comparisonInsights=[]（增强字段，对齐原 route 行为，不 503）。
+  const evaluationMetricRepo = new EvaluationMetricRepository(db);
+  const scorecardRepo = new ScorecardRepository(db);
+  const evaluationInsightsPort = litellmClient?.isConfigured()
+    ? (humanMetrics: Array<Record<string, unknown>>, aiMetrics: Array<Record<string, unknown>>) =>
+        generateInsights(humanMetrics, aiMetrics, litellmClient, config.agent.llmModel)
+    : null;
+  const evaluationService = new EvaluationService(
+    evaluationMetricRepo,
+    scorecardRepo,
+    evaluationInsightsPort
   );
 
   /* ──── Provisioner: local + container-orchestrator composite ──── */
@@ -762,6 +781,7 @@ export function createAppContext(db: Database): AppContext {
     objectiveService,
     decisionService,
     orchestrationService,
+    evaluationService,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,

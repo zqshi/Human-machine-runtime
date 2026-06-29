@@ -1,108 +1,129 @@
 import { Hono } from 'hono';
-import { newId } from '../../shared/utils.js';
-import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
-import { filteredResponse, pagedResponse } from './pagination.js';
-import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
-import { generateInsights as generateInsightsWithLlm } from './llm-analysis.js';
+import type { EvaluationService } from '../../contexts/cockpit/application/evaluation-service.js';
+import type {
+  EvaluationMetric,
+  EvaluationDimension,
+} from '../../contexts/cockpit/domain/evaluation/evaluation-metric.js';
+import type { Scorecard } from '../../contexts/cockpit/domain/evaluation/scorecard.js';
 
-export function createCockpitEvaluationRoutes(
-  repo: CockpitRepository,
-  /** EAOS 评估洞察真 LLM(未配置/无数据→空数组,不回退 if/else 文案伪装) */
-  llm?: LiteLLMClient | null,
-  model?: string
-) {
+/**
+ * cockpit 评估子系统路由（v2.1 EAOS，route 下沉 application，守 §12信号6）。
+ *
+ * 薄层：参数提取 → 调 EvaluationService → 返回。业务逻辑（CRUD/overallScore 计算/dual-track
+ * 聚合/trends 排序）在 service。serialize Date→ms（同 decisions/orchestration route 契约）。
+ * dual-track 的 LLM 洞察由 service 经 InsightsPort 注入（generateInsights 不动，防 scope creep）。
+ */
+
+function serializeMetric(m: EvaluationMetric) {
+  const p = m.toProps();
+  return {
+    id: p.id,
+    dimension: p.dimension,
+    score: p.score,
+    metadata: p.metadata,
+    tenantId: p.tenantId,
+    createdAt: p.createdAt.getTime(),
+    updatedAt: p.updatedAt.getTime(),
+  };
+}
+
+function serializeScorecard(s: Scorecard) {
+  const p = s.toProps();
+  return {
+    id: p.id,
+    scores: p.scores,
+    overallScore: p.overallScore,
+    metadata: p.metadata,
+    tenantId: p.tenantId,
+    createdAt: p.createdAt.getTime(),
+    updatedAt: p.updatedAt.getTime(),
+  };
+}
+
+function parsePagedQuery(q: (k: string) => string | undefined) {
+  const limit = q('limit');
+  const offset = q('offset');
+  return {
+    limit: limit ? parseInt(limit, 10) : undefined,
+    offset: offset ? parseInt(offset, 10) : undefined,
+  };
+}
+
+export function createCockpitEvaluationRoutes(service: EvaluationService) {
   const app = new Hono();
 
+  // ── metrics ──
   app.get('/evaluation/metrics', async (c) => {
-    const dimension = c.req.query('dimension');
-    return c.json(
-      await filteredResponse(
-        repo,
-        'evaluation_metric',
-        (k) => c.req.query(k),
-        (items) => (dimension ? items.filter((m) => m.dimension === dimension) : items)
-      )
-    );
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    const result = await service.listMetrics({
+      dimension: q('dimension') as EvaluationDimension | undefined,
+      limit,
+      offset,
+    });
+    return c.json({
+      items: result.items.map(serializeMetric),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    });
   });
 
   app.post('/evaluation/metrics', async (c) => {
     const body = await c.req.json();
-    const metric = {
-      id: newId('evm'),
-      ...body,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await repo.upsert('evaluation_metric', metric.id, metric);
-    return c.json(metric, 201);
+    const m = await service.createMetric(body);
+    return c.json(serializeMetric(m), 201);
   });
 
+  // ── scorecards ──
   app.get('/evaluation/scorecards', async (c) => {
-    return c.json(await pagedResponse(repo, 'scorecard', (k) => c.req.query(k)));
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    const result = await service.listScorecards({ tenantId: q('tenantId'), limit, offset });
+    return c.json({
+      items: result.items.map(serializeScorecard),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    });
   });
 
   app.post('/evaluation/scorecards', async (c) => {
     const body = await c.req.json();
-    const scorecard = {
-      id: newId('sc'),
-      ...body,
-      scores: body.scores ?? [],
-      overallScore: 0,
-      createdAt: Date.now(),
-    };
-    if (scorecard.scores.length > 0) {
-      const total = scorecard.scores.reduce(
-        (sum: number, s: { value: number }) => sum + s.value,
-        0
-      );
-      scorecard.overallScore = Math.round(total / scorecard.scores.length);
-    }
-    await repo.upsert('scorecard', scorecard.id, scorecard);
-    return c.json(scorecard, 201);
+    const s = await service.createScorecard(body);
+    return c.json(serializeScorecard(s), 201);
   });
 
   app.get('/evaluation/scorecards/:id', async (c) => {
-    const item = await repo.get('scorecard', c.req.param('id'));
-    if (!item) return c.json({ error: 'scorecard not found' }, 404);
-    return c.json(item);
+    const s = await service.getScorecard(c.req.param('id'));
+    if (!s) return c.json({ error: 'scorecard not found' }, 404);
+    return c.json(serializeScorecard(s));
   });
 
+  // ── 聚合查询 ──
   app.get('/evaluation/dual-track', async (c) => {
-    const agentMetrics = await repo.list('evaluation_metric');
-    const humanMetrics = agentMetrics.filter((m) => m.dimension === 'human');
-    const aiMetrics = agentMetrics.filter((m) => m.dimension === 'agent');
-
+    const r = await service.dualTrack();
     return c.json({
       humanTrack: {
-        metrics: humanMetrics,
-        summary: { avgScore: avg(humanMetrics.map((m) => (m.score as number) ?? 0)) },
+        metrics: r.humanTrack.metrics.map(serializeMetric),
+        summary: { avgScore: r.humanTrack.avgScore },
       },
       agentTrack: {
-        metrics: aiMetrics,
-        summary: { avgScore: avg(aiMetrics.map((m) => (m.score as number) ?? 0)) },
+        metrics: r.agentTrack.metrics.map(serializeMetric),
+        summary: { avgScore: r.agentTrack.avgScore },
       },
-      comparisonInsights: await generateInsightsWithLlm(
-        humanMetrics,
-        aiMetrics,
-        llm ?? null,
-        model ?? ''
-      ),
+      comparisonInsights: r.comparisonInsights,
     });
   });
 
   app.get('/evaluation/trends', async (c) => {
     const period = c.req.query('period') ?? '7d';
-    const items = await repo.list('evaluation_metric');
-    const sorted = items.sort(
-      (a, b) => ((a.createdAt as number) ?? 0) - ((b.createdAt as number) ?? 0)
-    );
-    return c.json({ period, dataPoints: sorted.slice(-50) });
+    const r = await service.trends(period);
+    return c.json({
+      period: r.period,
+      dataPoints: r.dataPoints.map(serializeMetric),
+    });
   });
 
   return app;
-}
-
-function avg(nums: number[]): number {
-  if (nums.length === 0) return 0;
-  return Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
 }

@@ -72,6 +72,7 @@ import type { SignalService } from '../../contexts/cockpit/application/signal-se
 import type { ObjectiveService } from '../../contexts/cockpit/application/objective-service.js';
 import type { DecisionService } from '../../contexts/cockpit/application/decision-service.js';
 import type { OrchestrationService } from '../../contexts/cockpit/application/orchestration-service.js';
+import type { EvaluationService } from '../../contexts/cockpit/application/evaluation-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -117,6 +118,8 @@ export interface AppContext {
   decisionService: DecisionService;
   /** v2.1 EAOS 编排子系统用例（chains/agents/escalations CRUD + advance 步骤推进 + escalation 状态机，route 下沉） */
   orchestrationService: OrchestrationService;
+  /** v2.1 EAOS 评估子系统用例（metrics/scorecards CRUD + dual-track LLM 洞察 + trends，route 下沉） */
+  evaluationService: EvaluationService;
   marketplaceService: MarketplaceService;
   workspaceService: WorkspaceService;
   agentProfileService: AgentProfileService;

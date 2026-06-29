@@ -118,16 +118,4 @@ describe('cockpit bootstrap routes', () => {
     const body = await res.json();
     expect(body.items).toHaveLength(1);
   });
-
-  it('POST /evaluation/scorecards creates scorecard', async () => {
-    const repo = mockRepo();
-    const app = createCockpitBootstrapRoutes(repo as never);
-    const res = await app.request('/evaluation/scorecards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'agent', score: 85 }),
-    });
-    expect(res.status).toBe(201);
-    expect(repo.upsert).toHaveBeenCalledWith('scorecard', expect.any(String), expect.any(Object));
-  });
 });

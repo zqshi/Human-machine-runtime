@@ -24,6 +24,7 @@ import { migrateCockpitSignals } from './migrations/cockpit-signals.js';
 import { migrateCockpitObjectives } from './migrations/cockpit-objectives.js';
 import { migrateCockpitDecisions } from './migrations/cockpit-decisions.js';
 import { migrateCockpitOrchestration } from './migrations/cockpit-orchestration.js';
+import { migrateCockpitEvaluation } from './migrations/cockpit-evaluation.js';
 
 async function runMigrations() {
   const client = postgres(config.db.url, { max: 1 });
@@ -53,6 +54,7 @@ async function runMigrations() {
   await migrateCockpitObjectives(db);
   await migrateCockpitDecisions(db);
   await migrateCockpitOrchestration(db);
+  await migrateCockpitEvaluation(db);
 
   console.log('Schema sync complete — all tables created.');
   await client.end();

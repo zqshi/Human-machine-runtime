@@ -245,6 +245,8 @@ HMR 用户端内置五大子系统，构成完整的 Agent 指挥操作系统：
 | **考核评估** | 人机双轨仪表盘、趋势分析、记分卡 | `evaluation` | `/api/cockpit/evaluation/*` |
 | **判断推理** | 判断工作台、信号时间线、修正图谱 | `judgment` | `/api/cockpit/decisions/*` |
 
+> **v2.1 EAOS domain 实体化**：五子系统（感知/战略解码/判断/编排/评估）已从 `cockpit_entities` EAV 通用单表（弱类型 jsonb、无实体不变式）抽为各自独立实体表 + 带 `contexts/cockpit/domain/` 的 immutable DDD 实体（枚举校验/值对象/状态机）+ repository（filter 下推 DB）+ application service（route 下沉薄层，守 §12信号6）。对外 API 契约与前端 DTO 不变（破贫血为内部架构重构）。dual-track 评估洞察与战略解码 `/decode` 接真 LLM（经 LiteLLM，未配置返空不回退硬编码）。
+
 ---
 
 ## 核心运行时引擎
@@ -576,7 +578,7 @@ human-machine-runtime/
 npm run dev              # 启动后端（tsx watch 热重载，端口 3002）
 npm run build            # 构建后端
 npm start                # 启动构建产物
-npm test                 # 后端测试（vitest，173 文件）
+npm test                 # 后端测试（vitest，192 文件）
 npm run lint             # ESLint
 npm run type-check       # TypeScript 检查
 npm run db:setup         # 数据库迁移 + 种子数据
@@ -638,7 +640,7 @@ bash scripts/ensure-matrix-bot.sh                    # 注册 bot + 创建 facto
 | ORM | Drizzle | TypeScript-first，PostgreSQL |
 | 数据库 | PostgreSQL 16 | 本地 5435 端口 |
 | 认证 | JWT + SSO 预留 | bcrypt 密码 |
-| 测试 | vitest | 173 文件 |
+| 测试 | vitest | 192 文件 |
 
 ---
 

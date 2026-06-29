@@ -279,26 +279,5 @@ export function createCockpitBootstrapRoutes(repo: CockpitRepository, agentCore?
     return c.json(pattern, 201);
   });
 
-  /* ──── Evaluation Scorecards ──── */
-
-  app.get('/evaluation/scorecards', async (c) => {
-    const type = c.req.query('type');
-    return c.json(
-      await filteredResponse(
-        repo,
-        'scorecard',
-        (k) => c.req.query(k),
-        (items) => (type ? items.filter((s) => s.type === type) : items)
-      )
-    );
-  });
-
-  app.post('/evaluation/scorecards', async (c) => {
-    const body = await c.req.json();
-    const scorecard = { id: newId('sc'), ...body };
-    await repo.upsert('scorecard', scorecard.id, scorecard);
-    return c.json(scorecard, 201);
-  });
-
   return app;
 }
