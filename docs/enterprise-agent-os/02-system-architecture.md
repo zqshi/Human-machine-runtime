@@ -1,5 +1,12 @@
 > ⚠️ **历史文档快照**（非当前实现）：本文档为早期架构/规划/PRD 记录，部分内容已被后续演进取代。当前实现以 `server/src` + `client-suite/apps/web/src` 代码为准（28 个限界上下文 · Hono/TS/Drizzle · PostgreSQL@5435）。
 
+> **五子系统智能内核实现状态（2026-06-29 EAOS 清障后）**：
+> - 战略解码引擎 `/decode`：**[IMPLEMENTED]** 已接真 LLM（LiteLLM），结构化拆解模糊 intent
+> - 考核评估 洞察 `generateInsights`：**[IMPLEMENTED]** comparisonInsights 接真 LLM 基于指标生成
+> - 感知反馈回路 涌现信号：**[PARTIAL]** 手动录入已实现；自动提取（dispatch trace→信号）**[PLANNED]**
+> - 人机判断界面 判断节点识别/纠偏传播：**[PLANNED]** 当前仅人工判断记录的状态更新
+> - 智能体编排层 真 Agent 路由：**[PLANNED]** 当前仅手动编排链步骤推进，真调度待接 `/agent/dispatch`
+
 # 02 — 系统架构：五大核心子系统
 
 ## 架构全景

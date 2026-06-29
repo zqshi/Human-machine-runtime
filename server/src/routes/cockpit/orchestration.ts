@@ -42,6 +42,8 @@ export function createCockpitOrchestrationRoutes(repo: CockpitRepository) {
     return c.json(chain);
   });
 
+  // 诚实化:当前为手动编排链步骤推进(currentStep++)。真 Agent 路由(按 step 调度
+  // /agent/dispatch)留 [PLANNED],不假装调度了 Agent。
   app.post('/orchestration/chains/:id/advance', async (c) => {
     const id = c.req.param('id');
     const chain = await repo.get('orchestration_chain', id);

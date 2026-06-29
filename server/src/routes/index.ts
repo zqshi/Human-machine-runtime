@@ -259,13 +259,19 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   cockpit.route('/', taskRoutes);
   cockpit.route('/', createCockpitDecisionRoutes(ctx.cockpitRepo));
   cockpit.route('/', createCockpitSignalRoutes(ctx.cockpitRepo));
-  cockpit.route('/objectives', createCockpitObjectiveRoutes(ctx.cockpitRepo));
+  cockpit.route(
+    '/objectives',
+    createCockpitObjectiveRoutes(ctx.cockpitRepo, ctx.litellmClient, config.agent.llmModel)
+  );
   cockpit.route('/', createCockpitCollaborationRoutes(ctx.cockpitRepo));
   cockpit.route('/', createCockpitBootstrapRoutes(ctx.cockpitRepo, ctx.agentCore));
   cockpit.route('/', createCockpitChannelRoutes(ctx.decisionConsole, ctx.channelService));
   cockpit.route('/', createCockpitWorkspaceRoutes(ctx.workspaceService));
   cockpit.route('/', createCockpitOrchestrationRoutes(ctx.cockpitRepo));
-  cockpit.route('/', createCockpitEvaluationRoutes(ctx.cockpitRepo));
+  cockpit.route(
+    '/',
+    createCockpitEvaluationRoutes(ctx.cockpitRepo, ctx.litellmClient, config.agent.llmModel)
+  );
   cockpit.route('/studio', createStudioRoutes(ctx.studioService));
   cockpit.route('/', createCockpitChatRoutes(ctx.chatService));
   app.route('/api/cockpit', cockpit);

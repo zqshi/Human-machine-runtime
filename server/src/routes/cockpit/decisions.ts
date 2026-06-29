@@ -19,6 +19,8 @@ export function createCockpitDecisionRoutes(repo: CockpitRepository) {
     );
   });
 
+  // 诚实化:当前为人工判断记录的状态更新(accept/decline/defer/modify)。
+  // 自动判断节点识别(超出 Agent 能力主动推人)+ 纠偏传播 接 LLM 留 [PLANNED],不伪装。
   app.post('/decisions/:id/respond', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json<{
@@ -95,7 +97,7 @@ export function createCockpitDecisionRoutes(repo: CockpitRepository) {
       accuracyRate: total > 0 ? Math.round((correct / total) * 100) / 100 : 0,
       avgResponseMs: avgMs,
       sourceDistribution: sources,
-      timeSeriesData: [],
+      timeSeriesData: [], // 时序聚合待实现(当前空,不伪装数据)
     });
   });
 

@@ -2,8 +2,15 @@ import { Hono } from 'hono';
 import { newId } from '../../shared/utils.js';
 import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
 import { filteredResponse, pagedResponse } from './pagination.js';
+import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
+import { generateInsights as generateInsightsWithLlm } from './llm-analysis.js';
 
-export function createCockpitEvaluationRoutes(repo: CockpitRepository) {
+export function createCockpitEvaluationRoutes(
+  repo: CockpitRepository,
+  /** EAOS 评估洞察真 LLM(未配置/无数据→空数组,不回退 if/else 文案伪装) */
+  llm?: LiteLLMClient | null,
+  model?: string
+) {
   const app = new Hono();
 
   app.get('/evaluation/metrics', async (c) => {
@@ -74,7 +81,12 @@ export function createCockpitEvaluationRoutes(repo: CockpitRepository) {
         metrics: aiMetrics,
         summary: { avgScore: avg(aiMetrics.map((m) => (m.score as number) ?? 0)) },
       },
-      comparisonInsights: generateInsights(humanMetrics, aiMetrics),
+      comparisonInsights: await generateInsightsWithLlm(
+        humanMetrics,
+        aiMetrics,
+        llm ?? null,
+        model ?? ''
+      ),
     });
   });
 
@@ -95,23 +107,3 @@ function avg(nums: number[]): number {
   return Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
 }
 
-function generateInsights(
-  humanMetrics: Array<Record<string, unknown>>,
-  aiMetrics: Array<Record<string, unknown>>
-): string[] {
-  const insights: string[] = [];
-  const humanAvg = avg(humanMetrics.map((m) => (m.score as number) ?? 0));
-  const aiAvg = avg(aiMetrics.map((m) => (m.score as number) ?? 0));
-
-  if (aiAvg > humanAvg) {
-    insights.push('Agent 执行效率高于人工处理平均水平');
-  } else if (humanAvg > aiAvg) {
-    insights.push('人工决策质量当前优于 Agent 自动处理');
-  }
-
-  if (humanMetrics.length > 0 && aiMetrics.length > 0) {
-    insights.push(`评估周期内共 ${humanMetrics.length + aiMetrics.length} 项指标记录`);
-  }
-
-  return insights;
-}

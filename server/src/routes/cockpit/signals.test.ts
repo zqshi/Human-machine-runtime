@@ -68,7 +68,7 @@ describe('cockpit signal routes', () => {
     expect(res.status).toBe(404);
   });
 
-  it('POST /corrections/apply returns applied count', async () => {
+  it('POST /corrections/apply honestly reports not effective', async () => {
     const repo = mockRepo();
     const app = createCockpitSignalRoutes(repo as never);
     const res = await app.request('/corrections/apply', {
@@ -78,7 +78,9 @@ describe('cockpit signal routes', () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.applied).toBe(1);
+    // 诚实化:未接执行引擎,applied=0 + effective=false,不伪装生效
+    expect(body.applied).toBe(0);
+    expect(body.effective).toBe(false);
   });
 
   it('GET /patterns returns patterns (paged)', async () => {

@@ -23,6 +23,8 @@ export function createCockpitSignalRoutes(repo: CockpitRepository) {
     return c.json(await pagedResponse(repo, 'emergent_signal', (k) => c.req.query(k)));
   });
 
+  // 诚实化:涌现信号当前为手动录入(真实 CRUD)。自动提取(从 dispatch trace 异常检测)
+  // 待接数据回流 [PLANNED],不由 LLM 编造(否则是另一种假智能)。
   app.post('/signals/emergent', async (c) => {
     const body = await c.req.json();
     const signal = { id: newId('sig'), ...body, createdAt: Date.now() };
@@ -43,12 +45,20 @@ export function createCockpitSignalRoutes(repo: CockpitRepository) {
 
   app.post('/corrections/apply', async (c) => {
     const body = await c.req.json<{ planId: string; actions: unknown[] }>();
+    // 诚实化:correction 传播链路未接入执行引擎(/agent/dispatch),未实际生效。
+    // 不假装 affectedTasks/affectedGoals 已作用。自动传播待接 dispatch 数据回流 [PLANNED]。
     appEventBus.publish('correction:applied', {
       planId: body.planId,
+      applied: false,
       affectedTasks: [],
       affectedGoals: [],
     });
-    return c.json({ applied: body.actions?.length ?? 0, failed: 0 });
+    return c.json({
+      applied: 0,
+      failed: 0,
+      effective: false,
+      note: 'correction 传播链路未接入执行引擎,未实际生效(自动传播待实现)',
+    });
   });
 
   app.get('/patterns', async (c) => {

@@ -3,8 +3,15 @@ import { newId } from '../../shared/utils.js';
 import { appEventBus } from '../../shared/event-bus.js';
 import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
 import { filteredResponse } from './pagination.js';
+import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
+import { decodeStrategy } from './llm-analysis.js';
 
-export function createCockpitObjectiveRoutes(repo: CockpitRepository) {
+export function createCockpitObjectiveRoutes(
+  repo: CockpitRepository,
+  /** EAOS 战略解码真 LLM(未配置→/decode 返 503 故障暴露,不回退硬编码) */
+  llm?: LiteLLMClient | null,
+  model?: string
+) {
   const app = new Hono();
 
   app.get('/', async (c) => {
@@ -57,25 +64,16 @@ export function createCockpitObjectiveRoutes(repo: CockpitRepository) {
 
   app.post('/decode', async (c) => {
     const { intent } = await c.req.json<{ intent: string }>();
-    const result = {
-      questions: [
-        { id: 'q1', question: `如何理解「${intent}」的核心目标？`, purpose: 'clarify' },
-        { id: 'q2', question: '成功的衡量标准是什么？', purpose: 'metrics' },
-      ],
-      hypotheses: [
-        { id: 'h1', statement: '当前方案可实现 80% 的目标', baselineValue: 50, targetValue: 80 },
-      ],
-      constraints: ['资源有限', '时间紧迫'],
-      suggestedL1Objectives: [
-        { title: '明确关键指标', keyQuestion: '哪些指标最能反映进展？' },
-        { title: '确定执行路径', keyQuestion: '最小可行方案是什么？' },
-      ],
-    };
+    const result = await decodeStrategy(intent, llm ?? null, model ?? '');
+    if (!result.ok) {
+      // 503 未配置 / 502 调用失败或输出不可解析 —— 故障暴露,不回退硬编码
+      return c.json({ error: result.reason }, result.status);
+    }
     appEventBus.publish('objective:decoded', {
       l0Id: newId('l0'),
-      questions: result.questions.map((q) => q.question),
+      questions: result.data.questions.map((q) => q.question),
     });
-    return c.json(result);
+    return c.json(result.data);
   });
 
   return app;
