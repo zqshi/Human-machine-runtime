@@ -741,6 +741,7 @@ helm upgrade --install hmr-server deploy/helm/human-machine-runtime \
 | [租户管理后台](docs/admin-console/) | 架构/PRD/里程碑 |
 | [控制面](docs/control-plane/) | 架构/API 契约 |
 | [用户端](docs/cockpit-client/) | 架构/PRD |
+| [本地环境启动指南](docs/dev-environment-startup.md) | 全链路启动/停止（3 套 compose + 应用进程 + 端口清单） |
 | [监控配置](docs/shared/monitoring/) | Prometheus + Grafana |
 
 ---
