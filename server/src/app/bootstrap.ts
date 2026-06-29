@@ -84,7 +84,11 @@ import { ObjectiveService } from '../contexts/cockpit/application/objective-serv
 import { ObjectiveRepository } from '../db/repositories/objective-repository.js';
 import { DecisionRepository } from '../db/repositories/decision-repository.js';
 import { JudgmentRecordRepository } from '../db/repositories/judgment-record-repository.js';
+import { OrchestrationChainRepository } from '../db/repositories/orchestration-chain-repository.js';
+import { EscalationRepository } from '../db/repositories/escalation-repository.js';
+import { OrchestrationAgentRepository } from '../db/repositories/orchestration-agent-repository.js';
 import { DecisionService } from '../contexts/cockpit/application/decision-service.js';
+import { OrchestrationService } from '../contexts/cockpit/application/orchestration-service.js';
 import { decodeStrategy } from '../routes/cockpit/llm-analysis.js';
 import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
@@ -257,6 +261,20 @@ export function createAppContext(db: Database): AppContext {
   const decisionRepo = new DecisionRepository(db);
   const judgmentRecordRepo = new JudgmentRecordRepository(db);
   const decisionService = new DecisionService(decisionRepo, judgmentRecordRepo, appEventBus);
+
+  // v2.1 Phase C E11:cockpit 编排子系统。orchestration_chains/escalations/orchestration_agents 走新实体表（破 EAV 贫血）。
+  // advance 步骤推进 + escalation status 状态机在 OrchestrationService（route 下沉守 §12信号6）。
+  // advance 是诚实假推进（手动 currentStep++），真调度接 /agent/dispatch 留 [PLANNED]。
+  // 三端点前端不消费（孤儿），实体化破贫血 + 留真调度接口。
+  const orchestrationChainRepo = new OrchestrationChainRepository(db);
+  const escalationRepo = new EscalationRepository(db);
+  const orchestrationAgentRepo = new OrchestrationAgentRepository(db);
+  const orchestrationService = new OrchestrationService(
+    orchestrationChainRepo,
+    escalationRepo,
+    orchestrationAgentRepo,
+    appEventBus
+  );
 
   /* ──── Provisioner: local + container-orchestrator composite ──── */
   const localProvisioner = new LocalProvisioner();
@@ -743,6 +761,7 @@ export function createAppContext(db: Database): AppContext {
     signalService,
     objectiveService,
     decisionService,
+    orchestrationService,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,

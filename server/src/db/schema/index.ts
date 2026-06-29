@@ -26,3 +26,4 @@ export * from './runtime-manifest.js';
 export * from './cockpit-signals.js';
 export * from './cockpit-objectives.js';
 export * from './cockpit-decisions.js';
+export * from './cockpit-orchestration.js';

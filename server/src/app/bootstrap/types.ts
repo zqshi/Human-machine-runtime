@@ -71,6 +71,7 @@ import type { ChatService } from '../../contexts/agent-core/application/chat-ser
 import type { SignalService } from '../../contexts/cockpit/application/signal-service.js';
 import type { ObjectiveService } from '../../contexts/cockpit/application/objective-service.js';
 import type { DecisionService } from '../../contexts/cockpit/application/decision-service.js';
+import type { OrchestrationService } from '../../contexts/cockpit/application/orchestration-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -114,6 +115,8 @@ export interface AppContext {
   objectiveService: ObjectiveService;
   /** v2.1 EAOS 判断子系统用例（decisions/judgment_records CRUD + respond 状态机 + analytics 聚合，route 下沉） */
   decisionService: DecisionService;
+  /** v2.1 EAOS 编排子系统用例（chains/agents/escalations CRUD + advance 步骤推进 + escalation 状态机，route 下沉） */
+  orchestrationService: OrchestrationService;
   marketplaceService: MarketplaceService;
   workspaceService: WorkspaceService;
   agentProfileService: AgentProfileService;
