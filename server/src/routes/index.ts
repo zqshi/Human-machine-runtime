@@ -257,7 +257,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   cockpit.use('*', authMiddleware);
   const taskRoutes = createCockpitTaskRoutes(ctx.cockpitRepo);
   cockpit.route('/', taskRoutes);
-  cockpit.route('/', createCockpitDecisionRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitDecisionRoutes(ctx.decisionService, ctx.cockpitRepo));
   cockpit.route('/', createCockpitSignalRoutes(ctx.signalService));
   cockpit.route('/objectives', createCockpitObjectiveRoutes(ctx.objectiveService));
   cockpit.route('/', createCockpitCollaborationRoutes(ctx.cockpitRepo));

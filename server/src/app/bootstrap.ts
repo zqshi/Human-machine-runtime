@@ -82,6 +82,9 @@ import { SignalService } from '../contexts/cockpit/application/signal-service.js
 import { SignalExtractionService } from '../contexts/cockpit/application/signal-extraction-service.js';
 import { ObjectiveService } from '../contexts/cockpit/application/objective-service.js';
 import { ObjectiveRepository } from '../db/repositories/objective-repository.js';
+import { DecisionRepository } from '../db/repositories/decision-repository.js';
+import { JudgmentRecordRepository } from '../db/repositories/judgment-record-repository.js';
+import { DecisionService } from '../contexts/cockpit/application/decision-service.js';
 import { decodeStrategy } from '../routes/cockpit/llm-analysis.js';
 import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
@@ -247,6 +250,13 @@ export function createAppContext(db: Database): AppContext {
     ? (intent: string) => decodeStrategy(intent, litellmClient, config.agent.llmModel)
     : null;
   const objectiveService = new ObjectiveService(objectiveRepo, appEventBus, objectiveDecodePort);
+
+  // v2.1 Phase C E10:cockpit 判断子系统。decisions+judgment_records 走新实体表（破 EAV 贫血）。
+  // respond 状态机 + judgment-analytics 聚合在 DecisionService（route 下沉守 §12信号6）。
+  // respond 自动生成审计 JudgmentRecord（修复原 route respond 不留 record bug）。
+  const decisionRepo = new DecisionRepository(db);
+  const judgmentRecordRepo = new JudgmentRecordRepository(db);
+  const decisionService = new DecisionService(decisionRepo, judgmentRecordRepo, appEventBus);
 
   /* ──── Provisioner: local + container-orchestrator composite ──── */
   const localProvisioner = new LocalProvisioner();
@@ -732,6 +742,7 @@ export function createAppContext(db: Database): AppContext {
     cockpitRepo,
     signalService,
     objectiveService,
+    decisionService,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,
