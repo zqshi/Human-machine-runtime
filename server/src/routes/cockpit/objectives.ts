@@ -1,78 +1,96 @@
 import { Hono } from 'hono';
-import { newId } from '../../shared/utils.js';
-import { appEventBus } from '../../shared/event-bus.js';
-import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
-import { filteredResponse } from './pagination.js';
-import type { LiteLLMClient } from '../../contexts/gateway/clients/litellm-client.js';
-import { decodeStrategy } from './llm-analysis.js';
+import type { ObjectiveService } from '../../contexts/cockpit/application/objective-service.js';
+import type {
+  Objective,
+  ObjectiveLevel,
+  ObjectiveStatus,
+} from '../../contexts/cockpit/domain/objective/objective.js';
 
-export function createCockpitObjectiveRoutes(
-  repo: CockpitRepository,
-  /** EAOS 战略解码真 LLM(未配置→/decode 返 503 故障暴露,不回退硬编码) */
-  llm?: LiteLLMClient | null,
-  model?: string
-) {
+/**
+ * cockpit 战略解码子系统路由（v2.1 EAOS，route 下沉 application，守 §12信号6）。
+ *
+ * 薄层：参数提取 → 调 ObjectiveService → 返回。业务逻辑（CRUD/状态机/解码）在 service。
+ * 前端 DTO 不变（id/level/title/description/parentId/confidence/status/metrics + createdAt/updatedAt epoch ms）。
+ */
+function serializeObjective(o: Objective) {
+  const p = o.toProps();
+  return {
+    id: p.id,
+    level: p.level,
+    parentId: p.parentId,
+    title: p.title,
+    description: p.description,
+    confidence: p.confidence,
+    status: p.status,
+    metrics: p.metrics,
+    createdAt: p.createdAt.getTime(),
+    updatedAt: p.updatedAt.getTime(),
+  };
+}
+
+function parsePagedQuery(q: (k: string) => string | undefined) {
+  const limit = q('limit');
+  const offset = q('offset');
+  return {
+    limit: limit ? parseInt(limit, 10) : undefined,
+    offset: offset ? parseInt(offset, 10) : undefined,
+  };
+}
+
+export function createCockpitObjectiveRoutes(service: ObjectiveService) {
   const app = new Hono();
 
   app.get('/', async (c) => {
-    const level = c.req.query('level');
-    return c.json(
-      await filteredResponse(
-        repo,
-        'objective',
-        (k) => c.req.query(k),
-        (items) => (level ? items.filter((o) => o.level === level) : items)
-      )
-    );
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    const result = await service.listObjectives({
+      level: q('level') as ObjectiveLevel | undefined,
+      parentId: q('parentId'),
+      tenantId: q('tenantId'),
+      status: q('status') as ObjectiveStatus | undefined,
+      limit,
+      offset,
+    });
+    return c.json({
+      items: result.items.map(serializeObjective),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    });
   });
 
   app.post('/', async (c) => {
     const body = await c.req.json();
-    const now = Date.now();
-    const obj = {
-      id: newId('obj'),
-      ...body,
-      status: body.status ?? 'active',
-      createdAt: now,
-      updatedAt: now,
-    };
-    await repo.upsert('objective', obj.id, obj);
-    return c.json(obj, 201);
+    const o = await service.createObjective(body);
+    return c.json(serializeObjective(o), 201);
   });
 
   app.get('/:id', async (c) => {
-    const obj = await repo.get('objective', c.req.param('id'));
-    if (!obj) return c.json({ error: 'objective not found' }, 404);
-    return c.json(obj);
+    const o = await service.getObjective(c.req.param('id'));
+    if (!o) return c.json({ error: 'objective not found' }, 404);
+    return c.json(serializeObjective(o));
   });
 
   app.patch('/:id', async (c) => {
-    const id = c.req.param('id');
     const patch = await c.req.json();
-    const obj = await repo.get('objective', id);
-    if (!obj) return c.json({ error: 'objective not found' }, 404);
-    const updated = { ...obj, ...patch, updatedAt: Date.now() };
-    await repo.upsert('objective', id, updated);
-    appEventBus.publish('objective:updated', updated);
-    return c.json(updated);
+    const o = await service.updateObjective(c.req.param('id'), patch);
+    if (!o) return c.json({ error: 'objective not found' }, 404);
+    return c.json(serializeObjective(o));
   });
 
   app.delete('/:id', async (c) => {
-    await repo.remove('objective', c.req.param('id'));
+    const removed = await service.deleteObjective(c.req.param('id'));
+    if (!removed) return c.json({ error: 'objective not found' }, 404);
     return c.json({ success: true });
   });
 
+  // 战略解码（接真 LLM，未配置→503 故障暴露，不回退硬编码）
   app.post('/decode', async (c) => {
     const { intent } = await c.req.json<{ intent: string }>();
-    const result = await decodeStrategy(intent, llm ?? null, model ?? '');
+    const result = await service.decodeStrategy(intent);
     if (!result.ok) {
-      // 503 未配置 / 502 调用失败或输出不可解析 —— 故障暴露,不回退硬编码
       return c.json({ error: result.reason }, result.status);
     }
-    appEventBus.publish('objective:decoded', {
-      l0Id: newId('l0'),
-      questions: result.data.questions.map((q) => q.question),
-    });
     return c.json(result.data);
   });
 

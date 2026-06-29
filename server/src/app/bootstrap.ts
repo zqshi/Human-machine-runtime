@@ -80,6 +80,9 @@ import { EmergentSignalRepository } from '../db/repositories/emergent-signal-rep
 import { PatternRepository } from '../db/repositories/pattern-repository.js';
 import { SignalService } from '../contexts/cockpit/application/signal-service.js';
 import { SignalExtractionService } from '../contexts/cockpit/application/signal-extraction-service.js';
+import { ObjectiveService } from '../contexts/cockpit/application/objective-service.js';
+import { ObjectiveRepository } from '../db/repositories/objective-repository.js';
+import { decodeStrategy } from '../routes/cockpit/llm-analysis.js';
 import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
@@ -235,6 +238,15 @@ export function createAppContext(db: Database): AppContext {
     clusterInstanceClient,
     litellmClient,
   } = buildGatewayClients();
+
+  // v2.1 Phase B:cockpit 战略解码子系统。objectives 走新实体表（破 EAV 贫血）。
+  // decodePort 包装 routes/cockpit/llm-analysis.decodeStrategy(intent, llm, model) 为 (intent)=>result
+  // 端口注入（避免 application→routes 反向依赖 §1.1）。llm 未配置→传 null→service.decode 返 503 故障暴露。
+  const objectiveRepo = new ObjectiveRepository(db);
+  const objectiveDecodePort = litellmClient?.isConfigured()
+    ? (intent: string) => decodeStrategy(intent, litellmClient, config.agent.llmModel)
+    : null;
+  const objectiveService = new ObjectiveService(objectiveRepo, appEventBus, objectiveDecodePort);
 
   /* ──── Provisioner: local + container-orchestrator composite ──── */
   const localProvisioner = new LocalProvisioner();
@@ -719,6 +731,7 @@ export function createAppContext(db: Database): AppContext {
     operationalRepo,
     cockpitRepo,
     signalService,
+    objectiveService,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,

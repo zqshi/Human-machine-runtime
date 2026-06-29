@@ -69,6 +69,7 @@ import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-
 import type { StudioService } from '../../contexts/agent-core/application/studio-service.js';
 import type { ChatService } from '../../contexts/agent-core/application/chat-service.js';
 import type { SignalService } from '../../contexts/cockpit/application/signal-service.js';
+import type { ObjectiveService } from '../../contexts/cockpit/application/objective-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -108,6 +109,8 @@ export interface AppContext {
   cockpitRepo: CockpitRepository;
   /** v2.1 EAOS 感知子系统用例（emergent/pattern CRUD + corrections/apply） */
   signalService: SignalService;
+  /** v2.1 EAOS 战略解码子系统用例（objectives CRUD + 战略解码，route 下沉） */
+  objectiveService: ObjectiveService;
   marketplaceService: MarketplaceService;
   workspaceService: WorkspaceService;
   agentProfileService: AgentProfileService;

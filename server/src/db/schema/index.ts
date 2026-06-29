@@ -24,3 +24,4 @@ export * from './billing.js';
 export * from './agent-definition.js';
 export * from './runtime-manifest.js';
 export * from './cockpit-signals.js';
+export * from './cockpit-objectives.js';
