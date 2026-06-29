@@ -1,76 +1,117 @@
 import { Hono } from 'hono';
-import { newId } from '../../shared/utils.js';
-import { appEventBus } from '../../shared/event-bus.js';
-import type { CockpitRepository } from '../../db/repositories/cockpit-repository.js';
-import { filteredResponse, pagedResponse } from './pagination.js';
+import type { SignalService } from '../../contexts/cockpit/application/signal-service.js';
+import type {
+  EmergentSignal,
+  SignalSeverity,
+  SignalStatus,
+} from '../../contexts/cockpit/domain/sensing/emergent-signal.js';
+import type { Pattern, PatternType } from '../../contexts/cockpit/domain/sensing/pattern.js';
 
-export function createCockpitSignalRoutes(repo: CockpitRepository) {
+/**
+ * cockpit 感知子系统路由（v2.1 EAOS，route 下沉 application，守 §12信号6）。
+ *
+ * 薄层：参数提取 → 调 SignalService → 返回。业务逻辑（CRUD/状态机/聚合）在 service。
+ * 前端 DTO 不变（emergent_signal/pattern 字段 camelCase + createdAt/updatedAt epoch ms）。
+ */
+function serializeSignal(sig: EmergentSignal) {
+  const p = sig.toProps();
+  return { ...p, createdAt: p.createdAt.getTime(), updatedAt: p.updatedAt.getTime() };
+}
+
+function serializePattern(p: Pattern) {
+  const props = p.toProps();
+  return { ...props, createdAt: props.createdAt.getTime() };
+}
+
+function parsePagedQuery(q: (k: string) => string | undefined) {
+  const limit = q('limit');
+  const offset = q('offset');
+  return {
+    limit: limit ? parseInt(limit, 10) : undefined,
+    offset: offset ? parseInt(offset, 10) : undefined,
+  };
+}
+
+export function createCockpitSignalRoutes(service: SignalService) {
   const app = new Hono();
 
+  // signal（旧 EAV entityType，过渡保留，urgency filter + paged）
   app.get('/signals', async (c) => {
-    const urgency = c.req.query('urgency');
-    return c.json(
-      await filteredResponse(
-        repo,
-        'signal',
-        (k) => c.req.query(k),
-        (items) => (urgency ? items.filter((s) => s.urgency === urgency) : items)
-      )
-    );
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    return c.json(await service.listSignals({ urgency: q('urgency'), limit, offset }));
   });
 
+  // emergent signals（新实体表，paged，§7.2.1#2）
   app.get('/signals/emergent', async (c) => {
-    return c.json(await pagedResponse(repo, 'emergent_signal', (k) => c.req.query(k)));
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    const result = await service.listEmergentPaged({
+      severity: q('severity') as SignalSeverity | undefined,
+      status: q('status') as SignalStatus | undefined,
+      tenantId: q('tenantId'),
+      limit,
+      offset,
+    });
+    return c.json({
+      items: result.items.map(serializeSignal),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    });
   });
 
-  // 诚实化:涌现信号当前为手动录入(真实 CRUD)。自动提取(从 dispatch trace 异常检测)
-  // 待接数据回流 [PLANNED],不由 LLM 编造(否则是另一种假智能)。
   app.post('/signals/emergent', async (c) => {
     const body = await c.req.json();
-    const signal = { id: newId('sig'), ...body, createdAt: Date.now() };
-    await repo.upsert('emergent_signal', signal.id, signal);
-    appEventBus.publish('emergent-signal:detected', signal);
-    return c.json(signal, 201);
+    const sig = await service.createEmergent(body);
+    return c.json(serializeSignal(sig), 201);
+  });
+
+  // ④从 dispatch trace 自动提取涌现信号（感知神经系统，替代纯手动录入）
+  app.post('/signals/emergent/extract', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as {
+      sinceMinutes?: number;
+      failureThreshold?: number;
+    };
+    const signals = await service.extractEmergentFromTrace(body);
+    return c.json({ items: signals.map(serializeSignal), count: signals.length });
   });
 
   app.patch('/signals/emergent/:id', async (c) => {
-    const id = c.req.param('id');
     const patch = await c.req.json();
-    const signal = await repo.get('emergent_signal', id);
-    if (!signal) return c.json({ error: 'signal not found' }, 404);
-    const updated = { ...signal, ...patch };
-    await repo.upsert('emergent_signal', id, updated);
-    return c.json(updated);
+    const sig = await service.updateEmergent(c.req.param('id'), patch);
+    if (!sig) return c.json({ error: 'signal not found' }, 404);
+    return c.json(serializeSignal(sig));
   });
 
+  // corrections/apply（E6 接 harness.dispatchTask 传播；当前 effective:false 诚实标注，守 C20）
   app.post('/corrections/apply', async (c) => {
     const body = await c.req.json<{ planId: string; actions: unknown[] }>();
-    // 诚实化:correction 传播链路未接入执行引擎(/agent/dispatch),未实际生效。
-    // 不假装 affectedTasks/affectedGoals 已作用。自动传播待接 dispatch 数据回流 [PLANNED]。
-    appEventBus.publish('correction:applied', {
-      planId: body.planId,
-      applied: false,
-      affectedTasks: [],
-      affectedGoals: [],
-    });
-    return c.json({
-      applied: 0,
-      failed: 0,
-      effective: false,
-      note: 'correction 传播链路未接入执行引擎,未实际生效(自动传播待实现)',
-    });
+    return c.json(await service.applyCorrections(body.planId ?? '', body.actions ?? []));
   });
 
+  // patterns（新实体表，paged）
   app.get('/patterns', async (c) => {
-    return c.json(await pagedResponse(repo, 'pattern', (k) => c.req.query(k)));
+    const q = (k: string) => c.req.query(k);
+    const { limit, offset } = parsePagedQuery(q);
+    const result = await service.listPatternsPaged({
+      patternType: q('patternType') as PatternType | undefined,
+      tenantId: q('tenantId'),
+      limit,
+      offset,
+    });
+    return c.json({
+      items: result.items.map(serializePattern),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    });
   });
 
   app.post('/patterns', async (c) => {
     const body = await c.req.json();
-    const pattern = { id: newId('pat'), ...body };
-    await repo.upsert('pattern', pattern.id, pattern);
-    appEventBus.publish('pattern:discovered', pattern);
-    return c.json(pattern, 201);
+    const p = await service.createPattern(body);
+    return c.json(serializePattern(p), 201);
   });
 
   return app;

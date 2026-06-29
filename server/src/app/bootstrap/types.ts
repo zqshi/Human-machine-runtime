@@ -68,6 +68,7 @@ import type { AgentDefinitionService } from '../../contexts/agent-core/applicati
 import type { IPersonaProvider } from '../../contexts/agent-core/domain/persona-provider.js';
 import type { StudioService } from '../../contexts/agent-core/application/studio-service.js';
 import type { ChatService } from '../../contexts/agent-core/application/chat-service.js';
+import type { SignalService } from '../../contexts/cockpit/application/signal-service.js';
 
 import type { MatrixBot } from '../../integrations/matrix/matrix-bot.js';
 import type { AiGatewayRepository } from '../../db/repositories/ai-gateway-repository.js';
@@ -105,6 +106,8 @@ export interface AppContext {
   mcpService: McpService;
   tokenUsageService: TokenUsageService;
   cockpitRepo: CockpitRepository;
+  /** v2.1 EAOS 感知子系统用例（emergent/pattern CRUD + corrections/apply） */
+  signalService: SignalService;
   marketplaceService: MarketplaceService;
   workspaceService: WorkspaceService;
   agentProfileService: AgentProfileService;

@@ -258,7 +258,7 @@ export function registerRoutes(app: Hono, ctx: AppContext) {
   const taskRoutes = createCockpitTaskRoutes(ctx.cockpitRepo);
   cockpit.route('/', taskRoutes);
   cockpit.route('/', createCockpitDecisionRoutes(ctx.cockpitRepo));
-  cockpit.route('/', createCockpitSignalRoutes(ctx.cockpitRepo));
+  cockpit.route('/', createCockpitSignalRoutes(ctx.signalService));
   cockpit.route(
     '/objectives',
     createCockpitObjectiveRoutes(ctx.cockpitRepo, ctx.litellmClient, config.agent.llmModel)

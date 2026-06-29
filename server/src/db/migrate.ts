@@ -20,6 +20,7 @@ import { migrateAgentDefinition } from './migrations/agent-definition.js';
 import { migrateInstance } from './migrations/instance.js';
 import { migrateSandboxSessions } from './migrations/sandbox-sessions.js';
 import { migrateRuntimeManifests } from './migrations/runtime-manifests.js';
+import { migrateCockpitSignals } from './migrations/cockpit-signals.js';
 
 async function runMigrations() {
   const client = postgres(config.db.url, { max: 1 });
@@ -45,6 +46,7 @@ async function runMigrations() {
   await migrateInstance(db);
   await migrateSandboxSessions(db);
   await migrateRuntimeManifests(db);
+  await migrateCockpitSignals(db);
 
   console.log('Schema sync complete — all tables created.');
   await client.end();

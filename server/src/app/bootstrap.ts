@@ -76,6 +76,10 @@ import { MarketplaceService } from '../contexts/marketplace/marketplace-service.
 import { WorkspaceService } from '../contexts/workspace/workspace-service.js';
 import { AgentProfileService } from '../contexts/agent-profile/agent-profile-service.js';
 import { CockpitRepository } from '../db/repositories/cockpit-repository.js';
+import { EmergentSignalRepository } from '../db/repositories/emergent-signal-repository.js';
+import { PatternRepository } from '../db/repositories/pattern-repository.js';
+import { SignalService } from '../contexts/cockpit/application/signal-service.js';
+import { SignalExtractionService } from '../contexts/cockpit/application/signal-extraction-service.js';
 import { RuntimeManifestRepository } from '../db/repositories/runtime-manifest-repository.js';
 import { OperationalRepository } from '../db/repositories/operational-repository.js';
 import { WorkspaceRepository } from '../db/repositories/workspace-repository.js';
@@ -188,6 +192,20 @@ export function createAppContext(db: Database): AppContext {
   const aiGatewayRepo = new AiGatewayRepository(db);
   const configRepo = new ConfigRepository(db);
   const cockpitRepo = new CockpitRepository(db);
+  const emergentSignalRepo = new EmergentSignalRepository(db);
+  const patternRepo = new PatternRepository(db);
+  const signalExtractionService = new SignalExtractionService(
+    aiGatewayRepo,
+    emergentSignalRepo,
+    appEventBus
+  );
+  const signalService = new SignalService(
+    emergentSignalRepo,
+    patternRepo,
+    cockpitRepo,
+    appEventBus,
+    signalExtractionService
+  );
   const operationalRepo = new OperationalRepository(db);
   const agentProfileRepo = new AgentProfileRepository(db);
   const tokenUsageRepo = new TokenUsageRepository(db);
@@ -700,6 +718,7 @@ export function createAppContext(db: Database): AppContext {
     llmKeySyncService,
     operationalRepo,
     cockpitRepo,
+    signalService,
     marketplaceClient,
     profileServiceClient,
     workspaceBackendClient,
