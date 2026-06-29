@@ -86,9 +86,7 @@ describe('cockpit objective routes', () => {
     const llm = mockLlm(
       JSON.stringify({
         questions: [{ id: 'q1', question: '核心目标是什么?', purpose: 'clarify' }],
-        hypotheses: [
-          { id: 'h1', statement: '可实现 80%', baselineValue: 50, targetValue: 80 },
-        ],
+        hypotheses: [{ id: 'h1', statement: '可实现 80%', baselineValue: 50, targetValue: 80 }],
         constraints: ['资源有限'],
         suggestedL1Objectives: [{ title: '明确指标', keyQuestion: '哪些指标?' }],
       })

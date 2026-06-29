@@ -106,4 +106,3 @@ function avg(nums: number[]): number {
   if (nums.length === 0) return 0;
   return Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
 }
-

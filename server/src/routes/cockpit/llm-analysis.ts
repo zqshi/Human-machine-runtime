@@ -169,7 +169,9 @@ function normalizeDecoded(parsed: unknown): DecodedStrategy | null {
   const hypotheses = normalizeArray(
     obj.hypotheses,
     (h) =>
-      typeof h === 'object' && h !== null && typeof (h as Record<string, unknown>).statement === 'string',
+      typeof h === 'object' &&
+      h !== null &&
+      typeof (h as Record<string, unknown>).statement === 'string',
     (h) => {
       const r = h as Record<string, unknown>;
       return {
@@ -186,7 +188,9 @@ function normalizeDecoded(parsed: unknown): DecodedStrategy | null {
   const suggestedL1Objectives = normalizeArray(
     obj.suggestedL1Objectives,
     (o) =>
-      typeof o === 'object' && o !== null && typeof (o as Record<string, unknown>).title === 'string',
+      typeof o === 'object' &&
+      o !== null &&
+      typeof (o as Record<string, unknown>).title === 'string',
     (o) => {
       const r = o as Record<string, unknown>;
       return {
