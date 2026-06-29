@@ -13,7 +13,8 @@
 | v1.3-v1.7 | 云原生声明式 Agent 平台（声明/组装/trace/eval） | done | snapshot 已归档（v1.3-v1.7-snapshot.md）；4 版连续完成，架构总纲 `docs/architecture/cloud-native-platform-design.md` |
 | v1.8 | 声明/运行 reconcile 解耦 | done | snapshot 已归档(v1.8-snapshot.md);desiredState+generation+spec-diff 调和,云原生收官;遗留:Container 扩容限制 + bootstrap.ts 832 行技术债 |
 | v1.9 | 投产就绪:Agent 声明式创建升级 + #1拒答/#7审批/#13灰度 + D8治本 | done | snapshot 已归档(v1.9-snapshot.md);7步声明式向导+AgentRuntimePort解耦useAgentChat+管理后台UI(审批/flag/模板);遗留:T9流式待浏览器实测+cockpit后端guardrail兜底 |
-| v2.0 | 声明式+编译固化+运行时动态组装(架构升级) | current 进行中 | 2026-06-28 激活;本批先做 baking 链路(C1-C7/C11/C12/C14/C15)不依赖 KVM;CubeSandbox 半(C8/C9/C10/C13)留待 KVM 宿主(D14);设计文档 docs/architecture/v2.0-declarative-baking-runtime.md;任务图 docs/versions/v2.0-current.md |
+| v2.0 | 声明式+编译固化+运行时动态组装(架构升级) | done 归档 | snapshot 已归档(2026-06-29);baking 编译固化链路(C1-C7/C11/C12/C14)+投产清障(C19)+EAOS假智能清障(C20) done;CubeSandbox(C8/C9/C10/C13)留 D14 KVM;EAOS domain建模/数据回流转 v2.1(D16);设计文档 docs/architecture/v2.0-declarative-baking-runtime.md |
+| v2.1 | EAOS cockpit domain 建模+感知数据回流 | current 进行中 | 2026-06-29 激活;五子系统实体从 EAV 贫血模型建模(破§12信号1 P1)+dispatch trace→涌现信号回流+判断节点/编排接真路由;对标前端 client-suite domain/;任务图 docs/versions/v2.1-current.md |
 
 ## 长期技术债务
 
@@ -36,7 +37,8 @@
 | D13 | cockpit 带 filter 端点 JSONB filter 索引优化（list+filter+slice 改 DB 层 where filter，消除全量读+内存 filter；实体 EAV+JSONB） | v1.2.2 T58 | P3 | 待排期 |
 | D14 | CubeSandbox KVM 宿主部署（v2.0 C8 实测前置；代码只接 E2B SDK，宿主部署是运维侧，需支持 KVM 的 x86_64 Linux PVM） | v2.0 规划 | P1 | v2.0 C8 启动前 |
 | D15 | **计费 T4-T11（v1.2.2 主题核心，归档时全 pending 转入）**：T4(quota↔analytics 贯通)/T6(用量报表 API)/T7(前端用量报表)/T8(用量异常告警)/T10(billing 写侧补全 consume/deduct/reserve)/T11(日终对账)。**启动前置**:用户确认商业化时机 + 灰区实测(Matrix E2E/cockpit 浏览器实测)。**前置依赖**:v2.0 manifest 落地后计费基于固化配额才不漂移(v2.0 设计文档 §10.3)。详见 v1.2.2-snapshot.md 遗留 + v2.0-current.md 任务详情 | v1.2.2 归档 | P0 | v2.0 manifest 落地后 |
-| D16 | **EAOS 五子系统假智能 + 贫血模型（产品级阻断）**：cockpit 五子系统（战略驾驶舱/编排中心/感知反馈/考核评估/判断推理）框架齐全但智能内核缺失。①战略解码 `/decode`(routes/cockpit/objectives.ts) 返回硬编码 questions（任何输入同样问题），非真 LLM 解码；②"涌现信号"(signals.ts) 只有手动 CRUD 入库无提取算法；③全 EAV 通用表(CockpitRepository)无 Objective/Signal/Decision 领域实体（§12信号1 贫血模型 P1，与 D12/D13 性能债不同）；④cockpit 数据与 `/agent/dispatch` 主链路割裂无回流。详 `docs/versions/handoff-2026-06-28.md` §三。与已清的 B1/F4 假数据同类。**处置**：先盘点→清假智能(真LLM或诚实空态)→接回流→建domain实体。**进展(2026-06-29)**:①②假智能已清——`/decode`+评估洞察接真 LLM(`routes/cockpit/llm-analysis.ts`),signals/decisions/orchestration 假执行诚实化(C20 done,见 v2.0-current.md)。**剩余**:③domain 实体建模破贫血模型 + ④dispatch→涌现信号数据回流 + 判断节点识别/编排真路由接 LLM/dispatch | 2026-06-28评估/2026-06-29部分清 | P1 | 投产后或与计费并行 |
+| D16 | **EAOS 五子系统假智能 + 贫血模型（产品级阻断）**：cockpit 五子系统（战略驾驶舱/编排中心/感知反馈/考核评估/判断推理）框架齐全但智能内核缺失。①战略解码 `/decode`(routes/cockpit/objectives.ts) 返回硬编码 questions（任何输入同样问题），非真 LLM 解码；②"涌现信号"(signals.ts) 只有手动 CRUD 入库无提取算法；③全 EAV 通用表(CockpitRepository)无 Objective/Signal/Decision 领域实体（§12信号1 贫血模型 P1，与 D12/D13 性能债不同）；④cockpit 数据与 `/agent/dispatch` 主链路割裂无回流。详 `docs/versions/handoff-2026-06-28.md` §三。与已清的 B1/F4 假数据同类。**处置**：先盘点→清假智能(真LLM或诚实空态)→接回流→建domain实体。**进展(2026-06-29)**:①②假智能已清——`/decode`+评估洞察接真 LLM(`routes/cockpit/llm-analysis.ts`),signals/decisions/orchestration 假执行诚实化(C20 done,见 v2.0-current.md)。**剩余**:③domain 实体建模破贫血模型 + ④dispatch→涌现信号数据回流 + 判断节点识别/编排真路由接 LLM/dispatch | 2026-06-28评估/2026-06-29部分清(①②假智能) | P1 | v2.1（③domain建模+④数据回流） |
+| D17 | **历史遗留死代码清理**:§14 v2.0 归档门禁发现 5 个 0 引用历史死代码——后端 budget-guard.ts(06-23 计费预算占位)/mail-service.ts(06-16 邮件通知占位) + 前端 cockpitChannelStore.ts/workspaceStore.ts/cockpitPhase1ApiAdapter.ts(06-16/06-27 改名遗留 store/adapter)。均 v2.0 激活前引入非本版本产生。budget-guard/mail-service 有未来用途注释(计费/通知占位)。处置:接线或删(归档时未强删避免风险,转此清) | v2.0 §14 门禁 | P2 | v2.1 |
 
 ## 候选方向（未排期）
 
